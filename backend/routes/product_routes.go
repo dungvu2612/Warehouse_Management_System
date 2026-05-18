@@ -2,16 +2,19 @@ package routes
 
 import (
 	"quan_ly_kho/handlers"
+	"quan_ly_kho/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
 func ProductRoutes(r *gin.Engine) {
-
-	r.POST("/products", handlers.CreateProduct)
-
-	r.GET("/products", handlers.GetProducts)
-	r.GET("/products/:id", handlers.GetProductByID)
-	r.PUT("/products/:id", handlers.UpdateProduct)
-	r.DELETE("/products/:id", handlers.DeleteProduct)
+	products := r.Group("/products")
+	products.Use(middleware.AuthRequired())
+	{
+		products.GET("", handlers.GetProducts)
+		products.GET("/:id", handlers.GetProductByID)
+		products.POST("", middleware.RequireRoles("ADMIN"), handlers.CreateProduct)
+		products.PUT("/:id", middleware.RequireRoles("ADMIN"), handlers.UpdateProduct)
+		products.DELETE("/:id", middleware.RequireRoles("ADMIN"), handlers.DeleteProduct)
+	}
 }

@@ -13,6 +13,7 @@ func main() {
 	_ = godotenv.Load()
 
 	config.ConnectDatabase()
+	config.SeedDefaultUsers()
 
 	r := gin.Default()
 
@@ -22,6 +23,11 @@ func main() {
 		})
 	})
 
+	routes.AuthRoutes(r)
+	routes.InventoryRoutes(r)
+	routes.StockTransactionRoutes(r)
+	routes.LocationRoutes(r)
+	routes.TrayRoutes(r)
 	routes.ProductRoutes(r)
 
 	r.Run(":8080")
