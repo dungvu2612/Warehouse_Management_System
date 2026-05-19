@@ -10,3 +10,8 @@ type Inventory struct {
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
+
+// Schema SQL hiện tại dùng tên bảng số ít: "inventory".
+func (Inventory) TableName() string {
+	return "inventory"
+}

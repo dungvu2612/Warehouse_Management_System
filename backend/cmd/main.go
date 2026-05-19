@@ -24,7 +24,10 @@ func main() {
 	})
 
 	routes.AuthRoutes(r)
+	routes.BOMRoutes(r)
+	routes.ImportReceiptRoutes(r)
 	routes.InventoryRoutes(r)
+	routes.OrderRoutes(r)
 	routes.StockTransactionRoutes(r)
 	routes.LocationRoutes(r)
 	routes.TrayRoutes(r)
