@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"quan_ly_kho/config"
 	"quan_ly_kho/models"
+	"quan_ly_kho/utils"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +14,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+)
+
+var (
+	// Nhóm lỗi nghiệp vụ picking/order để map HTTP status ổn định.
+	errOrderAlreadyClosed      = errors.New("order already closed")
+	errOrderHasNoItems         = errors.New("order has no items")
+	errTaskAlreadyConfirmed    = errors.New("picking task already confirmed")
+	errOrderAlreadyCompleted   = errors.New("order already completed, cannot pick")
+	errInsufficientStock       = errors.New("insufficient stock")
+	errOrderAlreadyCompleted2  = errors.New("order already completed")
+	errOrderCancelled          = errors.New("order is cancelled")
+	errOrderNotInPickingStatus = errors.New("order is not in picking status")
 )
 
 type createOrderRequest struct {
@@ -47,6 +60,7 @@ func CreateOrder(c *gin.Context) {
 	createdBy, _ := userIDValue.(uint)
 
 	var createdOrder models.Order
+	// Transaction đảm bảo tạo order header + items là atomic.
 	txErr := config.DB.Transaction(func(tx *gorm.DB) error {
 		var bom models.BOM
 		if err := tx.First(&bom, req.BOMID).Error; err != nil {
@@ -65,7 +79,7 @@ func CreateOrder(c *gin.Context) {
 		order := models.Order{
 			OrderCode:    orderCode,
 			CustomerName: req.CustomerName,
-			Status:       "PENDING",
+			Status:       utils.OrderStatusPending,
 			TotalAmount:  0,
 			QRCode:       orderCode,
 		}
@@ -77,6 +91,7 @@ func CreateOrder(c *gin.Context) {
 			return err
 		}
 
+		// Nhân số lượng BOM với số lượng máy đặt để ra nhu cầu thực tế của order.
 		orderItems := make([]models.OrderItem, 0, len(bomItems))
 		for _, item := range bomItems {
 			orderItems = append(orderItems, models.OrderItem{
@@ -196,14 +211,15 @@ func ScanOrderForPicking(c *gin.Context) {
 	var updatedOrder models.Order
 	var tasks []models.PickingTask
 
+	// Transaction để đảm bảo scan order không sinh task trùng khi nhiều request đồng thời.
 	txErr := config.DB.Transaction(func(tx *gorm.DB) error {
 		var order models.Order
 		if err := tx.Where("order_code = ?", orderCode).First(&order).Error; err != nil {
 			return err
 		}
 
-		if order.Status == "COMPLETED" || order.Status == "CANCELLED" {
-			return errors.New("order already closed")
+		if order.Status == utils.OrderStatusCompleted || order.Status == utils.OrderStatusCancelled {
+			return errOrderAlreadyClosed
 		}
 
 		// Nếu order đã PICKING và đã có task rồi thì không tạo lại.
@@ -218,10 +234,10 @@ func ScanOrderForPicking(c *gin.Context) {
 				return err
 			}
 			if len(orderItems) == 0 {
-				return errors.New("order has no items")
+				return errOrderHasNoItems
 			}
 
-			// Mỗi order_item tương ứng 1 picking task.
+			// Mỗi order_item tương ứng 1 picking task để staff pick theo từng linh kiện.
 			tasks = make([]models.PickingTask, 0, len(orderItems))
 			for _, item := range orderItems {
 				var tray models.Tray
@@ -236,7 +252,7 @@ func ScanOrderForPicking(c *gin.Context) {
 					RequiredQuantity: item.Quantity,
 					PickedQuantity:   0,
 					Verified:         false,
-					Status:           "WAITING",
+					Status:           utils.PickingStatusWaiting,
 					AssignedTo:       &userID,
 				})
 			}
@@ -250,7 +266,7 @@ func ScanOrderForPicking(c *gin.Context) {
 			}
 		}
 
-		order.Status = "PICKING"
+		order.Status = utils.OrderStatusPicking
 		if err := tx.Save(&order).Error; err != nil {
 			return err
 		}
@@ -272,14 +288,14 @@ func ScanOrderForPicking(c *gin.Context) {
 			return
 		}
 
-		if txErr.Error() == "order already closed" {
+		if errors.Is(txErr, errOrderAlreadyClosed) {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "order already completed or cancelled",
 			})
 			return
 		}
 
-		if txErr.Error() == "order has no items" {
+		if errors.Is(txErr, errOrderHasNoItems) {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "order has no items",
 			})
@@ -337,6 +353,7 @@ func ConfirmPickingTask(c *gin.Context) {
 	userID, _ := userIDValue.(uint)
 
 	var responseTask models.PickingTask
+	// Transaction xuất kho: lock task + lock inventory + ghi log theo 1 đơn vị commit.
 	txErr := config.DB.Transaction(func(tx *gorm.DB) error {
 		var task models.PickingTask
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -344,16 +361,16 @@ func ConfirmPickingTask(c *gin.Context) {
 			return err
 		}
 
-		if task.Status == "DONE" {
-			return errors.New("picking task already confirmed")
+		if task.Status == utils.PickingStatusDone {
+			return errTaskAlreadyConfirmed
 		}
 
 		var order models.Order
 		if err := tx.Where("id = ?", task.OrderID).First(&order).Error; err != nil {
 			return err
 		}
-		if order.Status == "COMPLETED" {
-			return errors.New("order already completed, cannot pick")
+		if order.Status == utils.OrderStatusCompleted {
+			return errOrderAlreadyCompleted
 		}
 
 		var tray models.Tray
@@ -364,8 +381,12 @@ func ConfirmPickingTask(c *gin.Context) {
 			return fmt.Errorf("wrong location. Expected: %s, Got: %s", tray.TrayCode, req.TrayCode)
 		}
 
-		if req.Quantity > task.RequiredQuantity {
-			return fmt.Errorf("quantity exceeds required amount (max: %d)", task.RequiredQuantity)
+		remainingRequired := task.RequiredQuantity - task.PickedQuantity
+		if remainingRequired <= 0 {
+			return errTaskAlreadyConfirmed
+		}
+		if req.Quantity > remainingRequired {
+			return fmt.Errorf("quantity exceeds required amount (max: %d)", remainingRequired)
 		}
 
 		var inventory models.Inventory
@@ -375,8 +396,9 @@ func ConfirmPickingTask(c *gin.Context) {
 			return err
 		}
 
+		// Không cho xuất vượt tồn kho thực tế.
 		if req.Quantity > inventory.Quantity {
-			return errors.New("insufficient stock")
+			return errInsufficientStock
 		}
 
 		beforeQty := inventory.Quantity
@@ -387,9 +409,14 @@ func ConfirmPickingTask(c *gin.Context) {
 			return err
 		}
 
-		task.PickedQuantity = req.Quantity
+		task.PickedQuantity = task.PickedQuantity + req.Quantity
 		task.Verified = true
-		task.Status = "DONE"
+		if task.PickedQuantity >= task.RequiredQuantity {
+			task.Status = utils.PickingStatusDone
+		} else {
+			// Chưa lấy đủ số lượng yêu cầu thì giữ trạng thái PICKING.
+			task.Status = utils.PickingStatusPicking
+		}
 		if err := tx.Save(&task).Error; err != nil {
 			return err
 		}
@@ -410,7 +437,7 @@ func ConfirmPickingTask(c *gin.Context) {
 		}
 
 		stockTx := models.StockTransaction{
-			TransactionType: "EXPORT",
+			TransactionType: utils.StockTxTypeExport,
 			ProductID:       task.ProductID,
 			TrayID:          &trayID,
 			Quantity:        req.Quantity,
@@ -426,18 +453,18 @@ func ConfirmPickingTask(c *gin.Context) {
 			return err
 		}
 
-		// Nếu tất cả task đã done thì hoàn tất order
+		// Nếu tất cả task đã done thì hoàn tất order tự động.
 		var remaining int64
 		if err := tx.Model(&models.PickingTask{}).
-			Where("order_id = ? AND status <> ?", task.OrderID, "DONE").
+			Where("order_id = ? AND status <> ?", task.OrderID, utils.PickingStatusDone).
 			Count(&remaining).Error; err != nil {
 			return err
 		}
 		if remaining == 0 {
-			if err := tx.Model(&order).Update("status", "COMPLETED").Error; err != nil {
+			if err := tx.Model(&order).Update("status", utils.OrderStatusCompleted).Error; err != nil {
 				return err
 			}
-			order.Status = "COMPLETED"
+			order.Status = utils.OrderStatusCompleted
 		}
 
 		responseTask = task
@@ -451,13 +478,13 @@ func ConfirmPickingTask(c *gin.Context) {
 			})
 			return
 		}
-		if txErr.Error() == "picking task already confirmed" {
+		if errors.Is(txErr, errTaskAlreadyConfirmed) {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "picking task already confirmed",
 			})
 			return
 		}
-		if txErr.Error() == "order already completed, cannot pick" {
+		if errors.Is(txErr, errOrderAlreadyCompleted) {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "order already completed, cannot pick",
 			})
@@ -475,7 +502,7 @@ func ConfirmPickingTask(c *gin.Context) {
 			})
 			return
 		}
-		if txErr.Error() == "insufficient stock" {
+		if errors.Is(txErr, errInsufficientStock) {
 			c.JSON(http.StatusConflict, gin.H{
 				"error": "insufficient stock",
 			})
@@ -489,8 +516,121 @@ func ConfirmPickingTask(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "picking task confirmed successfully",
-		"task":    responseTask,
+		"message":            "picking task confirmed successfully",
+		"task":               responseTask,
+		"remaining_quantity": responseTask.RequiredQuantity - responseTask.PickedQuantity,
+	})
+}
+
+// POST /orders/:id/finish
+// Kết thúc order thủ công. Nếu còn task chưa đủ số lượng thì trả cảnh báo thiếu.
+func FinishOrder(c *gin.Context) {
+	orderIDRaw := c.Param("id")
+	orderID, err := strconv.ParseUint(orderIDRaw, 10, 64)
+	if err != nil || orderID == 0 {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"error": "invalid order id",
+		})
+		return
+	}
+
+	var shortageItems []gin.H
+	var updatedOrder models.Order
+
+	// Finish thủ công: cho phép chốt đơn dù thiếu, nhưng trả cảnh báo shortage rõ ràng.
+	txErr := config.DB.Transaction(func(tx *gorm.DB) error {
+		var order models.Order
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&order, uint(orderID)).Error; err != nil {
+			return err
+		}
+
+		if order.Status == utils.OrderStatusCompleted {
+			return errOrderAlreadyCompleted2
+		}
+		if order.Status == utils.OrderStatusCancelled {
+			return errOrderCancelled
+		}
+		// Chỉ cho phép finish ở trạng thái PICKING để tránh đóng nhầm order vừa tạo.
+		if order.Status != utils.OrderStatusPicking {
+			return errOrderNotInPickingStatus
+		}
+
+		var tasks []models.PickingTask
+		if err := tx.Where("order_id = ?", order.ID).Order("id ASC").Find(&tasks).Error; err != nil {
+			return err
+		}
+
+		for _, task := range tasks {
+			if task.PickedQuantity < task.RequiredQuantity {
+				shortageItems = append(shortageItems, gin.H{
+					"picking_task_id": task.ID,
+					"product_id":      task.ProductID,
+					"required_qty":    task.RequiredQuantity,
+					"picked_qty":      task.PickedQuantity,
+					"missing_qty":     task.RequiredQuantity - task.PickedQuantity,
+				})
+			}
+		}
+
+		order.Status = utils.OrderStatusCompleted
+		if err := tx.Save(&order).Error; err != nil {
+			return err
+		}
+
+		updatedOrder = order
+		return nil
+	})
+
+	if txErr != nil {
+		if errors.Is(txErr, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "order not found",
+			})
+			return
+		}
+		if errors.Is(txErr, errOrderAlreadyCompleted2) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "order already completed",
+			})
+			return
+		}
+		if errors.Is(txErr, errOrderCancelled) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "order is cancelled",
+			})
+			return
+		}
+		if errors.Is(txErr, errOrderNotInPickingStatus) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "order must be in PICKING status before finish",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": txErr.Error(),
+		})
+		return
+	}
+
+	if len(shortageItems) > 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "order completed with shortage",
+			"order":   updatedOrder,
+			"shortage": gin.H{
+				"has_shortage": true,
+				"items":        shortageItems,
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "order completed successfully",
+		"order":   updatedOrder,
+		"shortage": gin.H{
+			"has_shortage": false,
+			"items":        []any{},
+		},
 	})
 }
 
@@ -571,7 +711,7 @@ func GetOrderProgress(c *gin.Context) {
 
 	var done int64
 	if err := config.DB.Model(&models.PickingTask{}).
-		Where("order_id = ? AND status = ?", order.ID, "DONE").
+		Where("order_id = ? AND status = ?", order.ID, utils.PickingStatusDone).
 		Count(&done).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -585,10 +725,10 @@ func GetOrderProgress(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"order_id":    order.ID,
+		"order_id":     order.ID,
 		"order_status": order.Status,
-		"done_tasks":  done,
-		"total_tasks": total,
-		"progress":    percent,
+		"done_tasks":   done,
+		"total_tasks":  total,
+		"progress":     percent,
 	})
 }

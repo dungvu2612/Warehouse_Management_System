@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"quan_ly_kho/config"
 	"quan_ly_kho/models"
+	"quan_ly_kho/utils"
 	"strconv"
 	"time"
 
@@ -21,8 +22,8 @@ type createImportReceiptItemRequest struct {
 }
 
 type createImportReceiptRequest struct {
-	SupplierName string                         `json:"supplier_name"`
-	Note         string                         `json:"note"`
+	SupplierName string                           `json:"supplier_name"`
+	Note         string                           `json:"note"`
 	Items        []createImportReceiptItemRequest `json:"items" binding:"required,min=1,dive"`
 }
 
@@ -56,6 +57,12 @@ func CreateImportReceipt(c *gin.Context) {
 	var createdReceipt models.ImportReceipt
 	var createdItems []models.ImportReceiptItem
 
+	// Transaction nhập kho:
+	// 1) tạo receipt
+	// 2) cộng/tạo inventory
+	// 3) ghi receipt items
+	// 4) ghi stock transaction IMPORT
+	// => tất cả thành công hoặc rollback toàn bộ.
 	txErr := config.DB.Transaction(func(tx *gorm.DB) error {
 		receiptCode := fmt.Sprintf("IMP-%d", time.Now().UnixNano())
 		receipt := models.ImportReceipt{
@@ -88,7 +95,8 @@ func CreateImportReceipt(c *gin.Context) {
 				return err
 			}
 
-			// lock inventory row nếu có, nếu chưa có thì tạo mới
+			// Lock row inventory để tránh race condition khi nhập cùng lúc.
+			// Nếu chưa có row thì tạo mới theo cặp (product_id, tray_id).
 			var inventory models.Inventory
 			findErr := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 				Where("product_id = ? AND tray_id = ?", item.ProductID, item.TrayID).
@@ -110,6 +118,7 @@ func CreateImportReceipt(c *gin.Context) {
 					return err
 				}
 			} else {
+				// Row đã tồn tại thì cộng dồn tồn kho.
 				beforeQty = inventory.Quantity
 				inventory.Quantity = inventory.Quantity + item.Quantity
 				afterQty = inventory.Quantity
@@ -131,7 +140,7 @@ func CreateImportReceipt(c *gin.Context) {
 
 			trayID := item.TrayID
 			stockTx := models.StockTransaction{
-				TransactionType: "IMPORT",
+				TransactionType: utils.StockTxTypeImport,
 				ProductID:       item.ProductID,
 				TrayID:          &trayID,
 				Quantity:        item.Quantity,

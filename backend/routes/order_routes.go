@@ -17,6 +17,8 @@ func OrderRoutes(r *gin.Engine) {
 		orders.POST("/scan", middleware.RequireRoles("ADMIN", "STAFF"), handlers.ScanOrderForPicking)
 		// Staff xác nhận từng picking task sau khi quét đúng tray.
 		orders.PATCH("/picking-tasks/:id/confirm", middleware.RequireRoles("ADMIN", "STAFF"), handlers.ConfirmPickingTask)
+		// Kết thúc đơn thủ công (có thể kèm cảnh báo thiếu hàng).
+		orders.POST("/:id/finish", middleware.RequireRoles("ADMIN", "STAFF"), handlers.FinishOrder)
 		orders.GET("/:id/picking-tasks", middleware.RequireRoles("ADMIN", "STAFF"), handlers.GetOrderPickingTasks)
 		orders.GET("/:id/progress", middleware.RequireRoles("ADMIN", "STAFF"), handlers.GetOrderProgress)
 		// Xem order cho ADMIN và STAFF.

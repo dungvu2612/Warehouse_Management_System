@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"quan_ly_kho/config"
 	"quan_ly_kho/models"
+	"quan_ly_kho/utils"
 	"strconv"
 	"strings"
 
@@ -192,7 +193,7 @@ func AdjustInventory(c *gin.Context) {
 
 		trayID := inventory.TrayID
 		transaction := models.StockTransaction{
-			TransactionType: "ADJUST",
+			TransactionType: utils.StockTxTypeAdjust,
 			ProductID:       inventory.ProductID,
 			TrayID:          &trayID,
 			Quantity:        req.Delta,
