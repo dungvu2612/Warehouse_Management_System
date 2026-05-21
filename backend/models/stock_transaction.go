@@ -15,3 +15,7 @@ type StockTransaction struct {
 	CreatedBy       *uint     `json:"created_by"`
 	CreatedAt       time.Time `json:"created_at"`
 }
+
+func (StockTransaction) TableName() string {
+	return "stock_transactions"
+}

@@ -12,3 +12,6 @@ type OrderItem struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+func (OrderItem) TableName() string {
+	return "order_items"
+}

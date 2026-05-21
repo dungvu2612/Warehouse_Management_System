@@ -17,3 +17,6 @@ type BOM struct {
 	Items   []BOMItem `gorm:"foreignKey:BOMID;references:ID" json:"items,omitempty"`
 }
 
+func (BOM) TableName() string {
+	return "boms"
+}

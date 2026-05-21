@@ -17,3 +17,6 @@ type BOMItem struct {
 	ComponentProduct Product `gorm:"foreignKey:ComponentProductID;references:ID" json:"component_product,omitempty"`
 }
 
+func (BOMItem) TableName() string {
+	return "bom_items"
+}

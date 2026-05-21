@@ -16,3 +16,6 @@ type Order struct {
 	Items []OrderItem `gorm:"foreignKey:OrderID;references:ID" json:"items,omitempty"`
 }
 
+func (Order) TableName() string {
+	return "orders"
+}

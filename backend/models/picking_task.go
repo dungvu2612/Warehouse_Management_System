@@ -16,3 +16,6 @@ type PickingTask struct {
 	UpdatedAt        time.Time `json:"updated_at"`
 }
 
+func (PickingTask) TableName() string {
+	return "picking_tasks"
+}

@@ -28,6 +28,25 @@ var (
 	errOrderNotInPickingStatus = errors.New("order is not in picking status")
 )
 
+// wrongTrayError dùng để trả message rõ ràng khi worker scan sai tray.
+type wrongTrayError struct {
+	Expected string
+	Got      string
+}
+
+func (e wrongTrayError) Error() string {
+	return fmt.Sprintf("wrong tray. Expected: %s, Got: %s", e.Expected, e.Got)
+}
+
+// quantityExceededError dùng khi nhập số lượng vượt quá phần còn lại cần lấy.
+type quantityExceededError struct {
+	Max int
+}
+
+func (e quantityExceededError) Error() string {
+	return fmt.Sprintf("quantity exceeds required amount (max: %d)", e.Max)
+}
+
 type createOrderRequest struct {
 	BOMID        uint   `json:"bom_id" binding:"required,gt=0"`
 	MachineQty   int    `json:"machine_qty" binding:"required,gt=0"`
@@ -378,7 +397,7 @@ func ConfirmPickingTask(c *gin.Context) {
 			return err
 		}
 		if !strings.EqualFold(tray.TrayCode, req.TrayCode) {
-			return fmt.Errorf("wrong location. Expected: %s, Got: %s", tray.TrayCode, req.TrayCode)
+			return wrongTrayError{Expected: tray.TrayCode, Got: req.TrayCode}
 		}
 
 		remainingRequired := task.RequiredQuantity - task.PickedQuantity
@@ -386,7 +405,7 @@ func ConfirmPickingTask(c *gin.Context) {
 			return errTaskAlreadyConfirmed
 		}
 		if req.Quantity > remainingRequired {
-			return fmt.Errorf("quantity exceeds required amount (max: %d)", remainingRequired)
+			return quantityExceededError{Max: remainingRequired}
 		}
 
 		var inventory models.Inventory
@@ -490,15 +509,17 @@ func ConfirmPickingTask(c *gin.Context) {
 			})
 			return
 		}
-		if strings.HasPrefix(txErr.Error(), "wrong location.") {
+		var wrongTrayErr wrongTrayError
+		if errors.As(txErr, &wrongTrayErr) {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": txErr.Error(),
+				"error": wrongTrayErr.Error(),
 			})
 			return
 		}
-		if strings.HasPrefix(txErr.Error(), "quantity exceeds required amount") {
+		var qtyErr quantityExceededError
+		if errors.As(txErr, &qtyErr) {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": txErr.Error(),
+				"error": qtyErr.Error(),
 			})
 			return
 		}

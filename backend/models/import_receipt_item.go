@@ -13,3 +13,6 @@ type ImportReceiptItem struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+func (ImportReceiptItem) TableName() string {
+	return "import_receipt_items"
+}
