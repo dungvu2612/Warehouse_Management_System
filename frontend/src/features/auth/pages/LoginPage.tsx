@@ -3,6 +3,7 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   IconButton,
   InputAdornment,
   Paper,
@@ -60,58 +61,108 @@ export function LoginPage() {
     <Box
       sx={{
         minHeight: '100vh',
-        display: 'grid',
-        placeItems: 'center',
-        p: 2,
-        background: 'linear-gradient(135deg, #f5f7fb 0%, #e8eef8 100%)',
+        p: { xs: 2, md: 3 },
+        background: 'linear-gradient(135deg, #e2e8f0 0%, #f8fafc 45%, #dbeafe 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
-      <Paper sx={{ width: 440, maxWidth: '100%', p: 3.5 }} elevation={3}>
-        <Typography variant="h5" sx={{ fontWeight: 700 }} gutterBottom>
-          Đăng nhập WMS
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Tài khoản được tạo bởi ADMIN hệ thống.
-        </Typography>
+      <Paper
+        elevation={0}
+        sx={{
+          width: '100%',
+          maxWidth: 980,
+          minHeight: 560,
+          borderRadius: 4,
+          overflow: 'hidden',
+          border: '1px solid #cbd5e1',
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: '1.1fr 1fr' },
+          bgcolor: 'white',
+        }}
+      >
+        {/* Khối trái: branding + mô tả ngữ cảnh nghiệp vụ */}
+        <Box
+          sx={{
+            p: { xs: 3, md: 5 },
+            background: 'linear-gradient(165deg, #0f172a 0%, #1e293b 55%, #2563eb 130%)',
+            color: 'white',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Box>
+            <Chip label="WMS ENTERPRISE" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.12)', color: 'white', fontWeight: 800 }} />
+            <Typography variant="h4" sx={{ fontWeight: 900, mt: 2 }}>
+              STITCHHUB
+            </Typography>
+            <Typography variant="h6" sx={{ opacity: 0.92 }}>
+              Warehouse Control Portal
+            </Typography>
+          </Box>
 
-        <Stack component="form" spacing={2} onSubmit={onSubmit}>
-          <TextField
-            label="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            fullWidth
-          />
+          <Stack spacing={1.2} sx={{ mt: 4 }}>
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+              Theo dõi tồn kho, quản lý BOM, điều phối picking và kiểm toán giao dịch trong một hệ thống tập trung.
+            </Typography>
+            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+              Luồng đăng nhập này dành cho tài khoản do ADMIN cấp phát.
+            </Typography>
+          </Stack>
+        </Box>
 
-          <TextField
-            label="Password"
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            fullWidth
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    {/* Nút mắt: bật/tắt hiển thị mật khẩu để user nhập dễ hơn */}
-                    <IconButton
-                      edge="end"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      aria-label="toggle password visibility"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
+        {/* Khối phải: form đăng nhập */}
+        <Box sx={{ p: { xs: 3, md: 5 }, display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ width: '100%' }}>
+            <Typography variant="h5" sx={{ fontWeight: 800 }} gutterBottom>
+              Đăng nhập hệ thống
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+              Vui lòng nhập thông tin tài khoản để tiếp tục.
+            </Typography>
 
-          {error && <Alert severity="error">{error}</Alert>}
+            <Stack component="form" spacing={2} onSubmit={onSubmit}>
+              <TextField
+                label="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                fullWidth
+              />
 
-          <Button type="submit" variant="contained" size="large" disabled={loading}>
-            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-          </Button>
-        </Stack>
+              <TextField
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                fullWidth
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        {/* Nút mắt: bật/tắt hiển thị mật khẩu để user nhập dễ hơn */}
+                        <IconButton
+                          edge="end"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          aria-label="toggle password visibility"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+
+              {error && <Alert severity="error">{error}</Alert>}
+
+              <Button type="submit" variant="contained" size="large" disabled={loading} sx={{ py: 1.2 }}>
+                {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+              </Button>
+            </Stack>
+          </Box>
+        </Box>
       </Paper>
     </Box>
   )

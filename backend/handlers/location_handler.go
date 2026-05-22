@@ -1,13 +1,41 @@
 package handlers
 
+/*
+Mo ta file:
+- File nay la transport layer HTTP cho module 'location'.
+- Trach nhiem: bind request, parse params, goi service, map domain error sang status code.
+
+Luong xu ly:
+1) Nhan request tu router va validate input o muc API.
+2) Goi service use-case tuong ung.
+3) Tra JSON response nhat quan cho frontend/PDA.
+
+Cac ham chinh:
+- NewLocationHandler
+- CreateLocation
+- GetLocations
+
+Luu y khi sua:
+- Uu tien giu on dinh API contract va ten error message neu frontend dang phu thuoc.
+*/
+
 import (
+	"errors"
 	"net/http"
-	"quan_ly_kho/config"
-	"quan_ly_kho/models"
-	"strings"
+
+	"quan_ly_kho/repositories"
+	"quan_ly_kho/services"
 
 	"github.com/gin-gonic/gin"
 )
+
+type LocationHandler struct {
+	service services.LocationService
+}
+
+func NewLocationHandler(service services.LocationService) *LocationHandler {
+	return &LocationHandler{service: service}
+}
 
 type locationRequest struct {
 	LocationCode string `json:"location_code" binding:"required,max=100"`
@@ -15,62 +43,36 @@ type locationRequest struct {
 	Description  string `json:"description"`
 }
 
-// POST /locations
-// Tạo vị trí/kệ mới trong kho
-func CreateLocation(c *gin.Context) {
+// CreateLocation tạo vị trí/kệ mới.
+func (h *LocationHandler) CreateLocation(c *gin.Context) {
 	var req locationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{
-			"error": err.Error(),
-		})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
 
-	req.LocationCode = strings.TrimSpace(req.LocationCode)
-	req.Shelf = strings.TrimSpace(req.Shelf)
-
-	if req.LocationCode == "" {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{
-			"error": "location_code is required",
-		})
-		return
-	}
-
-	location := models.Location{
-		LocationCode: req.LocationCode,
-		Shelf:        req.Shelf,
-		Description:  req.Description,
-		IsActive:     true,
-	}
-
-	if err := config.DB.Create(&location).Error; err != nil {
-		if isUniqueConstraintError(err) {
-			c.JSON(http.StatusConflict, gin.H{
-				"error": "location_code already exists",
-			})
-			return
+	location, err := h.service.Create(req.LocationCode, req.Shelf, req.Description)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrInvalidLocationPayload):
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		case errors.Is(err, repositories.ErrLocationCodeExists):
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
 		return
 	}
 
 	c.JSON(http.StatusCreated, location)
 }
 
-// GET /locations
-// Lấy danh sách vị trí đang active
-func GetLocations(c *gin.Context) {
-	var locations []models.Location
-
-	if err := config.DB.Where("is_active = ?", true).Find(&locations).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+// GetLocations lấy danh sách location active.
+func (h *LocationHandler) GetLocations(c *gin.Context) {
+	locations, err := h.service.GetAllActive()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
 	c.JSON(http.StatusOK, locations)
 }

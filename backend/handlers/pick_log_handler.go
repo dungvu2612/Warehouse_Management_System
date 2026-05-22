@@ -1,88 +1,50 @@
 package handlers
 
+/*
+Mo ta file:
+- File nay la transport layer HTTP cho module 'pick_log'.
+- Trach nhiem: bind request, parse params, goi service, map domain error sang status code.
+
+Luong xu ly:
+1) Nhan request tu router va validate input o muc API.
+2) Goi service use-case tuong ung.
+3) Tra JSON response nhat quan cho frontend/PDA.
+
+Cac ham chinh:
+- NewPickLogHandler
+- GetPickLogs
+
+Luu y khi sua:
+- Uu tien giu on dinh API contract va ten error message neu frontend dang phu thuoc.
+*/
+
 import (
 	"net/http"
-	"quan_ly_kho/config"
-	"quan_ly_kho/models"
-	"strconv"
-	"time"
+
+	"quan_ly_kho/services"
 
 	"github.com/gin-gonic/gin"
 )
 
-// GET /pick-logs
-// Xem audit log cho luồng picking, hỗ trợ filter theo order/staff/ngày.
-func GetPickLogs(c *gin.Context) {
-	var logs []models.PickLog
-	query := config.DB.Model(&models.PickLog{})
+type PickLogHandler struct {
+	service services.PickLogService
+}
 
-	// Filter theo đơn hàng để truy vết 1 phiên picking cụ thể.
-	if orderIDRaw := c.Query("order_id"); orderIDRaw != "" {
-		orderID, err := strconv.ParseUint(orderIDRaw, 10, 64)
-		if err != nil || orderID == 0 {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{
-				"error": "invalid order_id",
-			})
-			return
-		}
-		query = query.Where("order_id = ?", uint(orderID))
-	}
+func NewPickLogHandler(service services.PickLogService) *PickLogHandler {
+	return &PickLogHandler{service: service}
+}
 
-	// Filter theo nhân viên đã thao tác pick.
-	if pickedByRaw := c.Query("picked_by"); pickedByRaw != "" {
-		pickedBy, err := strconv.ParseUint(pickedByRaw, 10, 64)
-		if err != nil || pickedBy == 0 {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{
-				"error": "invalid picked_by",
-			})
-			return
-		}
-		query = query.Where("picked_by = ?", uint(pickedBy))
-	}
-
-	// date_from/date_to dùng format YYYY-MM-DD để team vận hành dễ nhập.
-	if dateFromRaw := c.Query("date_from"); dateFromRaw != "" {
-		dateFrom, err := time.Parse("2006-01-02", dateFromRaw)
-		if err != nil {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{
-				"error": "invalid date_from format, expected YYYY-MM-DD",
-			})
-			return
-		}
-		query = query.Where("picked_at >= ?", dateFrom)
-	}
-
-	if dateToRaw := c.Query("date_to"); dateToRaw != "" {
-		dateTo, err := time.Parse("2006-01-02", dateToRaw)
-		if err != nil {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{
-				"error": "invalid date_to format, expected YYYY-MM-DD",
-			})
-			return
-		}
-		// include hết ngày date_to (đến 23:59:59).
-		query = query.Where("picked_at < ?", dateTo.Add(24*time.Hour))
-	}
-
-	// Giới hạn số bản ghi trả về để tránh query quá nặng.
-	limit := 50
-	if limitRaw := c.Query("limit"); limitRaw != "" {
-		parsedLimit, err := strconv.Atoi(limitRaw)
-		if err != nil || parsedLimit <= 0 || parsedLimit > 200 {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{
-				"error": "invalid limit (1-200)",
-			})
-			return
-		}
-		limit = parsedLimit
-	}
-
-	if err := query.Order("picked_at DESC").Limit(limit).Find(&logs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+func (h *PickLogHandler) GetPickLogs(c *gin.Context) {
+	logs, err := h.service.GetByFilters(services.PickLogQuery{
+		OrderIDRaw:  c.Query("order_id"),
+		PickedByRaw: c.Query("picked_by"),
+		DateFromRaw: c.Query("date_from"),
+		DateToRaw:   c.Query("date_to"),
+		LimitRaw:    c.Query("limit"),
+	})
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
-
 	c.JSON(http.StatusOK, logs)
 }

@@ -1,8 +1,9 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from '../layouts/AppLayout'
 import { LoginPage } from '../features/auth/pages/LoginPage'
-import { PagePlaceholder } from '../pages/Placeholders'
+import { DashboardMock, PagePlaceholder } from '../pages/Placeholders'
 import { PrivateRoute, PublicRoute } from '../shared/router/guards'
+import { ProductsPage } from '../features/products/pages/ProductsPage'
 
 // Cấu hình toàn bộ route của app.
 export const router = createBrowserRouter([
@@ -28,8 +29,8 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/dashboard" replace /> },
 
       // Các route nghiệp vụ (tạm placeholder, sẽ thay bằng page thật ở phần tiếp theo).
-      { path: 'dashboard', element: <PagePlaceholder title="Dashboard" /> },
-      { path: 'products', element: <PagePlaceholder title="Products" /> },
+      { path: 'dashboard', element: <DashboardMock /> },
+      { path: 'products', element: <ProductsPage /> },
       { path: 'locations', element: <PagePlaceholder title="Locations" /> },
       { path: 'trays', element: <PagePlaceholder title="Trays" /> },
       { path: 'inventory', element: <PagePlaceholder title="Inventory" /> },

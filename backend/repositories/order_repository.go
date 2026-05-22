@@ -1,0 +1,561 @@
+package repositories
+
+/*
+Mo ta file:
+- File nay la data-access layer cho module 'order'.
+- Trach nhiem: query/transaction DB, lock row (neu can), map loi DB sang domain error.
+
+Luong xu ly:
+1) Nhan filter/input tu service.
+2) Thuc thi thao tac GORM/SQL (co transaction neu nghiep vu nhieu buoc).
+3) Tra model hoac domain error cho service.
+
+Cac ham chinh:
+- NewOrderRepository
+- CreateFromBOM
+- FindAll
+- FindByIDWithItems
+- ScanForPicking
+- ConfirmPickingTask
+- FinishOrder
+- FindPickingTasksByOrderID
+- GetOrderProgress
+
+Luu y khi sua:
+- Day la file transaction trong tam cua he thong (create/scan/confirm/finish).
+- Khong bo lock row trong cac buoc tru ton va cap nhat task/order de tranh race condition.
+*/
+
+import (
+	"errors"
+	"fmt"
+	"strings"
+	"time"
+
+	"quan_ly_kho/models"
+	"quan_ly_kho/utils"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
+
+// OrderProgressSummary biểu diễn tiến độ picking của 1 order.
+type OrderProgressSummary struct {
+	OrderID     uint
+	OrderStatus string
+	DoneTasks   int64
+	TotalTasks  int64
+	Progress    float64
+}
+
+// OrderShortageItem biểu diễn 1 dòng thiếu hàng khi finish thủ công.
+type OrderShortageItem struct {
+	PickingTaskID uint
+	ProductID     uint
+	RequiredQty   int
+	PickedQty     int
+	MissingQty    int
+}
+
+// OrderRepository định nghĩa lớp data-access cho module order/picking.
+type OrderRepository interface {
+	CreateFromBOM(bomID uint, machineQty int, customerName string, createdBy uint) (*models.Order, error)
+	FindAll(status *string) ([]models.Order, error)
+	FindByIDWithItems(orderID uint) (*models.Order, error)
+	ScanForPicking(orderCode string, userID uint) (*models.Order, []models.PickingTask, error)
+	ConfirmPickingTask(taskID uint, trayCode string, quantity int, note string, userID uint) (*models.PickingTask, error)
+	FinishOrder(orderID uint) (*models.Order, []OrderShortageItem, error)
+	FindPickingTasksByOrderID(orderID uint) (*models.Order, []models.PickingTask, error)
+	GetOrderProgress(orderID uint) (*OrderProgressSummary, error)
+}
+
+// Nhóm lỗi domain module order ở tầng repository.
+var (
+	ErrOrderEntityNotFound             = errors.New("order not found")
+	ErrOrderBOMNotFound                = errors.New("bom not found")
+	ErrOrderBOMHasNoItems              = errors.New("bom has no items")
+	ErrOrderAlreadyClosed              = errors.New("order already closed")
+	ErrOrderHasNoItems                 = errors.New("order has no items")
+	ErrPickingTaskAlreadyConfirmed     = errors.New("picking task already confirmed")
+	ErrOrderAlreadyCompletedCannotPick = errors.New("order already completed, cannot pick")
+	ErrOrderInsufficientStock          = errors.New("insufficient stock")
+	ErrOrderAlreadyCompleted           = errors.New("order already completed")
+	ErrOrderCancelled                  = errors.New("order is cancelled")
+	ErrOrderNotInPickingStatus         = errors.New("order is not in picking status")
+	ErrConfirmTaskDependencyNotFound   = errors.New("picking task or inventory not found")
+)
+
+// OrderWrongTrayError dùng để trả message rõ ràng khi scan sai khay.
+type OrderWrongTrayError struct {
+	Expected string
+	Got      string
+}
+
+func (e OrderWrongTrayError) Error() string {
+	return fmt.Sprintf("wrong tray. Expected: %s, Got: %s", e.Expected, e.Got)
+}
+
+// OrderQuantityExceededError dùng khi staff nhập qty lớn hơn phần còn lại cần pick.
+type OrderQuantityExceededError struct {
+	Max int
+}
+
+func (e OrderQuantityExceededError) Error() string {
+	return fmt.Sprintf("quantity exceeds required amount (max: %d)", e.Max)
+}
+
+type orderRepository struct {
+	db *gorm.DB
+}
+
+// NewOrderRepository khởi tạo repository cho module order.
+func NewOrderRepository(db *gorm.DB) OrderRepository {
+	return &orderRepository{db: db}
+}
+
+// CreateFromBOM tạo order header + order items dựa trên BOM trong cùng transaction.
+func (r *orderRepository) CreateFromBOM(bomID uint, machineQty int, customerName string, createdBy uint) (*models.Order, error) {
+	var createdOrder models.Order
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		// 1) Đọc BOM header.
+		var bom models.BOM
+		if err := tx.First(&bom, bomID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrOrderBOMNotFound
+			}
+			return err
+		}
+
+		// 2) Đọc BOM items để tính nhu cầu thực tế.
+		var bomItems []models.BOMItem
+		if err := tx.Where("bom_id = ?", bom.ID).Find(&bomItems).Error; err != nil {
+			return err
+		}
+		if len(bomItems) == 0 {
+			return ErrOrderBOMHasNoItems
+		}
+
+		// 3) Tạo order header với trạng thái PENDING.
+		orderCode := fmt.Sprintf("ORD-%d", time.Now().UnixNano())
+		order := models.Order{
+			OrderCode:    orderCode,
+			CustomerName: customerName,
+			Status:       utils.OrderStatusPending,
+			TotalAmount:  0,
+			QRCode:       orderCode,
+		}
+		if createdBy > 0 {
+			order.CreatedBy = &createdBy
+		}
+		if err := tx.Create(&order).Error; err != nil {
+			return err
+		}
+
+		// 4) Sinh order_items = BOM quantity * machineQty.
+		orderItems := make([]models.OrderItem, 0, len(bomItems))
+		for _, item := range bomItems {
+			orderItems = append(orderItems, models.OrderItem{
+				OrderID:   order.ID,
+				ProductID: item.ComponentProductID,
+				Quantity:  item.Quantity * machineQty,
+				UnitPrice: 0,
+			})
+		}
+		if err := tx.Create(&orderItems).Error; err != nil {
+			return err
+		}
+
+		// 5) Load lại order kèm items để trả response.
+		if err := tx.Preload("Items").First(&order, order.ID).Error; err != nil {
+			return err
+		}
+
+		createdOrder = order
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &createdOrder, nil
+}
+
+// FindAll lấy danh sách orders, hỗ trợ filter status.
+func (r *orderRepository) FindAll(status *string) ([]models.Order, error) {
+	var orders []models.Order
+	query := r.db.Model(&models.Order{}).Order("id DESC")
+
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+
+	if err := query.Find(&orders).Error; err != nil {
+		return nil, err
+	}
+	return orders, nil
+}
+
+// FindByIDWithItems lấy chi tiết order kèm order_items.
+func (r *orderRepository) FindByIDWithItems(orderID uint) (*models.Order, error) {
+	var order models.Order
+	if err := r.db.Preload("Items").First(&order, orderID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrOrderEntityNotFound
+		}
+		return nil, err
+	}
+	return &order, nil
+}
+
+// ScanForPicking quét order_code: sinh tasks nếu chưa có và chuyển order sang PICKING.
+func (r *orderRepository) ScanForPicking(orderCode string, userID uint) (*models.Order, []models.PickingTask, error) {
+	var updatedOrder models.Order
+	var tasks []models.PickingTask
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		// 1) Lock order row để tránh race condition quét đồng thời.
+		var order models.Order
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("order_code = ?", orderCode).
+			First(&order).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrOrderEntityNotFound
+			}
+			return err
+		}
+
+		// 2) Không cho quét order đã đóng.
+		if order.Status == utils.OrderStatusCompleted || order.Status == utils.OrderStatusCancelled {
+			return ErrOrderAlreadyClosed
+		}
+
+		// 3) Kiểm tra order đã có task chưa.
+		var existingTaskCount int64
+		if err := tx.Model(&models.PickingTask{}).Where("order_id = ?", order.ID).Count(&existingTaskCount).Error; err != nil {
+			return err
+		}
+
+		if existingTaskCount == 0 {
+			// 4) Nếu chưa có task thì đọc order_items để sinh tasks.
+			var orderItems []models.OrderItem
+			if err := tx.Where("order_id = ?", order.ID).Find(&orderItems).Error; err != nil {
+				return err
+			}
+			if len(orderItems) == 0 {
+				return ErrOrderHasNoItems
+			}
+
+			newTasks := make([]models.PickingTask, 0, len(orderItems))
+			for _, item := range orderItems {
+				// 5) Mỗi product lấy khay active đầu tiên để assign cho picking.
+				var tray models.Tray
+				if err := tx.Where("product_id = ? AND is_active = ?", item.ProductID, true).First(&tray).Error; err != nil {
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						return ErrOrderEntityNotFound
+					}
+					return err
+				}
+
+				assignedTo := userID
+				newTasks = append(newTasks, models.PickingTask{
+					OrderID:          order.ID,
+					ProductID:        item.ProductID,
+					TrayID:           tray.ID,
+					RequiredQuantity: item.Quantity,
+					PickedQuantity:   0,
+					Verified:         false,
+					Status:           utils.PickingStatusWaiting,
+					AssignedTo:       &assignedTo,
+				})
+			}
+
+			if err := tx.Create(&newTasks).Error; err != nil {
+				return err
+			}
+			tasks = newTasks
+		} else {
+			// 6) Nếu đã có task thì load lại để trả đầy đủ.
+			if err := tx.Where("order_id = ?", order.ID).Order("id ASC").Find(&tasks).Error; err != nil {
+				return err
+			}
+		}
+
+		// 7) Chuyển trạng thái order sang PICKING.
+		order.Status = utils.OrderStatusPicking
+		if err := tx.Save(&order).Error; err != nil {
+			return err
+		}
+
+		updatedOrder = order
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// 8) Phòng trường hợp hiếm tasks chưa có trong slice, load bổ sung.
+	if len(tasks) == 0 {
+		if err := r.db.Where("order_id = ?", updatedOrder.ID).Order("id ASC").Find(&tasks).Error; err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return &updatedOrder, tasks, nil
+}
+
+// ConfirmPickingTask xác nhận 1 lần pick: lock task + lock inventory + ghi logs.
+func (r *orderRepository) ConfirmPickingTask(taskID uint, trayCode string, quantity int, note string, userID uint) (*models.PickingTask, error) {
+	var responseTask models.PickingTask
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		// 1) Lock picking task để chống double-submit.
+		var task models.PickingTask
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&task, taskID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrConfirmTaskDependencyNotFound
+			}
+			return err
+		}
+
+		if task.Status == utils.PickingStatusDone {
+			return ErrPickingTaskAlreadyConfirmed
+		}
+
+		// 2) Đọc order để lấy reference code và validate trạng thái.
+		var order models.Order
+		if err := tx.Where("id = ?", task.OrderID).First(&order).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrConfirmTaskDependencyNotFound
+			}
+			return err
+		}
+		if order.Status == utils.OrderStatusCompleted {
+			return ErrOrderAlreadyCompletedCannotPick
+		}
+
+		// 3) Validate tray theo task và yêu cầu active.
+		var tray models.Tray
+		if err := tx.Where("id = ? AND is_active = ?", task.TrayID, true).First(&tray).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrConfirmTaskDependencyNotFound
+			}
+			return err
+		}
+		if !strings.EqualFold(tray.TrayCode, trayCode) {
+			return OrderWrongTrayError{Expected: tray.TrayCode, Got: trayCode}
+		}
+
+		// 4) Validate số lượng không vượt nhu cầu còn lại.
+		remainingRequired := task.RequiredQuantity - task.PickedQuantity
+		if remainingRequired <= 0 {
+			return ErrPickingTaskAlreadyConfirmed
+		}
+		if quantity > remainingRequired {
+			return OrderQuantityExceededError{Max: remainingRequired}
+		}
+
+		// 5) Lock inventory để trừ kho an toàn khi có concurrent picking.
+		var inventory models.Inventory
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("product_id = ? AND tray_id = ?", task.ProductID, task.TrayID).
+			First(&inventory).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrConfirmTaskDependencyNotFound
+			}
+			return err
+		}
+
+		if quantity > inventory.Quantity {
+			return ErrOrderInsufficientStock
+		}
+
+		beforeQty := inventory.Quantity
+		afterQty := inventory.Quantity - quantity
+
+		inventory.Quantity = afterQty
+		if err := tx.Save(&inventory).Error; err != nil {
+			return err
+		}
+
+		// 6) Cập nhật task theo số lượng đã pick.
+		task.PickedQuantity += quantity
+		task.Verified = true
+		if task.PickedQuantity >= task.RequiredQuantity {
+			task.Status = utils.PickingStatusDone
+		} else {
+			task.Status = utils.PickingStatusPicking
+		}
+		if err := tx.Save(&task).Error; err != nil {
+			return err
+		}
+
+		// 7) Ghi pick_logs để audit worker thao tác.
+		trayID := task.TrayID
+		pickedBy := userID
+		pickLog := models.PickLog{
+			PickingTaskID:  &task.ID,
+			OrderID:        &task.OrderID,
+			ProductID:      &task.ProductID,
+			TrayID:         &trayID,
+			PickedQuantity: quantity,
+			PickedBy:       &pickedBy,
+			Note:           note,
+		}
+		if err := tx.Create(&pickLog).Error; err != nil {
+			return err
+		}
+
+		// 8) Ghi stock_transactions loại EXPORT.
+		stockTx := models.StockTransaction{
+			TransactionType: utils.StockTxTypeExport,
+			ProductID:       task.ProductID,
+			TrayID:          &trayID,
+			Quantity:        quantity,
+			BeforeQuantity:  beforeQty,
+			AfterQuantity:   afterQty,
+			ReferenceCode:   order.OrderCode,
+			Note:            note,
+		}
+		if userID > 0 {
+			stockTx.CreatedBy = &userID
+		}
+		if err := tx.Create(&stockTx).Error; err != nil {
+			return err
+		}
+
+		// 9) Nếu tất cả tasks đã done thì đóng order tự động.
+		var remaining int64
+		if err := tx.Model(&models.PickingTask{}).
+			Where("order_id = ? AND status <> ?", task.OrderID, utils.PickingStatusDone).
+			Count(&remaining).Error; err != nil {
+			return err
+		}
+		if remaining == 0 {
+			if err := tx.Model(&order).Update("status", utils.OrderStatusCompleted).Error; err != nil {
+				return err
+			}
+		}
+
+		responseTask = task
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &responseTask, nil
+}
+
+// FinishOrder đóng đơn thủ công, đồng thời trả danh sách thiếu hàng (nếu có).
+func (r *orderRepository) FinishOrder(orderID uint) (*models.Order, []OrderShortageItem, error) {
+	var updatedOrder models.Order
+	shortageItems := make([]OrderShortageItem, 0)
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		// 1) Lock order row để finish an toàn.
+		var order models.Order
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&order, orderID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrOrderEntityNotFound
+			}
+			return err
+		}
+
+		if order.Status == utils.OrderStatusCompleted {
+			return ErrOrderAlreadyCompleted
+		}
+		if order.Status == utils.OrderStatusCancelled {
+			return ErrOrderCancelled
+		}
+		if order.Status != utils.OrderStatusPicking {
+			return ErrOrderNotInPickingStatus
+		}
+
+		// 2) Lấy toàn bộ task để tính thiếu hàng.
+		var tasks []models.PickingTask
+		if err := tx.Where("order_id = ?", order.ID).Order("id ASC").Find(&tasks).Error; err != nil {
+			return err
+		}
+
+		for _, task := range tasks {
+			if task.PickedQuantity < task.RequiredQuantity {
+				shortageItems = append(shortageItems, OrderShortageItem{
+					PickingTaskID: task.ID,
+					ProductID:     task.ProductID,
+					RequiredQty:   task.RequiredQuantity,
+					PickedQty:     task.PickedQuantity,
+					MissingQty:    task.RequiredQuantity - task.PickedQuantity,
+				})
+			}
+		}
+
+		// 3) Chốt đơn completed.
+		order.Status = utils.OrderStatusCompleted
+		if err := tx.Save(&order).Error; err != nil {
+			return err
+		}
+
+		updatedOrder = order
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &updatedOrder, shortageItems, nil
+}
+
+// FindPickingTasksByOrderID lấy order + danh sách picking tasks theo order id.
+func (r *orderRepository) FindPickingTasksByOrderID(orderID uint) (*models.Order, []models.PickingTask, error) {
+	var order models.Order
+	if err := r.db.First(&order, orderID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, ErrOrderEntityNotFound
+		}
+		return nil, nil, err
+	}
+
+	var tasks []models.PickingTask
+	if err := r.db.Where("order_id = ?", order.ID).Order("id ASC").Find(&tasks).Error; err != nil {
+		return nil, nil, err
+	}
+
+	return &order, tasks, nil
+}
+
+// GetOrderProgress trả tổng số tasks, số done và phần trăm tiến độ của order.
+func (r *orderRepository) GetOrderProgress(orderID uint) (*OrderProgressSummary, error) {
+	var order models.Order
+	if err := r.db.First(&order, orderID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrOrderEntityNotFound
+		}
+		return nil, err
+	}
+
+	var total int64
+	if err := r.db.Model(&models.PickingTask{}).Where("order_id = ?", order.ID).Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	var done int64
+	if err := r.db.Model(&models.PickingTask{}).
+		Where("order_id = ? AND status = ?", order.ID, utils.PickingStatusDone).
+		Count(&done).Error; err != nil {
+		return nil, err
+	}
+
+	percent := 0.0
+	if total > 0 {
+		percent = (float64(done) / float64(total)) * 100
+	}
+
+	return &OrderProgressSummary{
+		OrderID:     order.ID,
+		OrderStatus: order.Status,
+		DoneTasks:   done,
+		TotalTasks:  total,
+		Progress:    percent,
+	}, nil
+}

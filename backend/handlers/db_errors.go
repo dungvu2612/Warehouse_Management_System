@@ -1,5 +1,22 @@
 package handlers
 
+/*
+Mo ta file:
+- File nay la transport layer HTTP cho module 'db_errors'.
+- Trach nhiem: bind request, parse params, goi service, map domain error sang status code.
+
+Luong xu ly:
+1) Nhan request tu router va validate input o muc API.
+2) Goi service use-case tuong ung.
+3) Tra JSON response nhat quan cho frontend/PDA.
+
+Cac ham chinh:
+- isUniqueConstraintError
+
+Luu y khi sua:
+- Utility file: uu tien giu behavior backward-compatible vi duoc dung o nhieu module.
+*/
+
 import (
 	"errors"
 	"strings"

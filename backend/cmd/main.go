@@ -15,6 +15,7 @@ func main() {
 	_ = godotenv.Load()
 
 	config.ConnectDatabase()
+	config.RunDatabaseMigrations()
 	config.SeedDefaultUsers()
 
 	r := gin.Default()
