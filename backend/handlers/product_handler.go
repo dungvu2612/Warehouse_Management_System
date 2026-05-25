@@ -15,6 +15,7 @@ Cac ham chinh:
 - parseProductID
 - toProductInput
 - mapProductServiceError
+- GetProductCodePreview
 - CreateProduct
 - GetProducts
 - GetProductByID
@@ -47,13 +48,13 @@ func NewProductHandler(service services.ProductService) *ProductHandler {
 
 // Request DTO cho layer HTTP.
 type productRequest struct {
-	ProductCode string  `json:"product_code" binding:"required,max=100"`
-	ProductName string  `json:"product_name" binding:"required,max=255"`
-	ProductType string  `json:"product_type" binding:"omitempty,max=30"`
-	Description string  `json:"description"`
-	Unit        string  `json:"unit" binding:"omitempty,max=50"`
-	MinStock    int     `json:"min_stock" binding:"gte=0"`
-	Price       float64 `json:"price" binding:"gte=0"`
+	ProductCode     string  `json:"product_code" binding:"omitempty,max=100"`
+	ProductName     string  `json:"product_name" binding:"required,max=255"`
+	ProductType     string  `json:"product_type" binding:"omitempty,max=30"`
+	Description     string  `json:"description"`
+	Unit            string  `json:"unit" binding:"omitempty,max=50"`
+	MinStock        int     `json:"min_stock" binding:"gte=0"`
+	Price           float64 `json:"price" binding:"gte=0"`
 }
 
 func parseProductID(c *gin.Context) (uint, bool) {
@@ -84,7 +85,7 @@ func mapProductServiceError(c *gin.Context, err error) {
 	case errors.Is(err, services.ErrInvalidProductType):
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 	case errors.Is(err, services.ErrInvalidProductPayload):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "product_code and product_name are required"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "product_name is required and numeric fields must be >= 0"})
 	case errors.Is(err, repositories.ErrProductEntityNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	case errors.Is(err, repositories.ErrProductEntityCodeExists):
@@ -92,6 +93,22 @@ func mapProductServiceError(c *gin.Context, err error) {
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
+}
+
+// GetProductCodePreview preview mã product_code dựa trên product_type + product_name.
+func (h *ProductHandler) GetProductCodePreview(c *gin.Context) {
+	productType := c.Query("product_type")
+	productName := c.Query("product_name")
+
+	code, err := h.service.PreviewCode(productType, productName)
+	if err != nil {
+		mapProductServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"product_code": code,
+	})
 }
 
 // CreateProduct tạo product mới (ADMIN).

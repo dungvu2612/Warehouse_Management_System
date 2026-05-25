@@ -31,6 +31,7 @@ import (
 
 	"quan_ly_kho/models"
 	"quan_ly_kho/repositories"
+	"quan_ly_kho/utils"
 )
 
 // OrderCreateInput là DTO tạo order ở layer service.
@@ -65,6 +66,57 @@ type OrderProgressResult struct {
 	Progress    float64
 }
 
+// OrderDetailTaskResult la DTO task da enrich du lieu san pham/vi tri/ton kho cho UI.
+type OrderDetailTaskResult struct {
+	ID               uint   `json:"id"`
+	OrderID          uint   `json:"order_id"`
+	ProductID        uint   `json:"product_id"`
+	ProductCode      string `json:"product_code"`
+	ProductName      string `json:"product_name"`
+	TrayID           uint   `json:"tray_id"`
+	TrayCode         string `json:"tray_code"`
+	LocationCode     string `json:"location_code"`
+	RequiredQuantity int    `json:"required_quantity"`
+	PickedQuantity   int    `json:"picked_quantity"`
+	InventoryQty     int    `json:"inventory_qty"`
+	Status           string `json:"status"`
+	Verified         bool   `json:"verified"`
+}
+
+// OrderDetailProgressResult la DTO progress trong chi tiet order.
+type OrderDetailProgressResult struct {
+	TotalTasks int     `json:"total_tasks"`
+	DoneTasks  int     `json:"done_tasks"`
+	Percent    float64 `json:"percent"`
+}
+
+// OrderDetailShortageItemResult la DTO canh bao thieu hang realtime.
+type OrderDetailShortageItemResult struct {
+	PickingTaskID uint   `json:"picking_task_id"`
+	ProductID     uint   `json:"product_id"`
+	ProductCode   string `json:"product_code"`
+	ProductName   string `json:"product_name"`
+	LocationCode  string `json:"location_code"`
+	RequiredQty   int    `json:"required_qty"`
+	PickedQty     int    `json:"picked_qty"`
+	AvailableQty  int    `json:"available_qty"`
+	MissingQty    int    `json:"missing_qty"`
+}
+
+// OrderDetailShortageResult gom flag va danh sach dong dang thieu hang.
+type OrderDetailShortageResult struct {
+	HasShortage bool                            `json:"has_shortage"`
+	Items       []OrderDetailShortageItemResult `json:"items"`
+}
+
+// OrderDetailResult la response contract cua GET /orders/:id.
+type OrderDetailResult struct {
+	Order        *models.Order             `json:"order"`
+	PickingTasks []OrderDetailTaskResult   `json:"picking_tasks"`
+	Progress     OrderDetailProgressResult `json:"progress"`
+	Shortage     OrderDetailShortageResult `json:"shortage"`
+}
+
 // OrderShortageItemResult là cấu trúc thiếu hàng khi finish thủ công.
 type OrderShortageItemResult struct {
 	PickingTaskID uint
@@ -78,7 +130,7 @@ type OrderShortageItemResult struct {
 type OrderService interface {
 	Create(input OrderCreateInput) (*models.Order, error)
 	GetAll(statusRaw string) ([]models.Order, error)
-	GetByID(orderID uint) (*models.Order, error)
+	GetByID(orderID uint) (*OrderDetailResult, error)
 	ScanForPicking(input OrderScanInput) (*models.Order, []models.PickingTask, error)
 	ConfirmPicking(input OrderConfirmPickingInput) (*models.PickingTask, int, error)
 	Finish(orderID uint) (*models.Order, []OrderShortageItemResult, error)
@@ -123,12 +175,80 @@ func (s *orderService) GetAll(statusRaw string) ([]models.Order, error) {
 	return s.repo.FindAll(&status)
 }
 
-// GetByID lấy 1 order + items theo id.
-func (s *orderService) GetByID(orderID uint) (*models.Order, error) {
+// GetByID lấy chi tiet order + picking tasks + progress + shortage realtime.
+func (s *orderService) GetByID(orderID uint) (*OrderDetailResult, error) {
 	if orderID == 0 {
 		return nil, ErrOrderInvalidID
 	}
-	return s.repo.FindByIDWithItems(orderID)
+
+	order, rows, err := s.repo.FindOrderDetailRows(orderID)
+	if err != nil {
+		return nil, err
+	}
+
+	tasks := make([]OrderDetailTaskResult, 0, len(rows))
+	shortageItems := make([]OrderDetailShortageItemResult, 0)
+	doneTasks := 0
+
+	for _, row := range rows {
+		task := OrderDetailTaskResult{
+			ID:               row.PickingTaskID,
+			OrderID:          row.OrderID,
+			ProductID:        row.ProductID,
+			ProductCode:      row.ProductCode,
+			ProductName:      row.ProductName,
+			TrayID:           row.TrayID,
+			TrayCode:         row.TrayCode,
+			LocationCode:     row.LocationCode,
+			RequiredQuantity: row.RequiredQuantity,
+			PickedQuantity:   row.PickedQuantity,
+			InventoryQty:     row.InventoryQty,
+			Status:           row.Status,
+			Verified:         row.Verified,
+		}
+		tasks = append(tasks, task)
+
+		if row.Status == utils.PickingStatusDone {
+			doneTasks++
+		}
+
+		remainingQty := row.RequiredQuantity - row.PickedQuantity
+		if remainingQty < 0 {
+			remainingQty = 0
+		}
+		if row.InventoryQty < remainingQty {
+			shortageItems = append(shortageItems, OrderDetailShortageItemResult{
+				PickingTaskID: row.PickingTaskID,
+				ProductID:     row.ProductID,
+				ProductCode:   row.ProductCode,
+				ProductName:   row.ProductName,
+				LocationCode:  row.LocationCode,
+				RequiredQty:   row.RequiredQuantity,
+				PickedQty:     row.PickedQuantity,
+				AvailableQty:  row.InventoryQty,
+				MissingQty:    remainingQty - row.InventoryQty,
+			})
+		}
+	}
+
+	percent := 0.0
+	if len(tasks) > 0 {
+		percent = (float64(doneTasks) / float64(len(tasks))) * 100
+	}
+
+	return &OrderDetailResult{
+		Order:        order,
+		PickingTasks: tasks,
+		Progress: OrderDetailProgressResult{
+			TotalTasks: len(tasks),
+			DoneTasks:  doneTasks,
+			Percent:    percent,
+		},
+		Shortage: OrderDetailShortageResult{
+			HasShortage: len(shortageItems) > 0,
+			Items:       shortageItems,
+		},
+	}, nil
 }
 
 // ScanForPicking xử lý quét order_code để vào luồng picking.

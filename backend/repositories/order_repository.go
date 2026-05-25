@@ -48,6 +48,23 @@ type OrderProgressSummary struct {
 	Progress    float64
 }
 
+// OrderDetailTaskRow la read-model phuc vu man chi tiet order/picking.
+type OrderDetailTaskRow struct {
+	PickingTaskID    uint
+	OrderID          uint
+	ProductID        uint
+	ProductCode      string
+	ProductName      string
+	TrayID           uint
+	TrayCode         string
+	LocationCode     string
+	RequiredQuantity int
+	PickedQuantity   int
+	InventoryQty     int
+	Status           string
+	Verified         bool
+}
+
 // OrderShortageItem biểu diễn 1 dòng thiếu hàng khi finish thủ công.
 type OrderShortageItem struct {
 	PickingTaskID uint
@@ -62,6 +79,7 @@ type OrderRepository interface {
 	CreateFromBOM(bomID uint, machineQty int, customerName string, createdBy uint) (*models.Order, error)
 	FindAll(status *string) ([]models.Order, error)
 	FindByIDWithItems(orderID uint) (*models.Order, error)
+	FindOrderDetailRows(orderID uint) (*models.Order, []OrderDetailTaskRow, error)
 	ScanForPicking(orderCode string, userID uint) (*models.Order, []models.PickingTask, error)
 	ConfirmPickingTask(taskID uint, trayCode string, quantity int, note string, userID uint) (*models.PickingTask, error)
 	FinishOrder(orderID uint) (*models.Order, []OrderShortageItem, error)
@@ -206,6 +224,47 @@ func (r *orderRepository) FindByIDWithItems(orderID uint) (*models.Order, error)
 		return nil, err
 	}
 	return &order, nil
+}
+
+// FindOrderDetailRows lay order va task rows da join product/tray/location/inventory.
+func (r *orderRepository) FindOrderDetailRows(orderID uint) (*models.Order, []OrderDetailTaskRow, error) {
+	var order models.Order
+	if err := r.db.Preload("Items").First(&order, orderID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, ErrOrderEntityNotFound
+		}
+		return nil, nil, err
+	}
+
+	var rows []OrderDetailTaskRow
+	err := r.db.Table("picking_tasks AS pt").
+		Select(`
+			pt.id AS picking_task_id,
+			pt.order_id AS order_id,
+			pt.product_id AS product_id,
+			COALESCE(p.product_code, '') AS product_code,
+			COALESCE(p.product_name, '') AS product_name,
+			pt.tray_id AS tray_id,
+			COALESCE(t.tray_code, '') AS tray_code,
+			COALESCE(l.location_code, '') AS location_code,
+			pt.required_quantity AS required_quantity,
+			pt.picked_quantity AS picked_quantity,
+			COALESCE(i.quantity, 0) AS inventory_qty,
+			pt.status AS status,
+			pt.verified AS verified
+		`).
+		Joins("LEFT JOIN products AS p ON p.id = pt.product_id").
+		Joins("LEFT JOIN trays AS t ON t.id = pt.tray_id").
+		Joins("LEFT JOIN locations AS l ON l.id = t.location_id").
+		Joins("LEFT JOIN inventory AS i ON i.product_id = pt.product_id AND i.tray_id = pt.tray_id").
+		Where("pt.order_id = ?", order.ID).
+		Order("pt.id ASC").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &order, rows, nil
 }
 
 // ScanForPicking quét order_code: sinh tasks nếu chưa có và chuyển order sang PICKING.

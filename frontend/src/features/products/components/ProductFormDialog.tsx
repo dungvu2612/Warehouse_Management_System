@@ -5,9 +5,9 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  MenuItem,
   Stack,
   TextField,
+  MenuItem,
 } from '@mui/material'
 import type { ProductPayload } from '../types/productTypes'
 
@@ -17,6 +17,7 @@ interface ProductFormDialogProps {
   form: ProductPayload
   errorMessage: string
   isSubmitting: boolean
+  isEditing: boolean
   onClose: () => void
   onSubmit: () => void
   onChange: (next: ProductPayload) => void
@@ -29,6 +30,7 @@ export function ProductFormDialog({
   form,
   errorMessage,
   isSubmitting,
+  isEditing,
   onClose,
   onSubmit,
   onChange,
@@ -39,9 +41,14 @@ export function ProductFormDialog({
       <DialogContent>
         <Stack spacing={1.6} sx={{ mt: 0.5 }}>
           <TextField
-            label="Mã sản phẩm"
+            label="Mã sản phẩm (tự sinh)"
             value={form.product_code}
-            onChange={(e) => onChange({ ...form, product_code: e.target.value })}
+            slotProps={{ input: { readOnly: true } }}
+            helperText={
+              isEditing
+                ? 'Mã đã phát hành, không thay đổi khi cập nhật.'
+                : 'Mã dự kiến theo tên + loại. Mã cuối cùng do backend cấp khi lưu.'
+            }
             fullWidth
           />
           <TextField
@@ -65,6 +72,7 @@ export function ProductFormDialog({
             <MenuItem value="COMPONENT">Linh kiện (COMPONENT)</MenuItem>
             <MenuItem value="FINISHED_GOOD">Thành phẩm (FINISHED_GOOD)</MenuItem>
           </TextField>
+
           <TextField
             label="Đơn vị"
             value={form.unit}

@@ -1,5 +1,5 @@
 import { http } from '../../../shared/lib/http'
-import type { Product, ProductPayload } from '../types/productTypes'
+import type { Product, ProductCodePreviewResponse, ProductPayload, ProductType } from '../types/productTypes'
 
 // Nhóm API thao tác với resource products.
 export const productsApi = {
@@ -15,6 +15,19 @@ export const productsApi = {
 
   updateProduct: async (id: number, payload: ProductPayload): Promise<Product> => {
     const { data } = await http.put<Product>(`/products/${id}`, payload)
+    return data
+  },
+
+  getProductCodePreview: async (
+    productType: ProductType,
+    productName: string,
+  ): Promise<ProductCodePreviewResponse> => {
+    const { data } = await http.get<ProductCodePreviewResponse>('/products/code-preview', {
+      params: {
+        product_type: productType,
+        product_name: productName,
+      },
+    })
     return data
   },
 

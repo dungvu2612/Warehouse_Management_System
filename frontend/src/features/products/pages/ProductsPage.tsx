@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Add, Refresh } from '@mui/icons-material'
 import { Alert, Box, Button, Chip, Paper, Stack, Tab, Tabs, TextField, Typography } from '@mui/material'
 import { useAuth } from '../../../app/providers/AuthProvider'
@@ -6,12 +6,14 @@ import { defaultProductForm } from '../constants/productForm'
 import {
   useCreateProductMutation,
   useDeleteProductMutation,
+  useProductCodePreviewQuery,
   useProductsQuery,
   useUpdateProductMutation,
 } from '../hooks/useProducts'
 import type { Product, ProductPayload, ProductType } from '../types/productTypes'
 import { mapProductApiError } from '../utils/productError'
 import { normalizeProductPayload, validateProductForm } from '../utils/productValidation'
+import { productService } from '../services/productService'
 import { ProductFormDialog } from '../components/ProductFormDialog'
 import { ProductTable } from '../components/ProductTable'
 
@@ -28,11 +30,30 @@ export function ProductsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [form, setForm] = useState<ProductPayload>(defaultProductForm)
+  const [debouncedProductName, setDebouncedProductName] = useState('')
   const [formError, setFormError] = useState('')
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
+  // Debounce 300ms để giảm số lượng request preview code khi user gõ nhanh.
+  useEffect(() => {
+    if (!dialogOpen || editingProduct) return
+
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedProductName(form.product_name)
+    }, 300)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [dialogOpen, editingProduct, form.product_name])
+
   // Data query.
   const productsQuery = useProductsQuery()
+  const previewQuery = useProductCodePreviewQuery(
+    form.product_type,
+    debouncedProductName,
+    dialogOpen && !editingProduct && debouncedProductName.trim().length > 0,
+  )
 
   // Mutations.
   const createMutation = useCreateProductMutation({
@@ -62,21 +83,26 @@ export function ProductsPage() {
   // Filter cục bộ cho UX search.
   const filteredProducts = useMemo(() => {
     const list = productsQuery.data || []
-    const keyword = search.trim().toLowerCase()
-    const typeFiltered = list.filter((p) => p.product_type === activeType)
-    if (!keyword) return typeFiltered
-
-    return typeFiltered.filter(
-      (p) =>
-        p.product_code.toLowerCase().includes(keyword) ||
-        p.product_name.toLowerCase().includes(keyword) ||
-        p.unit.toLowerCase().includes(keyword),
-    )
+    return productService.filterProductsByTypeAndKeyword(list, activeType, search)
   }, [productsQuery.data, search, activeType])
+
+  // Preview product_code realtime tu backend khi tao moi.
+  useEffect(() => {
+    if (editingProduct) return
+    const preview = previewQuery.data?.product_code || ''
+    if (!preview) return
+    setForm((prev) => {
+      if (prev.product_code === preview) return prev
+      return { ...prev, product_code: preview }
+    })
+  }, [previewQuery.data?.product_code, editingProduct])
 
   const openCreateDialog = () => {
     setEditingProduct(null)
-    setForm({ ...defaultProductForm, product_type: activeType })
+    setForm({
+      ...defaultProductForm,
+      product_type: activeType,
+    })
     setFormError('')
     setDialogOpen(true)
   }
@@ -202,6 +228,7 @@ export function ProductsPage() {
         onClose={() => setDialogOpen(false)}
         onSubmit={handleSubmit}
         isSubmitting={createMutation.isPending || updateMutation.isPending}
+        isEditing={Boolean(editingProduct)}
       />
     </Stack>
   )

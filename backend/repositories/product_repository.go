@@ -40,6 +40,7 @@ type ProductRepository interface {
 	FindActiveByID(id uint) (*models.Product, error)
 	Update(product *models.Product) error
 	SoftDeleteByID(id uint) error
+	FindMaxSequenceByCodeBase(codeBase string) (int, error)
 }
 
 type productRepository struct {
@@ -99,6 +100,30 @@ func (r *productRepository) SoftDeleteByID(id uint) error {
 		return err
 	}
 	return nil
+}
+
+func (r *productRepository) FindMaxSequenceByCodeBase(codeBase string) (int, error) {
+	var maxSeq int
+	pattern := codeBase + "-%"
+
+	if err := r.db.Raw(`
+		SELECT COALESCE(
+			MAX(
+				CASE
+					WHEN split_part(product_code, '-', 3) ~ '^[0-9]+$'
+						THEN CAST(split_part(product_code, '-', 3) AS INTEGER)
+					ELSE 0
+				END
+			),
+			0
+		) AS max_seq
+		FROM products
+		WHERE product_code LIKE ?
+	`, pattern).Scan(&maxSeq).Error; err != nil {
+		return 0, err
+	}
+
+	return maxSeq, nil
 }
 
 // Errors dùng chung giữa repository/service/handler để map HTTP status chuẩn.

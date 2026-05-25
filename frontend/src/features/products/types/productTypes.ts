@@ -25,3 +25,7 @@ export interface ProductPayload {
   min_stock: number
   price: number
 }
+
+export interface ProductCodePreviewResponse {
+  product_code: string
+}

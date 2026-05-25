@@ -35,8 +35,13 @@ func BOMRoutes(r *gin.Engine) {
 	boms := r.Group("/boms")
 	boms.Use(middleware.AuthRequired())
 	{
-		// Tạo BOM chỉ cho ADMIN.
-		boms.POST("", middleware.RequireRoles("ADMIN"), handler.CreateBOM)
+		// Cho phép cả ADMIN và STAFF tạo BOM theo yêu cầu vận hành.
+		boms.POST("", middleware.RequireRoles("ADMIN", "STAFF"), handler.CreateBOM)
+		// Cho phép cả ADMIN và STAFF cập nhật BOM.
+		boms.PUT("/:id", middleware.RequireRoles("ADMIN", "STAFF"), handler.UpdateBOM)
+		// Cho phép cả ADMIN và STAFF xóa BOM.
+		boms.DELETE("/:id", middleware.RequireRoles("ADMIN", "STAFF"), handler.DeleteBOM)
+
 		// Xem BOM cho cả ADMIN và STAFF.
 		boms.GET("", middleware.RequireRoles("ADMIN", "STAFF"), handler.GetBOMs)
 		boms.GET("/:id/items", middleware.RequireRoles("ADMIN", "STAFF"), handler.GetBOMItems)

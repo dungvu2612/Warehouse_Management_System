@@ -13,6 +13,8 @@ Luong xu ly:
 Cac ham chinh:
 - NewBOMService
 - Create
+- Update
+- Delete
 - GetAll
 - GetItemsByBOMID
 
@@ -40,6 +42,16 @@ type BOMCreateInput struct {
 	ProductID   uint
 	BOMName     string
 	Description string
+	CreatedBy   uint
+	Items       []BOMCreateItemInput
+}
+
+// BOMUpdateInput là DTO cập nhật BOM ở layer service.
+type BOMUpdateInput struct {
+	BOMID       uint
+	ProductID   uint
+	BOMName     string
+	Description string
 	Items       []BOMCreateItemInput
 }
 
@@ -51,6 +63,8 @@ type BOMListQuery struct {
 // BOMService định nghĩa use-cases của module BOM.
 type BOMService interface {
 	Create(input BOMCreateInput) (*models.BOM, error)
+	Update(input BOMUpdateInput) (*models.BOM, error)
+	Delete(bomID uint) error
 	GetAll(query BOMListQuery) ([]models.BOM, error)
 	GetItemsByBOMID(bomID uint) (*models.BOM, []models.BOMItem, error)
 }
@@ -70,20 +84,16 @@ func NewBOMService(repo repositories.BOMRepository) BOMService {
 	return &bomService{repo: repo}
 }
 
-// Create validate/normalize rồi gọi repository tạo BOM trong transaction.
-func (s *bomService) Create(input BOMCreateInput) (*models.BOM, error) {
-	if input.ProductID == 0 || len(input.Items) == 0 {
+func normalizeAndValidateBOMItems(items []BOMCreateItemInput) ([]repositories.BOMCreateItemInput, error) {
+	if len(items) == 0 {
 		return nil, ErrInvalidBOMPayload
 	}
 
-	input.BOMName = strings.TrimSpace(input.BOMName)
-	input.Description = strings.TrimSpace(input.Description)
-
 	// Validate duplicate component trong cùng request để fail sớm.
-	componentSeen := make(map[uint]struct{}, len(input.Items))
-	mappedItems := make([]repositories.BOMCreateItemInput, 0, len(input.Items))
+	componentSeen := make(map[uint]struct{}, len(items))
+	mappedItems := make([]repositories.BOMCreateItemInput, 0, len(items))
 
-	for _, item := range input.Items {
+	for _, item := range items {
 		if item.ComponentProductID == 0 || item.Quantity <= 0 {
 			return nil, ErrInvalidBOMPayload
 		}
@@ -98,12 +108,61 @@ func (s *bomService) Create(input BOMCreateInput) (*models.BOM, error) {
 		})
 	}
 
+	return mappedItems, nil
+}
+
+// Create validate/normalize rồi gọi repository tạo BOM trong transaction.
+func (s *bomService) Create(input BOMCreateInput) (*models.BOM, error) {
+	if input.ProductID == 0 {
+		return nil, ErrInvalidBOMPayload
+	}
+
+	input.BOMName = strings.TrimSpace(input.BOMName)
+	input.Description = strings.TrimSpace(input.Description)
+
+	mappedItems, err := normalizeAndValidateBOMItems(input.Items)
+	if err != nil {
+		return nil, err
+	}
+
 	return s.repo.CreateWithItems(repositories.BOMCreateInput{
+		ProductID:   input.ProductID,
+		BOMName:     input.BOMName,
+		Description: input.Description,
+		CreatedBy:   input.CreatedBy,
+		Items:       mappedItems,
+	})
+}
+
+// Update validate/normalize rồi gọi repository cập nhật BOM trong transaction.
+func (s *bomService) Update(input BOMUpdateInput) (*models.BOM, error) {
+	if input.BOMID == 0 || input.ProductID == 0 {
+		return nil, ErrInvalidBOMPayload
+	}
+
+	input.BOMName = strings.TrimSpace(input.BOMName)
+	input.Description = strings.TrimSpace(input.Description)
+
+	mappedItems, err := normalizeAndValidateBOMItems(input.Items)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.repo.UpdateWithItems(repositories.BOMUpdateInput{
+		BOMID:       input.BOMID,
 		ProductID:   input.ProductID,
 		BOMName:     input.BOMName,
 		Description: input.Description,
 		Items:       mappedItems,
 	})
+}
+
+// Delete xóa BOM theo id.
+func (s *bomService) Delete(bomID uint) error {
+	if bomID == 0 {
+		return ErrInvalidBOMID
+	}
+	return s.repo.DeleteByID(bomID)
 }
 
 // GetAll lấy danh sách BOM theo filter product_id tùy chọn.

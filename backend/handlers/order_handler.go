@@ -85,6 +85,17 @@ func parsePickingTaskID(c *gin.Context) (uint, bool) {
 	return uint(id), true
 }
 
+func respondOrderReadError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, services.ErrOrderInvalidID):
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	case errors.Is(err, repositories.ErrOrderEntityNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": repositories.ErrOrderEntityNotFound.Error()})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+}
+
 // CreateOrder tạo order từ BOM và sinh order_items theo machine_qty.
 func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	var req createOrderRequest
@@ -129,7 +140,7 @@ func (h *OrderHandler) GetOrders(c *gin.Context) {
 	c.JSON(http.StatusOK, orders)
 }
 
-// GetOrderByID lấy chi tiết order kèm items.
+// GetOrderByID lấy chi tiết order kèm picking tasks/progress/shortage.
 func (h *OrderHandler) GetOrderByID(c *gin.Context) {
 	orderID, ok := parseOrderID(c)
 	if !ok {
@@ -138,14 +149,7 @@ func (h *OrderHandler) GetOrderByID(c *gin.Context) {
 
 	order, err := h.service.GetByID(orderID)
 	if err != nil {
-		switch {
-		case errors.Is(err, services.ErrOrderInvalidID):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
-		case errors.Is(err, repositories.ErrOrderEntityNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": repositories.ErrOrderEntityNotFound.Error()})
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
+		respondOrderReadError(c, err)
 		return
 	}
 

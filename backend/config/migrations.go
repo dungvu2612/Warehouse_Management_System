@@ -36,5 +36,12 @@ func RunDatabaseMigrations() {
 	`).Error; err != nil {
 		log.Fatalf("failed to set not null for products.product_type: %v", err)
 	}
-}
 
+	// 4) Thêm cột created_by cho bảng boms để truy vết người tạo BOM.
+	if err := DB.Exec(`
+		ALTER TABLE boms
+		ADD COLUMN IF NOT EXISTS created_by BIGINT
+	`).Error; err != nil {
+		log.Fatalf("failed to add boms.created_by: %v", err)
+	}
+}
