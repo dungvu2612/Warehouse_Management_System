@@ -37,5 +37,7 @@ func TrayRoutes(r *gin.Engine) {
 	{
 		trays.GET("", handler.GetTrays)
 		trays.POST("", middleware.RequireRoles("ADMIN"), handler.CreateTray)
+		trays.PUT("/:id", middleware.RequireRoles("ADMIN"), handler.UpdateTray)
+		trays.DELETE("/:id", middleware.RequireRoles("ADMIN"), handler.DeleteTray)
 	}
 }

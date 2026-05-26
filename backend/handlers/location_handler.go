@@ -1,6 +1,11 @@
 package handlers
 
 /*
+Senior Handover Note:
+- File nay la HTTP transport cho module location, da mo rong them endpoint update/delete.
+- Phu thuoc vao LocationService va domain errors tu services/repositories de map dung status code.
+- Khong dua nghiep vu DB vao handler; chi bind/validate request va map response.
+
 Mo ta file:
 - File nay la transport layer HTTP cho module 'location'.
 - Trach nhiem: bind request, parse params, goi service, map domain error sang status code.
@@ -22,6 +27,7 @@ Luu y khi sua:
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
@@ -43,6 +49,30 @@ type locationRequest struct {
 	Description  string `json:"description"`
 }
 
+func parseLocationID(c *gin.Context) (uint, bool) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || id == 0 {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid location id"})
+		return 0, false
+	}
+	return uint(id), true
+}
+
+func mapLocationServiceError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, services.ErrInvalidLocationID):
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	case errors.Is(err, services.ErrInvalidLocationPayload):
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	case errors.Is(err, repositories.ErrLocationCodeExists):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	case errors.Is(err, repositories.ErrLocationNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+}
+
 // CreateLocation tạo vị trí/kệ mới.
 func (h *LocationHandler) CreateLocation(c *gin.Context) {
 	var req locationRequest
@@ -53,14 +83,7 @@ func (h *LocationHandler) CreateLocation(c *gin.Context) {
 
 	location, err := h.service.Create(req.LocationCode, req.Shelf, req.Description)
 	if err != nil {
-		switch {
-		case errors.Is(err, services.ErrInvalidLocationPayload):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
-		case errors.Is(err, repositories.ErrLocationCodeExists):
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
+		mapLocationServiceError(c, err)
 		return
 	}
 
@@ -75,4 +98,41 @@ func (h *LocationHandler) GetLocations(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, locations)
+}
+
+// UpdateLocation cap nhat location (ADMIN).
+func (h *LocationHandler) UpdateLocation(c *gin.Context) {
+	id, ok := parseLocationID(c)
+	if !ok {
+		return
+	}
+
+	var req locationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	location, err := h.service.Update(id, req.LocationCode, req.Shelf, req.Description)
+	if err != nil {
+		mapLocationServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, location)
+}
+
+// DeleteLocation xoa mem location (is_active=false, ADMIN).
+func (h *LocationHandler) DeleteLocation(c *gin.Context) {
+	id, ok := parseLocationID(c)
+	if !ok {
+		return
+	}
+
+	if err := h.service.Delete(id); err != nil {
+		mapLocationServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "location deactivated successfully"})
 }

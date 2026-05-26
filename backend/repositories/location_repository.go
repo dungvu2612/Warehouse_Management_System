@@ -20,12 +20,18 @@ Luu y khi sua:
 */
 
 import (
+	"errors"
 	"quan_ly_kho/models"
+
+	"gorm.io/gorm"
 )
 
 type LocationRepository interface {
 	Create(location *models.Location) error
 	FindAllActive() ([]models.Location, error)
+	FindActiveByID(id uint) (*models.Location, error)
+	Update(location *models.Location) error
+	SoftDeleteByID(id uint) error
 }
 
 type locationRepository struct {
@@ -52,4 +58,37 @@ func (r *locationRepository) FindAllActive() ([]models.Location, error) {
 		return nil, err
 	}
 	return locations, nil
+}
+
+func (r *locationRepository) FindActiveByID(id uint) (*models.Location, error) {
+	var location models.Location
+	if err := r.db.Where("id = ? AND is_active = ?", id, true).First(&location).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrLocationNotFound
+		}
+		return nil, err
+	}
+	return &location, nil
+}
+
+func (r *locationRepository) Update(location *models.Location) error {
+	if err := r.db.Save(location).Error; err != nil {
+		if isUniqueConstraintError(err) {
+			return ErrLocationCodeExists
+		}
+		return err
+	}
+	return nil
+}
+
+func (r *locationRepository) SoftDeleteByID(id uint) error {
+	location, err := r.FindActiveByID(id)
+	if err != nil {
+		return err
+	}
+
+	if err := r.db.Model(location).Update("is_active", false).Error; err != nil {
+		return err
+	}
+	return nil
 }

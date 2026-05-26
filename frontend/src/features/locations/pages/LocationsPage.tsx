@@ -1,0 +1,211 @@
+/*
+Senior Handover Note:
+- File này là page orchestration cho màn Locations: quản lý state UI chính, gọi hooks và ghép components.
+- Phụ thuộc vào `useLocationsQuery` + mutations create/update/delete, `locationService`, `useAuth`, và các component con của feature.
+- Lưu ý bảo trì: giữ logic permission tại page (ADMIN được tạo/sửa/xóa, STAFF chỉ xem) để không phá auth/router/layout hiện có.
+*/
+
+import { useMemo, useState } from 'react'
+import { Add, Refresh } from '@mui/icons-material'
+import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
+import { useAuth } from '../../../app/providers/AuthProvider'
+import { LocationCreateDialog } from '../components/LocationCreateDialog'
+import { LocationTable } from '../components/LocationTable'
+import {
+  useCreateLocationMutation,
+  useDeleteLocationMutation,
+  useLocationsQuery,
+  useUpdateLocationMutation,
+} from '../hooks/useLocations'
+import { locationService } from '../services/locationService'
+import type { CreateLocationPayload, Location } from '../types/locationTypes'
+import { mapLocationApiError } from '../utils/locationError'
+import { normalizeLocationPayload, validateLocationForm } from '../utils/locationValidation'
+
+const defaultLocationForm: CreateLocationPayload = {
+  location_code: '',
+  shelf: '',
+  description: '',
+}
+
+export function LocationsPage() {
+  const { user } = useAuth()
+  // Senior Handover: Permission block - chỉ ADMIN được quyền mở form tạo location.
+  const isAdmin = user?.role === 'ADMIN'
+
+  const [search, setSearch] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
+  const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null)
+  const [form, setForm] = useState<CreateLocationPayload>(defaultLocationForm)
+  const [formError, setFormError] = useState('')
+  const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const locationsQuery = useLocationsQuery()
+
+  const createMutation = useCreateLocationMutation({
+    onSuccess: () => {
+      setBanner({ type: 'success', text: 'Tạo vị trí thành công.' })
+      setFormOpen(false)
+      setForm(defaultLocationForm)
+      setFormError('')
+    },
+    onError: (error) => {
+      setFormError(mapLocationApiError(error))
+    },
+  })
+  const updateMutation = useUpdateLocationMutation({
+    onSuccess: () => {
+      setBanner({ type: 'success', text: 'Cập nhật vị trí thành công.' })
+      setFormOpen(false)
+      setFormMode('create')
+      setEditingLocation(null)
+      setForm(defaultLocationForm)
+      setFormError('')
+    },
+    onError: (error) => {
+      setFormError(mapLocationApiError(error))
+    },
+  })
+  const deleteMutation = useDeleteLocationMutation({
+    onSuccess: () => {
+      setBanner({ type: 'success', text: 'Đã xóa mềm vị trí (is_active=false).' })
+    },
+    onError: (error) => {
+      setBanner({ type: 'error', text: mapLocationApiError(error) })
+    },
+  })
+
+  const filteredLocations = useMemo(() => {
+    return locationService.filterLocationsByKeyword(locationsQuery.data || [], search)
+  }, [locationsQuery.data, search])
+
+  const openCreateDialog = () => {
+    // Senior Handover: Permission block - chỉ ADMIN được quyền mở dialog thao tác ghi.
+    if (!isAdmin) return
+    setFormMode('create')
+    setEditingLocation(null)
+    setForm(defaultLocationForm)
+    setFormError('')
+    setFormOpen(true)
+  }
+
+  const openEditDialog = (location: Location) => {
+    // Senior Handover: Permission block - chỉ ADMIN được quyền mở edit.
+    if (!isAdmin) return
+    setFormMode('edit')
+    setEditingLocation(location)
+    setForm({
+      location_code: location.location_code,
+      shelf: location.shelf || '',
+      description: location.description || '',
+    })
+    setFormError('')
+    setFormOpen(true)
+  }
+
+  const handleSubmitForm = () => {
+    if (!isAdmin) return
+    setFormError('')
+
+    // Senior Handover: Submit block - validate/normalize payload trước khi gọi POST/PUT /locations.
+    const validationError = validateLocationForm(form)
+    if (validationError) {
+      setFormError(validationError)
+      return
+    }
+
+    const payload = normalizeLocationPayload(form)
+
+    if (formMode === 'edit' && editingLocation) {
+      updateMutation.mutate({ id: editingLocation.id, payload })
+      return
+    }
+
+    createMutation.mutate(payload)
+  }
+
+  const handleDeleteLocation = (location: Location) => {
+    // Senior Handover: Permission block - chỉ ADMIN được quyền xóa mềm.
+    if (!isAdmin) return
+    if (!window.confirm(`Xóa mềm vị trí ${location.location_code}?`)) return
+    deleteMutation.mutate(location.id)
+  }
+
+  return (
+    <Stack spacing={2.5}>
+      <Paper sx={{ p: 3 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            gap: 1.5,
+          }}
+        >
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 900 }}>
+              Quản lý vị trí
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Quản lý danh sách vị trí lưu kho, phục vụ liên kết khay và quy trình lấy hàng.
+            </Typography>
+          </Box>
+
+          <Stack direction="row" spacing={1}>
+            <Button variant="outlined" startIcon={<Refresh />} onClick={() => locationsQuery.refetch()}>
+              Làm mới
+            </Button>
+            <Button variant="contained" startIcon={<Add />} disabled={!isAdmin} onClick={openCreateDialog}>
+              Thêm vị trí
+            </Button>
+          </Stack>
+        </Box>
+      </Paper>
+
+      {banner && <Alert severity={banner.type}>{banner.text}</Alert>}
+      {!isAdmin && (
+        <Alert severity="info">Nhân viên chỉ có quyền xem danh sách vị trí, không được tạo mới.</Alert>
+      )}
+
+      <Paper sx={{ p: 2.5 }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
+          <TextField
+            fullWidth
+            label="Tìm vị trí"
+            placeholder="Tìm theo mã vị trí, kệ, mô tả..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <Chip
+            color="secondary"
+            label={`Tổng vị trí: ${filteredLocations.length}`}
+            sx={{ fontWeight: 800, alignSelf: { xs: 'flex-start', sm: 'center' } }}
+          />
+        </Stack>
+
+        {/* Senior Handover: Fetch/render block - tập trung loading/error/empty state ở table component. */}
+        <LocationTable
+          locations={filteredLocations}
+          isLoading={locationsQuery.isLoading}
+          isError={locationsQuery.isError}
+          isAdmin={isAdmin}
+          onEdit={openEditDialog}
+          onDelete={handleDeleteLocation}
+        />
+      </Paper>
+
+      <LocationCreateDialog
+        open={formOpen}
+        mode={formMode}
+        form={form}
+        isSubmitting={createMutation.isPending || updateMutation.isPending}
+        errorMessage={formError}
+        onClose={() => setFormOpen(false)}
+        onSubmit={handleSubmitForm}
+        onChange={setForm}
+      />
+    </Stack>
+  )
+}

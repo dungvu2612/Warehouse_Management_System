@@ -37,5 +37,7 @@ func LocationRoutes(r *gin.Engine) {
 	{
 		locations.GET("", handler.GetLocations)
 		locations.POST("", middleware.RequireRoles("ADMIN"), handler.CreateLocation)
+		locations.PUT("/:id", middleware.RequireRoles("ADMIN"), handler.UpdateLocation)
+		locations.DELETE("/:id", middleware.RequireRoles("ADMIN"), handler.DeleteLocation)
 	}
 }

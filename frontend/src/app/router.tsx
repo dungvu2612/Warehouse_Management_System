@@ -1,3 +1,10 @@
+/*
+Senior Handover Note:
+- File này cấu hình router toàn app và giữ nguyên flow auth/private route hiện có.
+- Phụ thuộc vào guards (`PrivateRoute`, `PublicRoute`) và các page-level feature modules.
+- Khi thêm route mới, chỉ khai báo path + page component; không nhúng logic nghiệp vụ trực tiếp trong router.
+*/
+
 import { Navigate, createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from '../layouts/AppLayout'
 import { LoginPage } from '../features/auth/pages/LoginPage'
@@ -7,6 +14,9 @@ import { ProductsPage } from '../features/products/pages/ProductsPage'
 import { BOMsPage } from '../features/boms/pages/BOMsPage'
 import { OrdersPage } from '../features/orders/pages/OrdersPage'
 import { OrderDetail } from '../features/orders/pages/OrderDetail'
+import { LocationsPage } from '../features/locations/pages/LocationsPage'
+import { TraysPage } from '../features/trays/pages/TraysPage'
+import { InventoryPage } from '../features/inventory/pages/InventoryPage'
 
 // Cấu hình toàn bộ route của app.
 export const router = createBrowserRouter([
@@ -34,9 +44,9 @@ export const router = createBrowserRouter([
       // Các route nghiệp vụ.
       { path: 'dashboard', element: <DashboardMock /> },
       { path: 'products', element: <ProductsPage /> },
-      { path: 'locations', element: <PagePlaceholder title="Locations" /> },
-      { path: 'trays', element: <PagePlaceholder title="Trays" /> },
-      { path: 'inventory', element: <PagePlaceholder title="Inventory" /> },
+      { path: 'locations', element: <LocationsPage /> },
+      { path: 'trays', element: <TraysPage /> },
+      { path: 'inventory', element: <InventoryPage /> },
       { path: 'import-receipts', element: <PagePlaceholder title="Import Receipts" /> },
       { path: 'boms', element: <BOMsPage /> },
       { path: 'orders', element: <OrdersPage /> },

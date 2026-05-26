@@ -1,6 +1,11 @@
 package repositories
 
 /*
+Senior Handover Note:
+- File nay la data-access layer cho module Tray, da mo rong CRUD + helper sequence cho sinh ma khay.
+- Phu thuoc vao DBTX abstraction trong common.go de query/soft-delete ma khong khoa chat vao *gorm.DB.
+- Luu y bao tri: sequence lay theo pattern `<LOCATION_CODE>-T<number>` tren toan bo bang trays (ca active va inactive) de tranh reuse ma.
+
 Mo ta file:
 - File nay la data-access layer cho module 'tray'.
 - Trach nhiem: query/transaction DB, lock row (neu can), map loi DB sang domain error.
@@ -38,8 +43,12 @@ var (
 type TrayRepository interface {
 	Create(tray *models.Tray) error
 	FindAllActive() ([]models.Tray, error)
+	FindActiveByID(id uint) (*models.Tray, error)
+	Update(tray *models.Tray) error
+	SoftDeleteByID(id uint) error
 	FindActiveProductByID(id uint) (*models.Product, error)
 	FindActiveLocationByID(id uint) (*models.Location, error)
+	FindMaxTraySequenceByLocationCode(locationCode string) (int, error)
 }
 
 type trayRepository struct {
@@ -68,6 +77,39 @@ func (r *trayRepository) FindAllActive() ([]models.Tray, error) {
 	return trays, nil
 }
 
+func (r *trayRepository) FindActiveByID(id uint) (*models.Tray, error) {
+	var tray models.Tray
+	if err := r.db.Where("id = ? AND is_active = ?", id, true).First(&tray).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrTrayNotFound
+		}
+		return nil, err
+	}
+	return &tray, nil
+}
+
+func (r *trayRepository) Update(tray *models.Tray) error {
+	if err := r.db.Save(tray).Error; err != nil {
+		if isUniqueConstraintError(err) {
+			return ErrTrayCodeExists
+		}
+		return err
+	}
+	return nil
+}
+
+func (r *trayRepository) SoftDeleteByID(id uint) error {
+	tray, err := r.FindActiveByID(id)
+	if err != nil {
+		return err
+	}
+
+	if err := r.db.Model(tray).Update("is_active", false).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *trayRepository) FindActiveProductByID(id uint) (*models.Product, error) {
 	var product models.Product
 	if err := r.db.Where("id = ? AND is_active = ?", id, true).First(&product).Error; err != nil {
@@ -88,4 +130,20 @@ func (r *trayRepository) FindActiveLocationByID(id uint) (*models.Location, erro
 		return nil, err
 	}
 	return &location, nil
+}
+
+func (r *trayRepository) FindMaxTraySequenceByLocationCode(locationCode string) (int, error) {
+	var maxSeq int
+	pattern := locationCode + "-T%"
+
+	// Senior Handover: Lay sequence lon nhat theo prefix location_code, de sinh ma tiep theo dang A-01-T01.
+	if err := r.db.Raw(`
+		SELECT COALESCE(MAX(CAST(SUBSTRING(tray_code FROM '.+-T([0-9]+)$') AS INTEGER)), 0) AS max_seq
+		FROM trays
+		WHERE tray_code LIKE ?
+	`, pattern).Scan(&maxSeq).Error; err != nil {
+		return 0, err
+	}
+
+	return maxSeq, nil
 }
