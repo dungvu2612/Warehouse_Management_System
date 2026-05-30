@@ -1,7 +1,7 @@
 package handlers
 
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay la HTTP transport cho module location, da mo rong them endpoint update/delete.
 - Phu thuoc vao LocationService va domain errors tu services/repositories de map dung status code.
 - Khong dua nghiep vu DB vao handler; chi bind/validate request va map response.

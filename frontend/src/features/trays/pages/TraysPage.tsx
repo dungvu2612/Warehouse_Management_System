@@ -1,11 +1,13 @@
 /*
 Senior Handover Note:
-- File nay la page orchestration cho man Trays: quan ly state chinh, goi hooks va ghep components.
-- Phu thuoc vao CRUD hooks (`useTraysQuery` + create/update/delete), options hooks, `trayService`, `useAuth`.
-- Luu y bao tri: giu permission tai page (ADMIN duoc tao/sua/xoa, STAFF chi xem) de khong pha flow auth/router/layout.
+- Purpose: Page orchestration cho man Trays.
+- Dependencies: CRUD hooks (`useTraysQuery` + create/update/delete), options hooks, `trayService`, `useAuth`.
+- API contract: GET/POST/PUT/DELETE /trays.
+- Role access: ADMIN thao tac ghi; WAREHOUSE/VIEWER chi xem.
+- Maintenance notes: Permission xu ly tai page de dong bo backend role policy.
 */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Add, Refresh } from '@mui/icons-material'
 import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
 import { useAuth } from '../../../app/providers/AuthProvider'
@@ -23,6 +25,8 @@ import { trayService } from '../services/trayService'
 import type { TrayDisplay, TrayPayload } from '../types/trayTypes'
 import { mapTrayApiError } from '../utils/trayError'
 import { normalizeTrayPayload, validateTrayForm } from '../utils/trayValidation'
+import { ListPagination } from '../../../shared/components/ListPagination'
+import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination'
 
 const defaultTrayForm: TrayPayload = {
   product_id: 0,
@@ -42,6 +46,7 @@ export function TraysPage() {
   const [form, setForm] = useState<TrayPayload>(defaultTrayForm)
   const [formError, setFormError] = useState('')
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const traysQuery = useTraysQuery()
   const productOptionsQuery = useTrayProductOptionsQuery()
@@ -82,12 +87,25 @@ export function TraysPage() {
 
   const traysForDisplay = useMemo(() => {
     // Senior Handover: Join danh sach trays voi locations de hien thi location_code + mo ta.
-    return trayService.mapTraysForDisplay(traysQuery.data || [], locationOptionsQuery.data || [])
-  }, [traysQuery.data, locationOptionsQuery.data])
+    return trayService.mapTraysForDisplay(
+      traysQuery.data || [],
+      locationOptionsQuery.data || [],
+      productOptionsQuery.data || [],
+    )
+  }, [traysQuery.data, locationOptionsQuery.data, productOptionsQuery.data])
 
   const filteredTrays = useMemo(() => {
     return trayService.filterTraysByKeyword(traysForDisplay, search)
   }, [traysForDisplay, search])
+
+  useEffect(() => {
+    // Senior Handover: Reset page to 1 whenever search/filter changes.
+    setCurrentPage(1)
+  }, [search])
+
+  const paginatedTrays = useMemo(() => {
+    return paginateItems(filteredTrays, currentPage, DEFAULT_PAGE_SIZE)
+  }, [filteredTrays, currentPage])
 
   const openCreateDialog = () => {
     // Senior Handover: Permission block - chi ADMIN duoc mo form tao.
@@ -194,12 +212,18 @@ export function TraysPage() {
 
         {/* Senior Handover: Fetch/render block - table xu ly loading/error/empty state. */}
         <TrayTable
-          trays={filteredTrays}
+          trays={paginatedTrays}
           isLoading={traysQuery.isLoading}
           isError={traysQuery.isError}
           isAdmin={isAdmin}
           onEdit={openEditDialog}
           onDelete={handleDeleteTray}
+        />
+        <ListPagination
+          currentPage={currentPage}
+          totalItems={filteredTrays.length}
+          pageSize={DEFAULT_PAGE_SIZE}
+          onPageChange={setCurrentPage}
         />
       </Paper>
 

@@ -28,6 +28,7 @@ Luu y khi sua:
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"quan_ly_kho/models"
 	"quan_ly_kho/repositories"
@@ -36,10 +37,11 @@ import (
 
 // OrderCreateInput là DTO tạo order ở layer service.
 type OrderCreateInput struct {
-	BOMID        uint
-	MachineQty   int
-	CustomerName string
-	CreatedBy    uint
+	CustomerName    string
+	CustomerPhone   string
+	CustomerAddress string
+	Items           []OrderItemInput
+	CreatedBy       uint
 }
 
 // OrderScanInput là DTO quét order_code để vào luồng picking.
@@ -48,13 +50,36 @@ type OrderScanInput struct {
 	UserID    uint
 }
 
-// OrderConfirmPickingInput là DTO xác nhận pick task.
-type OrderConfirmPickingInput struct {
-	TaskID   uint
-	TrayCode string
-	Quantity int
-	Note     string
-	UserID   uint
+type OrderUpdateInput struct {
+	OrderID         uint
+	CustomerName    string
+	CustomerPhone   string
+	CustomerAddress string
+	Items           []OrderItemInput
+}
+
+// Senior Handover: Order items are edited as an array, not a single product.
+type OrderItemInput struct {
+	ProductID uint
+	Quantity  int
+	UnitPrice float64
+}
+
+// OrderVerifyTrayInput la DTO verify tray QR truoc scan product.
+type OrderVerifyTrayInput struct {
+	TaskID      uint
+	TrayQRCode  string
+	CurrentRole string
+}
+
+// OrderScanProductInput la DTO scan product QR theo tung lan (quantity = 1).
+type OrderScanProductInput struct {
+	TaskID        uint
+	TrayQRCode    string
+	ProductQRCode string
+	Note          string
+	UserID        uint
+	CurrentRole   string
 }
 
 // OrderProgressResult là cấu trúc trả tiến độ picking cho API.
@@ -64,6 +89,19 @@ type OrderProgressResult struct {
 	DoneTasks   int64
 	TotalTasks  int64
 	Progress    float64
+}
+
+// StaffTaskResult la read-model danh sach cong viec staff can picking.
+type StaffTaskResult struct {
+	ID              uint      `json:"id"`
+	OrderCode       string    `json:"order_code"`
+	CustomerName    string    `json:"customer_name"`
+	CustomerPhone   string    `json:"customer_phone"`
+	CustomerAddress string    `json:"customer_address"`
+	Status          string    `json:"status"`
+	TotalItems      int       `json:"total_items"`
+	PickedItems     int       `json:"picked_items"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 // OrderDetailTaskResult la DTO task da enrich du lieu san pham/vi tri/ton kho cho UI.
@@ -129,10 +167,14 @@ type OrderShortageItemResult struct {
 // OrderService định nghĩa use-cases cho module order/picking.
 type OrderService interface {
 	Create(input OrderCreateInput) (*models.Order, error)
+	Update(input OrderUpdateInput) (*models.Order, error)
+	Delete(orderID uint) error
 	GetAll(statusRaw string) ([]models.Order, error)
+	GetStaffTasks() ([]StaffTaskResult, error)
 	GetByID(orderID uint) (*OrderDetailResult, error)
 	ScanForPicking(input OrderScanInput) (*models.Order, []models.PickingTask, error)
-	ConfirmPicking(input OrderConfirmPickingInput) (*models.PickingTask, int, error)
+	VerifyTray(input OrderVerifyTrayInput) (*models.PickingTask, error)
+	ScanProduct(input OrderScanProductInput) (*models.PickingTask, int, error)
 	Finish(orderID uint) (*models.Order, []OrderShortageItemResult, error)
 	GetPickingTasks(orderID uint) (*models.Order, []models.PickingTask, error)
 	GetProgress(orderID uint) (*OrderProgressResult, error)
@@ -145,6 +187,8 @@ var (
 	ErrOrderInvalidPayload       = errors.New("invalid order payload")
 	ErrOrderCodeIsRequired       = errors.New("order_code is required")
 	ErrOrderTrayCodeRequired     = errors.New("tray_code is required")
+	ErrOrderUnauthorizedRole     = errors.New("unauthorized role")
+	ErrOrderProductCodeRequired  = errors.New("product_qr_code is required")
 )
 
 type orderService struct {
@@ -158,12 +202,83 @@ func NewOrderService(repo repositories.OrderRepository) OrderService {
 
 // Create validate payload tạo order rồi gọi repository.
 func (s *orderService) Create(input OrderCreateInput) (*models.Order, error) {
-	if input.BOMID == 0 || input.MachineQty <= 0 {
+	if len(input.Items) == 0 {
 		return nil, ErrOrderInvalidPayload
 	}
 
 	input.CustomerName = strings.TrimSpace(input.CustomerName)
-	return s.repo.CreateFromBOM(input.BOMID, input.MachineQty, input.CustomerName, input.CreatedBy)
+	input.CustomerPhone = strings.TrimSpace(input.CustomerPhone)
+	input.CustomerAddress = strings.TrimSpace(input.CustomerAddress)
+	if input.CustomerName == "" {
+		return nil, ErrOrderInvalidPayload
+	}
+	for _, item := range input.Items {
+		if item.ProductID == 0 || item.Quantity <= 0 || item.UnitPrice < 0 {
+			return nil, ErrOrderInvalidPayload
+		}
+	}
+	seen := make(map[uint]struct{}, len(input.Items))
+	for _, item := range input.Items {
+		if _, exists := seen[item.ProductID]; exists {
+			return nil, ErrOrderInvalidPayload
+		}
+		seen[item.ProductID] = struct{}{}
+	}
+
+	return s.repo.CreateOrderWithItems(
+		input.CustomerName,
+		input.CustomerPhone,
+		input.CustomerAddress,
+		mapOrderItemInputs(input.Items),
+		input.CreatedBy,
+	)
+}
+
+func (s *orderService) Update(input OrderUpdateInput) (*models.Order, error) {
+	if input.OrderID == 0 {
+		return nil, ErrOrderInvalidID
+	}
+	name := strings.TrimSpace(input.CustomerName)
+	if name == "" {
+		return nil, ErrOrderInvalidPayload
+	}
+	phone := strings.TrimSpace(input.CustomerPhone)
+	address := strings.TrimSpace(input.CustomerAddress)
+	if len(input.Items) == 0 {
+		return nil, ErrOrderInvalidPayload
+	}
+	for _, item := range input.Items {
+		if item.ProductID == 0 || item.Quantity <= 0 || item.UnitPrice < 0 {
+			return nil, ErrOrderInvalidPayload
+		}
+	}
+	seen := make(map[uint]struct{}, len(input.Items))
+	for _, item := range input.Items {
+		if _, exists := seen[item.ProductID]; exists {
+			return nil, ErrOrderInvalidPayload
+		}
+		seen[item.ProductID] = struct{}{}
+	}
+	return s.repo.UpdateOrderWithItems(input.OrderID, name, phone, address, mapOrderItemInputs(input.Items))
+}
+
+func mapOrderItemInputs(items []OrderItemInput) []repositories.OrderItemUpsertInput {
+	results := make([]repositories.OrderItemUpsertInput, 0, len(items))
+	for _, item := range items {
+		results = append(results, repositories.OrderItemUpsertInput{
+			ProductID: item.ProductID,
+			Quantity:  item.Quantity,
+			UnitPrice: item.UnitPrice,
+		})
+	}
+	return results
+}
+
+func (s *orderService) Delete(orderID uint) error {
+	if orderID == 0 {
+		return ErrOrderInvalidID
+	}
+	return s.repo.DeleteOrder(orderID)
 }
 
 // GetAll lấy danh sách orders, chuẩn hóa status filter.
@@ -173,6 +288,31 @@ func (s *orderService) GetAll(statusRaw string) ([]models.Order, error) {
 		return s.repo.FindAll(nil)
 	}
 	return s.repo.FindAll(&status)
+}
+
+// GetStaffTasks tra ve danh sach order PENDING/PICKING de staff vao viec.
+func (s *orderService) GetStaffTasks() ([]StaffTaskResult, error) {
+	rows, err := s.repo.FindStaffTaskRows()
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]StaffTaskResult, 0, len(rows))
+	for _, row := range rows {
+		results = append(results, StaffTaskResult{
+			ID:              row.ID,
+			OrderCode:       row.OrderCode,
+			CustomerName:    row.CustomerName,
+			CustomerPhone:   row.CustomerPhone,
+			CustomerAddress: row.CustomerAddress,
+			Status:          row.Status,
+			TotalItems:      row.TotalItems,
+			PickedItems:     row.PickedItems,
+			CreatedAt:       row.CreatedAt,
+		})
+	}
+
+	return results, nil
 }
 
 // GetByID lấy chi tiet order + picking tasks + progress + shortage realtime.
@@ -260,22 +400,48 @@ func (s *orderService) ScanForPicking(input OrderScanInput) (*models.Order, []mo
 	return s.repo.ScanForPicking(orderCode, input.UserID)
 }
 
-// ConfirmPicking xác nhận một lần pick task và trả remaining quantity.
-func (s *orderService) ConfirmPicking(input OrderConfirmPickingInput) (*models.PickingTask, int, error) {
+// VerifyTray validate va verify tray QR cho task.
+func (s *orderService) VerifyTray(input OrderVerifyTrayInput) (*models.PickingTask, error) {
+	if input.TaskID == 0 {
+		return nil, ErrOrderInvalidPickingTaskID
+	}
+
+	role := strings.ToUpper(strings.TrimSpace(input.CurrentRole))
+	if role != "ADMIN" && role != "WAREHOUSE" {
+		return nil, ErrOrderUnauthorizedRole
+	}
+
+	trayCode := strings.TrimSpace(input.TrayQRCode)
+	if trayCode == "" {
+		return nil, ErrOrderTrayCodeRequired
+	}
+
+	return s.repo.VerifyTrayForTask(input.TaskID, trayCode)
+}
+
+// ScanProduct validate va scan product QR 1 lan cho task.
+func (s *orderService) ScanProduct(input OrderScanProductInput) (*models.PickingTask, int, error) {
 	if input.TaskID == 0 {
 		return nil, 0, ErrOrderInvalidPickingTaskID
 	}
-	if input.Quantity <= 0 {
-		return nil, 0, ErrOrderInvalidPayload
+
+	role := strings.ToUpper(strings.TrimSpace(input.CurrentRole))
+	if role != "ADMIN" && role != "WAREHOUSE" {
+		return nil, 0, ErrOrderUnauthorizedRole
 	}
 
-	trayCode := strings.TrimSpace(input.TrayCode)
+	trayCode := strings.TrimSpace(input.TrayQRCode)
 	if trayCode == "" {
 		return nil, 0, ErrOrderTrayCodeRequired
 	}
 
+	productCode := strings.TrimSpace(input.ProductQRCode)
+	if productCode == "" {
+		return nil, 0, ErrOrderProductCodeRequired
+	}
+
 	note := strings.TrimSpace(input.Note)
-	task, err := s.repo.ConfirmPickingTask(input.TaskID, trayCode, input.Quantity, note, input.UserID)
+	task, err := s.repo.ScanProductForTask(input.TaskID, trayCode, productCode, note, input.UserID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -284,6 +450,7 @@ func (s *orderService) ConfirmPicking(input OrderConfirmPickingInput) (*models.P
 	if remaining < 0 {
 		remaining = 0
 	}
+
 	return task, remaining, nil
 }
 

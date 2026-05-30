@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay tap trung React Query hooks cho module Trays.
 - Phu thuoc vao `trayService` de giu page sach khoi logic fetch/cache/invalidate.
 - Query key va invalidate strategy tai day da bao phu create/update/delete.

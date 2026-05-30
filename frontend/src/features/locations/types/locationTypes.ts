@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File này định nghĩa contract type cho module Locations ở frontend, gồm create/update/delete.
 - Phụ thuộc trực tiếp vào API schema của backend: GET/POST/PUT/DELETE /locations.
 - Khi backend đổi tên field (ví dụ location_code/shelf/is_active), cần cập nhật type này trước để tránh lỗi lan sang hooks/components.

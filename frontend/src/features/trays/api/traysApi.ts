@@ -1,12 +1,12 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay la API layer thuan HTTP cho module Trays.
 - Phu thuoc vao shared `http` client de tai su dung auth token/interceptor hien co.
 - Chi chua request/response typed; khong dat business logic UI tai day.
 */
 
 import { http } from '../../../shared/lib/http'
-import type { LocationOption, ProductOption, Tray, TrayPayload } from '../types/trayTypes'
+import type { LocationOption, ProductOption, Tray, TrayPayload, TrayScanResponse } from '../types/trayTypes'
 
 export const traysApi = {
   // Senior Handover: Fetch danh sach tray active cho man hinh list.
@@ -42,6 +42,11 @@ export const traysApi = {
   // Senior Handover: Lay options location de do vao form tao tray.
   getLocationOptions: async (): Promise<LocationOption[]> => {
     const { data } = await http.get<LocationOption[]>('/locations')
+    return data
+  },
+
+  scanTrayByQRCode: async (qrCode: string): Promise<TrayScanResponse> => {
+    const { data } = await http.get<TrayScanResponse>(`/trays/scan/${encodeURIComponent(qrCode)}`)
     return data
   },
 }

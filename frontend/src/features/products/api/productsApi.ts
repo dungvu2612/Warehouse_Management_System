@@ -1,5 +1,5 @@
 import { http } from '../../../shared/lib/http'
-import type { Product, ProductCodePreviewResponse, ProductPayload, ProductType } from '../types/productTypes'
+import type { Product, ProductCodePreviewResponse, ProductPayload, ProductScanResponse, ProductType } from '../types/productTypes'
 
 // Nhóm API thao tác với resource products.
 export const productsApi = {
@@ -33,6 +33,11 @@ export const productsApi = {
 
   deleteProduct: async (id: number): Promise<{ message: string }> => {
     const { data } = await http.delete<{ message: string }>(`/products/${id}`)
+    return data
+  },
+
+  scanProductByQRCode: async (qrCode: string): Promise<ProductScanResponse> => {
+    const { data } = await http.get<ProductScanResponse>(`/products/scan/${encodeURIComponent(qrCode)}`)
     return data
   },
 }

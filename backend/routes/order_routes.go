@@ -1,20 +1,12 @@
 package routes
 
 /*
-Mo ta file:
-- File nay dang ky endpoint va wiring dependency injection cho module 'order'.
-- Noi day quy dinh policy middleware/auth/role truoc khi request vao handler.
-
-Luong xu ly:
-1) Khoi tao repository -> service -> handler cho module.
-2) Gan middleware cho group route (neu co).
-3) Map URL + HTTP method vao handler method cu the.
-
-Cac ham chinh:
-- OrderRoutes
-
-Luu y khi sua:
-- Uu tien giu on dinh API contract va ten error message neu frontend dang phu thuoc.
+Senior Handover Note:
+- Purpose: Dang ky endpoint module order va policy role cho flow picking.
+- Dependencies: order repository/service/handler + auth/role middleware.
+- API contract: /orders CRUD scan/confirm/finish/progress.
+- Role access: ADMIN + WAREHOUSE duoc van hanh picking flow; VIEWER khong duoc truy cap endpoint nay.
+- Maintenance notes: Neu doi role contract, cap nhat RequireRoles dong bo voi frontend guard.
 */
 
 import (
@@ -37,16 +29,20 @@ func OrderRoutes(r *gin.Engine) {
 	{
 		// Tạo order từ BOM: chỉ ADMIN.
 		orders.POST("", middleware.RequireRoles("ADMIN"), handler.CreateOrder)
+		orders.PUT("/:id", middleware.RequireRoles("ADMIN"), handler.UpdateOrder)
+		orders.DELETE("/:id", middleware.RequireRoles("ADMIN"), handler.DeleteOrder)
 		// Staff/Admin quét order để vào luồng picking.
-		orders.POST("/scan", middleware.RequireRoles("ADMIN", "STAFF"), handler.ScanOrderForPicking)
-		// Staff/Admin xác nhận từng picking task sau khi quét đúng tray.
-		orders.PATCH("/picking-tasks/:id/confirm", middleware.RequireRoles("ADMIN", "STAFF"), handler.ConfirmPickingTask)
+		orders.POST("/scan", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.ScanOrderForPicking)
+		orders.GET("/scan/:qr_code", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.ScanOrderForPickingByQRCode)
+		orders.POST("/picking-tasks/:id/verify-tray", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.VerifyPickingTaskTray)
+		orders.POST("/picking-tasks/:id/scan-product", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.ScanProductForPickingTask)
+		// Legacy endpoint confirm theo quantity da duoc thay the boi scan-product flow va khong expose nua.
 		// Kết thúc đơn thủ công (có thể kèm cảnh báo thiếu hàng).
-		orders.POST("/:id/finish", middleware.RequireRoles("ADMIN", "STAFF"), handler.FinishOrder)
-		orders.GET("/:id/picking-tasks", middleware.RequireRoles("ADMIN", "STAFF"), handler.GetOrderPickingTasks)
-		orders.GET("/:id/progress", middleware.RequireRoles("ADMIN", "STAFF"), handler.GetOrderProgress)
-		// Xem order cho ADMIN và STAFF.
-		orders.GET("", middleware.RequireRoles("ADMIN", "STAFF"), handler.GetOrders)
-		orders.GET("/:id", middleware.RequireRoles("ADMIN", "STAFF"), handler.GetOrderByID)
+		orders.POST("/:id/finish", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.FinishOrder)
+		orders.GET("/:id/picking-tasks", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetOrderPickingTasks)
+		orders.GET("/:id/progress", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetOrderProgress)
+		// Xem order cho ADMIN và WAREHOUSE.
+		orders.GET("", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetOrders)
+		orders.GET("/:id", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetOrderByID)
 	}
 }

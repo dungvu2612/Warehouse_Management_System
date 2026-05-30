@@ -1,12 +1,8 @@
 /*
-Mo ta file:
-- Bang hien thi danh sach BOM.
-- Component nay chi lo presentation, khong goi API truc tiep.
-
-Luong xu ly:
-1) Nhan data/flags tu page.
-2) Render state loading/error/empty.
-3) Emit su kien xem/sua/xoa BOM ve page.
+Thong tin handover:
+- File hien thi bang danh sach BOM.
+- Phu thuoc vao types BOM va callback tu page container.
+- Luu y bao tri: cot "Thanh pham cha" can hien thi du anh + ma + ten de thao tac kho truc quan.
 */
 
 import {
@@ -20,8 +16,9 @@ import {
   TableRow,
   Tooltip,
 } from '@mui/material'
-import { DeleteOutlined, EditOutlined, VisibilityOutlined } from '@mui/icons-material'
+import { DeleteOutlined, EditOutlined, VisibilityOutlined, ShoppingCartOutlined } from '@mui/icons-material'
 import type { BOM } from '../types/bomTypes'
+import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
 
 interface BOMTableProps {
   boms: BOM[]
@@ -31,6 +28,7 @@ interface BOMTableProps {
   onViewItems: (bom: BOM) => void
   onEdit: (bom: BOM) => void
   onDelete: (bom: BOM) => void
+  onCreateOrder: (bom: BOM) => void
 }
 
 // Bang BOM.
@@ -42,6 +40,7 @@ export function BOMTable({
   onViewItems,
   onEdit,
   onDelete,
+  onCreateOrder,
 }: BOMTableProps) {
   return (
     <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: 2 }}>
@@ -95,15 +94,23 @@ export function BOMTable({
               <TableRow key={bom.id} hover>
                 <TableCell>#{bom.id}</TableCell>
                 <TableCell>
-                  <Chip
-                    size="small"
-                    color="secondary"
-                    label={
-                      bom.product
-                        ? `${bom.product.product_code} - ${bom.product.product_name}`
-                        : `Product #${bom.product_id}`
-                    }
-                  />
+                  {/* Senior Handover: Hien thi anh + ma + ten thanh pham de nguoi van hanh nhan dien nhanh tren bang BOM. */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <ProductImageThumb
+                      src={bom.product?.image_url}
+                      alt={bom.product?.product_name || `Sản phẩm ${bom.product_id}`}
+                      size={40}
+                    />
+                    <Chip
+                      size="small"
+                      color="secondary"
+                      label={
+                        bom.product
+                          ? `${bom.product.product_code} - ${bom.product.product_name}`
+                          : `Product #${bom.product_id}`
+                      }
+                    />
+                  </div>
                 </TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>{bom.bom_name || '-'}</TableCell>
                 <TableCell>{bom.description || '-'}</TableCell>
@@ -117,6 +124,18 @@ export function BOMTable({
                     <IconButton color="info" size="small" onClick={() => onViewItems(bom)}>
                       <VisibilityOutlined fontSize="small" />
                     </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Tạo đơn hàng từ BOM">
+                    <span>
+                      <IconButton
+                        color="success"
+                        size="small"
+                        disabled={!canManage}
+                        onClick={() => onCreateOrder(bom)}
+                      >
+                        <ShoppingCartOutlined fontSize="small" />
+                      </IconButton>
+                    </span>
                   </Tooltip>
                   <Tooltip title="Sửa BOM">
                     <span>

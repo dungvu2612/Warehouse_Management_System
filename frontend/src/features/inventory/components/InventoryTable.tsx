@@ -7,6 +7,7 @@ Senior Handover Note:
 
 import { WarningAmberOutlined } from '@mui/icons-material'
 import { Button, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material'
+import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
 import type { InventoryDisplayItem } from '../types/inventoryTypes'
 
 interface InventoryTableProps {
@@ -14,6 +15,7 @@ interface InventoryTableProps {
   isLoading: boolean
   isError: boolean
   isAdmin: boolean
+  showActions?: boolean
   onOpenAdjust: (item: InventoryDisplayItem) => void
 }
 
@@ -22,6 +24,7 @@ export function InventoryTable({
   isLoading,
   isError,
   isAdmin,
+  showActions = true,
   onOpenAdjust,
 }: InventoryTableProps) {
   return (
@@ -30,6 +33,7 @@ export function InventoryTable({
         <TableHead sx={{ bgcolor: 'grey.50' }}>
           <TableRow>
             <TableCell sx={{ fontWeight: 800 }}>ID</TableCell>
+            <TableCell sx={{ fontWeight: 800 }}>Ảnh</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Sản phẩm</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Khay</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Vị trí</TableCell>
@@ -37,7 +41,7 @@ export function InventoryTable({
             <TableCell sx={{ fontWeight: 800, textAlign: 'right' }}>Tồn tối thiểu</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Cảnh báo</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Cập nhật</TableCell>
-            <TableCell sx={{ fontWeight: 800, textAlign: 'center' }}>Thao tác</TableCell>
+            {showActions && <TableCell sx={{ fontWeight: 800, textAlign: 'center' }}>Thao tác</TableCell>}
           </TableRow>
         </TableHead>
 
@@ -45,27 +49,30 @@ export function InventoryTable({
           {isLoading && (
             <TableRow>
               {/* Senior Handover: Loading state khi query GET /inventory chua hoan tat. */}
-              <TableCell colSpan={9}>Đang tải danh sách tồn kho...</TableCell>
+              <TableCell colSpan={showActions ? 10 : 9}>Đang tải danh sách tồn kho...</TableCell>
             </TableRow>
           )}
 
           {isError && (
             <TableRow>
               {/* Senior Handover: Error state khi fetch inventory that bai. */}
-              <TableCell colSpan={9}>Không tải được danh sách tồn kho.</TableCell>
+              <TableCell colSpan={showActions ? 10 : 9}>Không tải được danh sách tồn kho.</TableCell>
             </TableRow>
           )}
 
           {!isLoading && !isError && inventory.length === 0 && (
             <TableRow>
               {/* Senior Handover: Empty state khi inventory list rong. */}
-              <TableCell colSpan={9}>Chưa có dữ liệu tồn kho.</TableCell>
+              <TableCell colSpan={showActions ? 10 : 9}>Chưa có dữ liệu tồn kho.</TableCell>
             </TableRow>
           )}
 
           {inventory.map((item) => (
             <TableRow key={item.id} hover>
               <TableCell>#{item.id}</TableCell>
+              <TableCell>
+                <ProductImageThumb src={item.product_image_url} alt={item.product_name} size={52} />
+              </TableCell>
               <TableCell>
                 <Chip
                   size="small"
@@ -93,16 +100,18 @@ export function InventoryTable({
                 )}
               </TableCell>
               <TableCell>{new Date(item.updated_at).toLocaleString('vi-VN')}</TableCell>
-              <TableCell sx={{ textAlign: 'center' }}>
-                <Button
-                  size="small"
-                  variant="contained"
-                  disabled={!isAdmin || item.is_virtual_row}
-                  onClick={() => onOpenAdjust(item)}
-                >
-                  Điều chỉnh
-                </Button>
-              </TableCell>
+              {showActions && (
+                <TableCell sx={{ textAlign: 'center' }}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    disabled={!isAdmin || item.is_virtual_row}
+                    onClick={() => onOpenAdjust(item)}
+                  >
+                    Điều chỉnh
+                  </Button>
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>

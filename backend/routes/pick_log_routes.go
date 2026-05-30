@@ -35,6 +35,6 @@ func PickLogRoutes(r *gin.Engine) {
 	pickLogs := r.Group("/pick-logs")
 	pickLogs.Use(middleware.AuthRequired())
 	{
-		pickLogs.GET("", middleware.RequireRoles("ADMIN", "STAFF"), handler.GetPickLogs)
+		pickLogs.GET("", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetPickLogs)
 	}
 }

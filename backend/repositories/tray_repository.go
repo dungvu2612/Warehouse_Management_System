@@ -1,7 +1,7 @@
 package repositories
 
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay la data-access layer cho module Tray, da mo rong CRUD + helper sequence cho sinh ma khay.
 - Phu thuoc vao DBTX abstraction trong common.go de query/soft-delete ma khong khoa chat vao *gorm.DB.
 - Luu y bao tri: sequence lay theo pattern `<LOCATION_CODE>-T<number>` tren toan bo bang trays (ca active va inactive) de tranh reuse ma.
@@ -44,11 +44,22 @@ type TrayRepository interface {
 	Create(tray *models.Tray) error
 	FindAllActive() ([]models.Tray, error)
 	FindActiveByID(id uint) (*models.Tray, error)
+	FindActiveByQRCode(qrCode string) (*models.Tray, error)
 	Update(tray *models.Tray) error
 	SoftDeleteByID(id uint) error
 	FindActiveProductByID(id uint) (*models.Product, error)
 	FindActiveLocationByID(id uint) (*models.Location, error)
 	FindMaxTraySequenceByLocationCode(locationCode string) (int, error)
+	FindScanInventoryByTrayID(trayID uint) ([]TrayScanInventoryRow, error)
+}
+
+// TrayScanInventoryRow la read-model inventory + product theo tray scan.
+type TrayScanInventoryRow struct {
+	InventoryID uint
+	ProductID   uint
+	ProductCode string
+	ProductName string
+	Quantity    int
 }
 
 type trayRepository struct {
@@ -80,6 +91,17 @@ func (r *trayRepository) FindAllActive() ([]models.Tray, error) {
 func (r *trayRepository) FindActiveByID(id uint) (*models.Tray, error) {
 	var tray models.Tray
 	if err := r.db.Where("id = ? AND is_active = ?", id, true).First(&tray).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrTrayNotFound
+		}
+		return nil, err
+	}
+	return &tray, nil
+}
+
+func (r *trayRepository) FindActiveByQRCode(qrCode string) (*models.Tray, error) {
+	var tray models.Tray
+	if err := r.db.Where("qr_code = ? AND is_active = ?", qrCode, true).First(&tray).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrTrayNotFound
 		}
@@ -146,4 +168,23 @@ func (r *trayRepository) FindMaxTraySequenceByLocationCode(locationCode string) 
 	}
 
 	return maxSeq, nil
+}
+
+func (r *trayRepository) FindScanInventoryByTrayID(trayID uint) ([]TrayScanInventoryRow, error) {
+	rows := make([]TrayScanInventoryRow, 0)
+	if err := r.db.Raw(`
+		SELECT
+			i.id AS inventory_id,
+			i.product_id AS product_id,
+			COALESCE(p.product_code, '') AS product_code,
+			COALESCE(p.product_name, '') AS product_name,
+			COALESCE(i.quantity, 0) AS quantity
+		FROM inventory i
+		LEFT JOIN products p ON p.id = i.product_id
+		WHERE i.tray_id = ?
+		ORDER BY i.updated_at DESC, i.id DESC
+	`, trayID).Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
 }

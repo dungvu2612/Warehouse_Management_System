@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay la dialog form tao/cap nhat tray, chi xu ly UI/form controls.
 - Phu thuoc vao `TrayPayload` va option lists (`ProductOption`, `LocationOption`) tu page.
 - Khong tich hop API truc tiep trong component de giu phan tang ro rang.
@@ -7,12 +7,12 @@ Senior Handover Note:
 
 import {
   Alert,
+  Autocomplete,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  MenuItem,
   Stack,
   TextField,
 } from '@mui/material'
@@ -50,33 +50,25 @@ export function TrayCreateDialog({
       </DialogTitle>
       <DialogContent>
         <Stack spacing={1.75} sx={{ mt: 0.5 }}>
-          <TextField
-            select
-            label="Sản phẩm"
-            value={form.product_id || ''}
-            onChange={(e) => onChange({ ...form, product_id: Number(e.target.value) })}
-            fullWidth
-          >
-            {productOptions.map((product) => (
-              <MenuItem key={product.id} value={product.id}>
-                {product.product_code} - {product.product_name}
-              </MenuItem>
-            ))}
-          </TextField>
+          <Autocomplete
+            options={productOptions}
+            value={productOptions.find((product) => product.id === form.product_id) || null}
+            onChange={(_, product) => onChange({ ...form, product_id: product?.id || 0 })}
+            getOptionLabel={(option) => `${option.product_code} - ${option.product_name}`}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderInput={(params) => <TextField {...params} label="Sản phẩm" fullWidth />}
+          />
 
-          <TextField
-            select
-            label="Vị trí"
-            value={form.location_id || ''}
-            onChange={(e) => onChange({ ...form, location_id: Number(e.target.value) })}
-            fullWidth
-          >
-            {locationOptions.map((location) => (
-              <MenuItem key={location.id} value={location.id}>
-                {location.location_code} {location.description ? `- ${location.description}` : ''}
-              </MenuItem>
-            ))}
-          </TextField>
+          <Autocomplete
+            options={locationOptions}
+            value={locationOptions.find((location) => location.id === form.location_id) || null}
+            onChange={(_, location) => onChange({ ...form, location_id: location?.id || 0 })}
+            getOptionLabel={(option) =>
+              `${option.location_code}${option.description ? ` - ${option.description}` : ''}`
+            }
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderInput={(params) => <TextField {...params} label="Vị trí" fullWidth />}
+          />
 
           <TextField
             label="Mô tả"

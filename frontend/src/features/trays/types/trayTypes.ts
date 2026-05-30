@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay dinh nghia contracts TypeScript cho module Trays o frontend (CRUD + read-model display).
 - Phu thuoc truc tiep vao schema backend cho cac endpoint: GET/POST/PUT/DELETE /trays, GET /products, GET /locations.
 - Khi backend doi ten field JSON, cap nhat type tai day truoc de compile bao cac diem anh huong.
@@ -18,6 +18,9 @@ export interface Tray {
 }
 
 export interface TrayDisplay extends Tray {
+  product_code: string
+  product_name: string
+  product_image_url: string
   location_code: string
   location_description: string
 }
@@ -28,10 +31,27 @@ export interface TrayPayload {
   description: string
 }
 
+export interface TrayScanInventoryItem {
+  inventory_id: number
+  product_id: number
+  product_code: string
+  product_name: string
+  quantity: number
+  last_updated_at: string
+}
+
+export interface TrayScanResponse {
+  tray: Tray
+  location_code: string
+  inventory_items: TrayScanInventoryItem[]
+  inventory_total: number
+}
+
 export interface ProductOption {
   id: number
   product_code: string
   product_name: string
+  image_url: string
   is_active: boolean
 }
 

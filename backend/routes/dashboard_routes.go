@@ -1,20 +1,12 @@
 package routes
 
 /*
-Mo ta file:
-- File nay dang ky endpoint va wiring dependency injection cho module 'dashboard'.
-- Noi day quy dinh policy middleware/auth/role truoc khi request vao handler.
-
-Luong xu ly:
-1) Khoi tao repository -> service -> handler cho module.
-2) Gan middleware cho group route (neu co).
-3) Map URL + HTTP method vao handler method cu the.
-
-Cac ham chinh:
-- DashboardRoutes
-
-Luu y khi sua:
-- Uu tien giu on dinh API contract va ten error message neu frontend dang phu thuoc.
+Senior Handover Note:
+- Purpose: Dang ky route dashboard va policy role-based.
+- Dependencies: dashboard repository/service/handler + auth/role middleware.
+- API contract: GET /dashboard/stats.
+- Role access: ADMIN/WAREHOUSE/VIEWER duoc phep truy cap.
+- Maintenance notes: Khong re-use role STAFF moi; neu can tuong thich du lieu cu da normalize o JWT.
 */
 
 import (
@@ -35,7 +27,6 @@ func DashboardRoutes(r *gin.Engine) {
 	dashboard := r.Group("/dashboard")
 	dashboard.Use(middleware.AuthRequired())
 	{
-		// ADMIN và STAFF đều có thể xem dashboard tổng quan.
-		dashboard.GET("/stats", middleware.RequireRoles("ADMIN", "STAFF"), handler.GetDashboardStats)
+		dashboard.GET("/stats", middleware.RequireRoles("ADMIN", "WAREHOUSE", "VIEWER"), handler.GetDashboardStats)
 	}
 }

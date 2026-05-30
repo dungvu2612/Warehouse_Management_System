@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay la service layer cua module Trays, nam giua hooks va API layer.
 - Phu thuoc vao `traysApi` de thao tac du lieu va cung cap helper filter/search cho page.
 - Khong dua React state vao service; giu cac use-case dung chung de de test va maintain.
@@ -49,13 +49,22 @@ export const trayService = {
 
   // Senior Handover: Loc list tray theo ma khay / qr / mo ta / id.
   // Senior Handover: Join trays voi locations de hien thi location_code + location_description thay vi location_id.
-  mapTraysForDisplay: (trays: Tray[], locations: LocationOption[]): TrayDisplay[] => {
+  mapTraysForDisplay: (
+    trays: Tray[],
+    locations: LocationOption[],
+    products: ProductOption[],
+  ): TrayDisplay[] => {
     const locationMap = new Map<number, LocationOption>(locations.map((location) => [location.id, location]))
+    const productMap = new Map<number, ProductOption>(products.map((product) => [product.id, product]))
 
     return trays.map((tray) => {
       const location = locationMap.get(tray.location_id)
+      const product = productMap.get(tray.product_id)
       return {
         ...tray,
+        product_code: product?.product_code || `#${tray.product_id}`,
+        product_name: product?.product_name || '-',
+        product_image_url: product?.image_url || '',
         location_code: location?.location_code || `#${tray.location_id}`,
         location_description: location?.description || location?.shelf || '',
       }

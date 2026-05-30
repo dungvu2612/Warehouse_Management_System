@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay la dialog dieu chinh ton kho (PATCH /inventory/:id/adjust), chi xu ly UI form.
 - Phu thuoc vao `InventoryAdjustFormValues` va thong tin item duoc chon tu page.
 - Khong goi API truc tiep trong component de giu clean architecture.

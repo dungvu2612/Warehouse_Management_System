@@ -41,12 +41,32 @@ const (
 // ProductInput là DTO nghiệp vụ cho create/update.
 type ProductInput struct {
 	ProductCode     string
+	QRCode          string
 	ProductName     string
 	ProductType     string
+	ImageURL        string
 	Description     string
 	Unit            string
 	MinStock        int
 	Price           float64
+}
+
+// ProductScanTrayResult la dong inventory enrich theo tray/location khi scan product QR.
+type ProductScanTrayResult struct {
+	InventoryID   uint   `json:"inventory_id"`
+	TrayID        uint   `json:"tray_id"`
+	TrayCode      string `json:"tray_code"`
+	LocationID    uint   `json:"location_id"`
+	LocationCode  string `json:"location_code"`
+	Quantity      int    `json:"quantity"`
+	LastUpdatedAt string `json:"last_updated_at"`
+}
+
+// ProductScanResult la response contract cua GET /products/scan/:qr_code.
+type ProductScanResult struct {
+	Product        *models.Product         `json:"product"`
+	InventoryTotal int                     `json:"inventory_total"`
+	Trays          []ProductScanTrayResult `json:"trays"`
 }
 
 // ProductService định nghĩa business logic cho module products.
@@ -54,6 +74,7 @@ type ProductService interface {
 	Create(input ProductInput) (*models.Product, error)
 	GetAllActive() ([]models.Product, error)
 	GetByID(id uint) (*models.Product, error)
+	ScanByQRCode(qrCode string) (*ProductScanResult, error)
 	Update(id uint, input ProductInput) (*models.Product, error)
 	Delete(id uint) error
 	PreviewCode(productType string, productName string) (string, error)
@@ -82,13 +103,19 @@ func (s *productService) Create(input ProductInput) (*models.Product, error) {
 
 		product := &models.Product{
 			ProductCode: generatedCode,
+			QRCode:      generatedCode,
 			ProductName: normalized.ProductName,
 			ProductType: normalized.ProductType,
+			ImageURL:    normalized.ImageURL,
 			Description: normalized.Description,
 			Unit:        normalized.Unit,
 			MinStock:    normalized.MinStock,
 			Price:       normalized.Price,
 			IsActive:    true,
+		}
+
+		if normalized.QRCode != "" {
+			product.QRCode = normalized.QRCode
 		}
 
 		if err := s.repo.Create(product); err != nil {
@@ -115,6 +142,45 @@ func (s *productService) GetByID(id uint) (*models.Product, error) {
 	return s.repo.FindActiveByID(id)
 }
 
+func (s *productService) ScanByQRCode(qrCode string) (*ProductScanResult, error) {
+	normalizedQR := strings.TrimSpace(qrCode)
+	if normalizedQR == "" {
+		return nil, ErrInvalidProductPayload
+	}
+
+	product, err := s.repo.FindActiveByQRCode(normalizedQR)
+	if err != nil {
+		return nil, err
+	}
+
+	// Senior Handover: Product QR workflow - map inventory + trays de HT730 lookup/putaway/stocktaking.
+	rows, err := s.repo.FindScanRowsByProductID(product.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	total := 0
+	trays := make([]ProductScanTrayResult, 0, len(rows))
+	for _, row := range rows {
+		total += row.Quantity
+		trays = append(trays, ProductScanTrayResult{
+			InventoryID:   row.InventoryID,
+			TrayID:        row.TrayID,
+			TrayCode:      row.TrayCode,
+			LocationID:    row.LocationID,
+			LocationCode:  row.LocationCode,
+			Quantity:      row.Quantity,
+			LastUpdatedAt: "",
+		})
+	}
+
+	return &ProductScanResult{
+		Product:        product,
+		InventoryTotal: total,
+		Trays:          trays,
+	}, nil
+}
+
 func (s *productService) Update(id uint, input ProductInput) (*models.Product, error) {
 	if id == 0 {
 		return nil, ErrInvalidProductID
@@ -132,6 +198,11 @@ func (s *productService) Update(id uint, input ProductInput) (*models.Product, e
 
 	product.ProductName = normalized.ProductName
 	product.ProductType = normalized.ProductType
+	if normalized.QRCode == "" {
+		normalized.QRCode = product.QRCode
+	}
+	product.QRCode = normalized.QRCode
+	product.ImageURL = normalized.ImageURL
 	product.Description = normalized.Description
 	product.Unit = normalized.Unit
 	product.MinStock = normalized.MinStock
@@ -168,9 +239,11 @@ func (s *productService) PreviewCode(productType string, productName string) (st
 func normalizeAndValidateInput(input ProductInput) (ProductInput, error) {
 	input.ProductName = strings.TrimSpace(input.ProductName)
 	input.ProductType = strings.ToUpper(strings.TrimSpace(input.ProductType))
+	input.ImageURL = strings.TrimSpace(input.ImageURL)
 	input.Description = strings.TrimSpace(input.Description)
 	input.Unit = strings.TrimSpace(input.Unit)
 	input.ProductCode = strings.ToUpper(strings.TrimSpace(input.ProductCode))
+	input.QRCode = strings.ToUpper(strings.TrimSpace(input.QRCode))
 
 	if input.ProductName == "" {
 		return ProductInput{}, ErrInvalidProductPayload

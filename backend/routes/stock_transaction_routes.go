@@ -1,20 +1,12 @@
 package routes
 
 /*
-Mo ta file:
-- File nay dang ky endpoint va wiring dependency injection cho module 'stock_transaction'.
-- Noi day quy dinh policy middleware/auth/role truoc khi request vao handler.
-
-Luong xu ly:
-1) Khoi tao repository -> service -> handler cho module.
-2) Gan middleware cho group route (neu co).
-3) Map URL + HTTP method vao handler method cu the.
-
-Cac ham chinh:
-- StockTransactionRoutes
-
-Luu y khi sua:
-- Uu tien giu on dinh API contract va ten error message neu frontend dang phu thuoc.
+Senior Handover Note:
+- Purpose: Dang ky endpoint stock transactions read-only cho audit/warehouse monitoring.
+- Dependencies: stock_transaction repository/service/handler + middleware.
+- API contract: GET /stock-transactions.
+- Role access: ADMIN + WAREHOUSE.
+- Maintenance notes: Frontend dashboard va warehouse-overview phu thuoc endpoint nay.
 */
 
 import (
@@ -35,7 +27,7 @@ func StockTransactionRoutes(r *gin.Engine) {
 	stockTransactions := r.Group("/stock-transactions")
 	stockTransactions.Use(middleware.AuthRequired())
 	{
-		// ADMIN và STAFF đều có nhu cầu xem lịch sử giao dịch kho
-		stockTransactions.GET("", middleware.RequireRoles("ADMIN", "STAFF"), handler.GetStockTransactions)
+		// ADMIN và WAREHOUSE đều có nhu cầu xem lịch sử giao dịch kho
+		stockTransactions.GET("", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetStockTransactions)
 	}
 }

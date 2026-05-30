@@ -16,6 +16,9 @@ import { normalizeProductPayload, validateProductForm } from '../utils/productVa
 import { productService } from '../services/productService'
 import { ProductFormDialog } from '../components/ProductFormDialog'
 import { ProductTable } from '../components/ProductTable'
+import { isSupportedProductImageType, resizeProductImageToDataUrl } from '../../../shared/lib/productImage'
+import { ListPagination } from '../../../shared/components/ListPagination'
+import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination'
 
 // Trang Products chỉ giữ orchestration: state màn hình + gọi hooks + ghép components.
 export function ProductsPage() {
@@ -33,6 +36,7 @@ export function ProductsPage() {
   const [debouncedProductName, setDebouncedProductName] = useState('')
   const [formError, setFormError] = useState('')
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Debounce 300ms để giảm số lượng request preview code khi user gõ nhanh.
   useEffect(() => {
@@ -86,6 +90,15 @@ export function ProductsPage() {
     return productService.filterProductsByTypeAndKeyword(list, activeType, search)
   }, [productsQuery.data, search, activeType])
 
+  useEffect(() => {
+    // Senior Handover: Reset page to 1 whenever search/filter changes.
+    setCurrentPage(1)
+  }, [search, activeType])
+
+  const paginatedProducts = useMemo(() => {
+    return paginateItems(filteredProducts, currentPage, DEFAULT_PAGE_SIZE)
+  }, [filteredProducts, currentPage])
+
   // Preview product_code realtime tu backend khi tao moi.
   useEffect(() => {
     if (editingProduct) return
@@ -111,8 +124,10 @@ export function ProductsPage() {
     setEditingProduct(product)
     setForm({
       product_code: product.product_code,
+      qr_code: product.qr_code || product.product_code,
       product_name: product.product_name,
       product_type: product.product_type,
+      image_url: product.image_url || '',
       description: product.description || '',
       unit: product.unit || 'pcs',
       min_stock: product.min_stock,
@@ -144,6 +159,24 @@ export function ProductsPage() {
   const handleDelete = (product: Product) => {
     if (!window.confirm(`Xóa mềm sản phẩm ${product.product_code}?`)) return
     deleteMutation.mutate(product.id)
+  }
+
+  const handleImportImage = async (file: File | null) => {
+    if (!file) return
+    if (!isSupportedProductImageType(file)) {
+      setFormError('Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP.')
+      return
+    }
+
+    try {
+      // Senior Handover: Chuẩn hóa ảnh về cùng kích thước trước khi lưu để đảm bảo UI đồng nhất toàn hệ thống.
+      const resizedDataUrl = await resizeProductImageToDataUrl(file)
+      setForm((prev) => ({ ...prev, image_url: resizedDataUrl }))
+      setFormError('')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Không xử lý được ảnh sản phẩm.'
+      setFormError(message)
+    }
   }
 
   return (
@@ -180,7 +213,7 @@ export function ProductsPage() {
 
       {banner && <Alert severity={banner.type}>{banner.text}</Alert>}
       {!isAdmin && (
-        <Alert severity="info">Bạn đang ở role STAFF: chỉ có quyền xem danh sách sản phẩm.</Alert>
+        <Alert severity="info">Bạn đang ở role không có quyền quản trị: chỉ có quyền xem danh sách sản phẩm.</Alert>
       )}
 
       <Paper sx={{ p: 2.5 }}>
@@ -210,12 +243,18 @@ export function ProductsPage() {
         </Stack>
 
         <ProductTable
-          products={filteredProducts}
+          products={paginatedProducts}
           isLoading={productsQuery.isLoading}
           isError={productsQuery.isError}
           isAdmin={isAdmin}
           onEdit={openEditDialog}
           onDelete={handleDelete}
+        />
+        <ListPagination
+          currentPage={currentPage}
+          totalItems={filteredProducts.length}
+          pageSize={DEFAULT_PAGE_SIZE}
+          onPageChange={setCurrentPage}
         />
       </Paper>
 
@@ -224,6 +263,7 @@ export function ProductsPage() {
         title={editingProduct ? 'Cập nhật sản phẩm' : 'Tạo sản phẩm mới'}
         form={form}
         onChange={setForm}
+        onImportImage={handleImportImage}
         errorMessage={formError}
         onClose={() => setDialogOpen(false)}
         onSubmit={handleSubmit}

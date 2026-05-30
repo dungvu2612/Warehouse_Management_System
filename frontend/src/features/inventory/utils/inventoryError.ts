@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay map loi API module Inventory thanh thong diep UI nhat quan.
 - Phu thuoc vao shape loi axios (`error.response.status`, `error.response.data.error`).
 - Neu backend doi ma loi/nghiep vu, cap nhat mapping tai day de page khong phai sua nhieu diem.

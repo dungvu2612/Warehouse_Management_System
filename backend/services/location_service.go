@@ -1,7 +1,7 @@
 package services
 
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay chua business use-cases cho module location, gom create/list/update/delete.
 - Phu thuoc vao repository layer de doc/ghi model Location va map domain error len handler.
 - Khi doi nghiep vu phan quyen/validate, cap nhat tai service truoc de giu transport layer mong.

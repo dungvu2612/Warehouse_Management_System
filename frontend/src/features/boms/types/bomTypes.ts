@@ -1,16 +1,8 @@
 /*
-Mo ta file:
-- Dinh nghia toan bo data contracts TypeScript cho module BOM.
-- File nay la nguon su that ve shape du lieu giua FE va BE de tranh dung any.
-
-Luong xu ly:
-1) Cac layer api/hooks/components import type tu day.
-2) Type duoc tach ro cho Product/BOM/BOMItem/Create payload.
-3) Khi backend doi contract, cap nhat file nay truoc roi lan luot sua cac layer khac.
-
-Luu y khi sua:
-- Khong doi ten field tuy y neu backend chua doi.
-- Uu tien mo rong type thay vi dung any de de maintain.
+Thong tin handover:
+- File dinh nghia toan bo TypeScript contracts cua feature BOM.
+- Duoc su dung boi cac layer api/service/hook/component de dong bo shape du lieu.
+- Luu y bao tri: khi backend products thay doi contract (vi du image_url), can cap nhat tai day truoc de tranh sai type day chuyen.
 */
 
 // Product type theo quy uoc backend da enforce.
@@ -21,6 +13,7 @@ export interface ProductOption {
   id: number
   product_code: string
   product_name: string
+  image_url?: string
   product_type: ProductType
   unit: string
   is_active: boolean

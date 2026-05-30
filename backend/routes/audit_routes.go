@@ -1,20 +1,12 @@
 package routes
 
 /*
-Mo ta file:
-- File nay dang ky endpoint va wiring dependency injection cho module 'audit'.
-- Noi day quy dinh policy middleware/auth/role truoc khi request vao handler.
-
-Luong xu ly:
-1) Khoi tao repository -> service -> handler cho module.
-2) Gan middleware cho group route (neu co).
-3) Map URL + HTTP method vao handler method cu the.
-
-Cac ham chinh:
-- AuditRoutes
-
-Luu y khi sua:
-- Uu tien giu on dinh API contract va ten error message neu frontend dang phu thuoc.
+Senior Handover Note:
+- Purpose: Dang ky endpoint audit consistency.
+- Dependencies: audit repository/service/handler + role middleware.
+- API contract: GET /audit/consistency/:order_id.
+- Role access: ADMIN + WAREHOUSE.
+- Maintenance notes: Permission can phu hop module dashboard va order detail audit tab.
 */
 
 import (
@@ -36,6 +28,6 @@ func AuditRoutes(r *gin.Engine) {
 	audit.Use(middleware.AuthRequired())
 	{
 		// Admin/staff đều cần quyền xem báo cáo đối soát để kiểm tra nghiệp vụ.
-		audit.GET("/consistency/:order_id", middleware.RequireRoles("ADMIN", "STAFF"), handler.GetOrderAuditConsistency)
+		audit.GET("/consistency/:order_id", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetOrderAuditConsistency)
 	}
 }

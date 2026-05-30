@@ -1,7 +1,7 @@
 package handlers
 
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay la transport layer HTTP cho module Tray, da mo rong CRUD va payload create/update khong nhap tray_code/qr_code.
 - Phu thuoc vao TrayService va domain errors de map dung HTTP status code.
 - Luu y bao tri: tray_code/qr_code duoc service sinh tu dong theo location_code, handler khong nhan 2 field nay tu client.
@@ -103,6 +103,18 @@ func (h *TrayHandler) GetTrays(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, trays)
+}
+
+// ScanTrayByQRCode tra thong tin tray + ton kho theo qr_code de phuc vu HT730 scan workflow.
+func (h *TrayHandler) ScanTrayByQRCode(c *gin.Context) {
+	qrCode := c.Param("qr_code")
+	result, err := h.service.ScanByQRCode(qrCode)
+	if err != nil {
+		mapTrayServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }
 
 // UpdateTray cap nhat khay (ADMIN).

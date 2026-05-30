@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File này tập trung React Query hooks cho module Locations.
 - Phụ thuộc vào `locationService` để giữ page sạch khỏi logic data-fetch/cache.
 - Query key và invalidate strategy tại file này đã bao phủ create/update/delete.

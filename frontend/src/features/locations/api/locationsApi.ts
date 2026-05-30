@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File này là API layer thuần HTTP cho module Locations (CRUD).
 - Phụ thuộc vào shared `http` client để tái sử dụng auth token/interceptor hiện có.
 - Chỉ chứa request/response typed, không đặt business logic UI tại đây.

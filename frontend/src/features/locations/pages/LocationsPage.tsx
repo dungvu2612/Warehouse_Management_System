@@ -1,11 +1,13 @@
 /*
 Senior Handover Note:
-- File này là page orchestration cho màn Locations: quản lý state UI chính, gọi hooks và ghép components.
-- Phụ thuộc vào `useLocationsQuery` + mutations create/update/delete, `locationService`, `useAuth`, và các component con của feature.
-- Lưu ý bảo trì: giữ logic permission tại page (ADMIN được tạo/sửa/xóa, STAFF chỉ xem) để không phá auth/router/layout hiện có.
+- Purpose: Page orchestration cho man Locations.
+- Dependencies: `useLocationsQuery` + mutations create/update/delete, `locationService`, `useAuth`.
+- API contract: GET/POST/PUT/DELETE /locations.
+- Role access: ADMIN thao tac ghi; WAREHOUSE/VIEWER chi xem.
+- Maintenance notes: Giu logic permission tai page de dong bo route policy.
 */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Add, Refresh } from '@mui/icons-material'
 import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
 import { useAuth } from '../../../app/providers/AuthProvider'
@@ -21,6 +23,8 @@ import { locationService } from '../services/locationService'
 import type { CreateLocationPayload, Location } from '../types/locationTypes'
 import { mapLocationApiError } from '../utils/locationError'
 import { normalizeLocationPayload, validateLocationForm } from '../utils/locationValidation'
+import { ListPagination } from '../../../shared/components/ListPagination'
+import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination'
 
 const defaultLocationForm: CreateLocationPayload = {
   location_code: '',
@@ -40,6 +44,7 @@ export function LocationsPage() {
   const [form, setForm] = useState<CreateLocationPayload>(defaultLocationForm)
   const [formError, setFormError] = useState('')
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const locationsQuery = useLocationsQuery()
 
@@ -79,6 +84,15 @@ export function LocationsPage() {
   const filteredLocations = useMemo(() => {
     return locationService.filterLocationsByKeyword(locationsQuery.data || [], search)
   }, [locationsQuery.data, search])
+
+  useEffect(() => {
+    // Senior Handover: Reset page to 1 whenever search/filter changes.
+    setCurrentPage(1)
+  }, [search])
+
+  const paginatedLocations = useMemo(() => {
+    return paginateItems(filteredLocations, currentPage, DEFAULT_PAGE_SIZE)
+  }, [filteredLocations, currentPage])
 
   const openCreateDialog = () => {
     // Senior Handover: Permission block - chỉ ADMIN được quyền mở dialog thao tác ghi.
@@ -187,12 +201,18 @@ export function LocationsPage() {
 
         {/* Senior Handover: Fetch/render block - tập trung loading/error/empty state ở table component. */}
         <LocationTable
-          locations={filteredLocations}
+          locations={paginatedLocations}
           isLoading={locationsQuery.isLoading}
           isError={locationsQuery.isError}
           isAdmin={isAdmin}
           onEdit={openEditDialog}
           onDelete={handleDeleteLocation}
+        />
+        <ListPagination
+          currentPage={currentPage}
+          totalItems={filteredLocations.length}
+          pageSize={DEFAULT_PAGE_SIZE}
+          onPageChange={setCurrentPage}
         />
       </Paper>
 

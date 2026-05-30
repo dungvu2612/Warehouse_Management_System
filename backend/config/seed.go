@@ -8,6 +8,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+/*
+Senior Handover Note:
+- Purpose: Seed tai khoan mac dinh cho moi truong dev/test.
+- Dependencies: Su dung `DB` va model `users`.
+- API contract: Khong expose API; chi tao du lieu mau noi bo.
+- Role access: User seed van hanh theo role contract ADMIN/WAREHOUSE.
+- Maintenance notes: Khong dung seed credentials nay cho production.
+*/
 func SeedDefaultUsers() {
 	users := []struct {
 		Username string
@@ -25,7 +33,7 @@ func SeedDefaultUsers() {
 			Username: "staff",
 			Password: "staff123",
 			FullName: "Warehouse Staff",
-			Role:     "STAFF",
+			Role:     "WAREHOUSE",
 		},
 	}
 

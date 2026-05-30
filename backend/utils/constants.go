@@ -20,4 +20,5 @@ const (
 	StockTxTypeImport = "IMPORT"
 	StockTxTypeExport = "EXPORT"
 	StockTxTypeAdjust = "ADJUST"
+	StockTxTypeRollback = "ROLLBACK"
 )

@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File này là bảng hiển thị danh sách locations, thuộc presentation layer.
 - Phụ thuộc vào type `Location` và chỉ nhận data/flags từ page để render loading/error/empty.
 - Không gọi API trực tiếp trong component này để tránh trộn logic data và UI.

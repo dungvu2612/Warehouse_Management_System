@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay la dialog tao ton kho ban dau (POST /inventory), chi xu ly UI/form controls.
 - Phu thuoc vao `InventoryCreatePayload`, `ProductOption`, `TrayOption` tu page.
 - Khong tich hop API truc tiep trong component de giu phan tang ro rang.
@@ -7,15 +7,16 @@ Senior Handover Note:
 
 import {
   Alert,
+  Autocomplete,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  MenuItem,
   Stack,
   TextField,
 } from '@mui/material'
+import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
 import type { InventoryCreatePayload, ProductOption, TrayOption } from '../types/inventoryTypes'
 
 interface InventoryCreateDialogProps {
@@ -52,42 +53,50 @@ export function InventoryCreateDialog({
       <DialogTitle sx={{ fontWeight: 900 }}>Tạo tồn kho ban đầu</DialogTitle>
       <DialogContent>
         <Stack spacing={1.75} sx={{ mt: 0.5 }}>
-          <TextField
-            select
-            label="Sản phẩm"
-            value={form.product_id || ''}
-            onChange={(e) =>
+          <Autocomplete
+            options={productOptions}
+            value={productOptions.find((product) => product.id === form.product_id) || null}
+            onChange={(_, product) =>
               // Senior Handover: Khi doi product, reset tray de bat buoc chon lai khay hop le theo product moi.
-              onChange({ ...form, product_id: Number(e.target.value), tray_id: 0 })
+              onChange({ ...form, product_id: product?.id || 0, tray_id: 0 })
             }
-            fullWidth
-          >
-            {productOptions.map((product) => (
-              <MenuItem key={product.id} value={product.id}>
-                {product.product_code} - {product.product_name}
-              </MenuItem>
-            ))}
-          </TextField>
+            getOptionLabel={(option) => `${option.product_code} - ${option.product_name}`}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderOption={(props, option) => (
+              <li {...props} key={option.id}>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                  <ProductImageThumb src={option.image_url} alt={option.product_name} size={32} />
+                  <span>
+                    {option.product_code} - {option.product_name}
+                  </span>
+                </Stack>
+              </li>
+            )}
+            renderInput={(params) => <TextField {...params} label="Sản phẩm" fullWidth />}
+          />
 
-          <TextField
-            select
-            label="Khay"
-            value={form.tray_id || ''}
-            onChange={(e) => onChange({ ...form, tray_id: Number(e.target.value) })}
-            fullWidth
-            disabled={form.product_id <= 0}
-            helperText={
-              form.product_id > 0
-                ? 'Chỉ hiển thị khay thuộc sản phẩm đã chọn.'
-                : 'Chọn sản phẩm trước để lọc khay chính xác.'
+          <Autocomplete
+            options={trayOptionsByProduct}
+            value={trayOptionsByProduct.find((tray) => tray.id === form.tray_id) || null}
+            onChange={(_, tray) => onChange({ ...form, tray_id: tray?.id || 0 })}
+            getOptionLabel={(option) =>
+              `${option.tray_code}${productLabelById[option.product_id] ? ` (${productLabelById[option.product_id]})` : ''}`
             }
-          >
-            {trayOptionsByProduct.map((tray) => (
-              <MenuItem key={tray.id} value={tray.id}>
-                {tray.tray_code} {productLabelById[tray.product_id] ? `(${productLabelById[tray.product_id]})` : ''}
-              </MenuItem>
-            ))}
-          </TextField>
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            disabled={form.product_id <= 0}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Khay"
+                fullWidth
+                helperText={
+                  form.product_id > 0
+                    ? 'Chỉ hiển thị khay thuộc sản phẩm đã chọn.'
+                    : 'Chọn sản phẩm trước để lọc khay chính xác.'
+                }
+              />
+            )}
+          />
 
           <TextField
             label="Số lượng tồn ban đầu"

@@ -1,7 +1,7 @@
 package services
 
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay la service layer module Tray, da mo rong CRUD va sinh tray_code/qr_code tu dong theo location.
 - Phu thuoc vao TrayRepository de validate references va cap nhat du lieu theo soft-delete.
 - Luu y bao tri: nguoi dung khong nhap tray_code/qr_code; service sinh theo format `<LOCATION_CODE>-T<NN>`.
@@ -39,8 +39,27 @@ var ErrInvalidTrayID = errors.New("invalid tray id")
 type TrayService interface {
 	Create(productID uint, locationID uint, description string) (*models.Tray, error)
 	GetAllActive() ([]models.Tray, error)
+	ScanByQRCode(qrCode string) (*TrayScanResult, error)
 	Update(id uint, productID uint, locationID uint, description string) (*models.Tray, error)
 	Delete(id uint) error
+}
+
+// TrayScanInventoryResult la read-model ton kho theo tray scan.
+type TrayScanInventoryResult struct {
+	InventoryID   uint   `json:"inventory_id"`
+	ProductID     uint   `json:"product_id"`
+	ProductCode   string `json:"product_code"`
+	ProductName   string `json:"product_name"`
+	Quantity      int    `json:"quantity"`
+	LastUpdatedAt string `json:"last_updated_at"`
+}
+
+// TrayScanResult la response contract cua GET /trays/scan/:qr_code.
+type TrayScanResult struct {
+	Tray            *models.Tray               `json:"tray"`
+	LocationCode    string                     `json:"location_code"`
+	InventoryItems  []TrayScanInventoryResult  `json:"inventory_items"`
+	InventoryTotal  int                        `json:"inventory_total"`
 }
 
 type trayService struct {
@@ -89,6 +108,50 @@ func (s *trayService) Create(productID uint, locationID uint, description string
 
 func (s *trayService) GetAllActive() ([]models.Tray, error) {
 	return s.repo.FindAllActive()
+}
+
+func (s *trayService) ScanByQRCode(qrCode string) (*TrayScanResult, error) {
+	normalizedQR := strings.TrimSpace(qrCode)
+	if normalizedQR == "" {
+		return nil, ErrInvalidTrayPayload
+	}
+
+	tray, err := s.repo.FindActiveByQRCode(normalizedQR)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := s.repo.FindScanInventoryByTrayID(tray.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	locationCode := ""
+	location, err := s.repo.FindActiveLocationByID(tray.LocationID)
+	if err == nil && location != nil {
+		locationCode = location.LocationCode
+	}
+
+	total := 0
+	items := make([]TrayScanInventoryResult, 0, len(rows))
+	for _, row := range rows {
+		total += row.Quantity
+		items = append(items, TrayScanInventoryResult{
+			InventoryID:   row.InventoryID,
+			ProductID:     row.ProductID,
+			ProductCode:   row.ProductCode,
+			ProductName:   row.ProductName,
+			Quantity:      row.Quantity,
+			LastUpdatedAt: "",
+		})
+	}
+
+	return &TrayScanResult{
+		Tray:           tray,
+		LocationCode:   locationCode,
+		InventoryItems: items,
+		InventoryTotal: total,
+	}, nil
 }
 
 func (s *trayService) Update(id uint, productID uint, locationID uint, description string) (*models.Tray, error) {

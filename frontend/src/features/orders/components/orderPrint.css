@@ -1,0 +1,130 @@
+/*
+Senior Handover Note:
+- Purpose: Print-only stylesheet cho phieu don hang.
+- Dependencies: Class names tu `OrderPrintTemplate` va wrapper `no-print` trong OrderDetail.
+- API contract: Khong lien quan API; chi dinh nghia layout print/PDF.
+- Business rules: Chi in noi dung phieu khach hang, an toan bo UI van hanh noi bo khi print.
+- Permission notes: CSS read-only, khong tao nghiep vu moi.
+- Maintenance notes: Co the doi A4/A5 qua @page size tuy nhu cau.
+*/
+
+.order-print-root {
+  display: none;
+  color: #0f172a;
+  background: #fff;
+  font-family: Arial, sans-serif;
+}
+
+.order-print-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  border-bottom: 2px solid #1e293b;
+  padding-bottom: 10px;
+}
+
+.order-print-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.order-print-brand h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.order-print-brand p {
+  margin: 4px 0 0;
+  color: #334155;
+}
+
+.order-print-logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.order-print-qr-wrap {
+  text-align: center;
+}
+
+.order-print-qr-wrap p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.order-print-meta {
+  margin: 14px 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+}
+
+.order-print-meta p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.order-print-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.order-print-table th,
+.order-print-table td {
+  border: 1px solid #cbd5e1;
+  padding: 8px;
+  font-size: 13px;
+}
+
+.order-print-table th {
+  background: #f1f5f9;
+  text-align: left;
+}
+
+.order-print-table .num {
+  text-align: right;
+}
+
+.order-print-empty {
+  text-align: center;
+  color: #475569;
+  padding: 16px !important;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .order-print-root,
+  .order-print-root * {
+    visibility: visible !important;
+  }
+
+  .order-print-root {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}

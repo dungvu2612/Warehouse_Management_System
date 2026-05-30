@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay la service layer cua module Inventory, nam giua hooks va API layer.
 - Phu thuoc vao `inventoryApi` de thao tac du lieu va cung cap helper enrich/filter/canh bao ton thap.
 - Khong dua React state vao service; giu use-case dung chung de page/components gon va de bao tri.
@@ -8,14 +8,14 @@ Senior Handover Note:
 import { inventoryApi } from '../api/inventoryApi'
 import type {
   InventoryAdjustPayload,
+  InventoryAdjustByTrayPayload,
   InventoryAdjustResponse,
   InventoryCreatePayload,
   InventoryDisplayItem,
   InventoryItem,
+  InventoryTrayScanResponse,
   LocationOption,
   ProductOption,
-  StockTransactionDisplayItem,
-  StockTransactionItem,
   TrayOption,
 } from '../types/inventoryTypes'
 
@@ -38,6 +38,14 @@ export const inventoryService = {
     return inventoryApi.adjustInventory(id, payload)
   },
 
+  adjustInventoryByTray: async (payload: InventoryAdjustByTrayPayload): Promise<InventoryAdjustResponse> => {
+    return inventoryApi.adjustByTray(payload)
+  },
+
+  scanTrayByQRCode: async (trayQRCode: string): Promise<InventoryTrayScanResponse> => {
+    return inventoryApi.scanTrayByQRCode(trayQRCode)
+  },
+
   getProductOptions: async (): Promise<ProductOption[]> => {
     const products = await inventoryApi.getProducts()
     return products.filter((product) => product.is_active)
@@ -51,13 +59,6 @@ export const inventoryService = {
   getLocationOptions: async (): Promise<LocationOption[]> => {
     const locations = await inventoryApi.getLocations()
     return locations.filter((location) => location.is_active)
-  },
-
-  getAdjustTransactions: async (): Promise<StockTransactionItem[]> => {
-    return inventoryApi.getStockTransactions({
-      transaction_type: 'ADJUST',
-      limit: 100,
-    })
   },
 
   // Senior Handover: Enrich inventory list bang product/tray/location de phuc vu filter + low-stock warning UI.
@@ -83,6 +84,7 @@ export const inventoryService = {
         ...item,
         product_code: product?.product_code || `#${item.product_id}`,
         product_name: product?.product_name || '-',
+        product_image_url: product?.image_url || '',
         min_stock: minStock,
         tray_code: tray?.tray_code || `#${item.tray_id}`,
         location_code: location?.location_code || '-',
@@ -110,6 +112,7 @@ export const inventoryService = {
           updated_at: new Date(0).toISOString(),
           product_code: product.product_code,
           product_name: product.product_name,
+          product_image_url: product.image_url || '',
           min_stock: minStock,
           tray_code: '-',
           location_code: '-',
@@ -121,33 +124,6 @@ export const inventoryService = {
       })
 
     return [...realRows, ...virtualRows]
-  },
-
-  mapStockTransactionsForDisplay: (
-    transactions: StockTransactionItem[],
-    products: ProductOption[],
-    trays: TrayOption[],
-    locations: LocationOption[],
-  ): StockTransactionDisplayItem[] => {
-    const productMap = new Map<number, ProductOption>(products.map((product) => [product.id, product]))
-    const trayMap = new Map<number, TrayOption>(trays.map((tray) => [tray.id, tray]))
-    const locationMap = new Map<number, LocationOption>(
-      locations.map((location) => [location.id, location]),
-    )
-
-    return transactions.map((tx) => {
-      const product = productMap.get(tx.product_id)
-      const tray = tx.tray_id ? trayMap.get(tx.tray_id) : undefined
-      const location = tray ? locationMap.get(tray.location_id) : undefined
-
-      return {
-        ...tx,
-        product_code: product?.product_code || `#${tx.product_id}`,
-        product_name: product?.product_name || '-',
-        tray_code: tray?.tray_code || '-',
-        location_code: location?.location_code || '-',
-      }
-    })
   },
 
   filterInventory: (

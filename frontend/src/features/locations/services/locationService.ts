@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File này là service layer của module Locations, đứng giữa hooks và API layer (CRUD).
 - Phụ thuộc vào `locationsApi` để thao tác dữ liệu và export helper lọc danh sách cho page.
 - Không đưa React state vào đây; chỉ giữ use-case dùng chung để page/components tái sử dụng.

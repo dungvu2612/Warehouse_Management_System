@@ -1,175 +1,67 @@
 /*
-Mo ta file:
-- Trang Orders chinh theo clean architecture.
-- Page nay giu vai tro coordinator: quan ly state man hinh, goi hooks, ghep components.
-
-Luong xu ly:
-1) Query danh sach orders + options BOM + tasks/progress theo order duoc chon.
-2) Xu ly action create/scan/confirm/finish thong qua mutation hooks.
-3) Hien thi banner message va dieu phoi cac component con.
+Senior Handover Note:
+- Purpose: Orders page read-only quan ly danh sach va dieu huong den Order Detail.
+- Dependencies: useOrdersQuery + OrderTable + orderService filter helper.
+- API contract: GET /orders.
+- Business rules: Orders page khong van hanh picking; picking chi chay o PDA route.
+- Replacement refactor notes: old scan/confirm/finish/picking panel da bi xoa khoi trang nay.
+- Maintenance notes: Neu can tao order lai tren trang rieng, dung module route khac, khong ghep lai vao day.
 */
 
 import { useEffect, useMemo, useState } from 'react'
-import { Add, QrCodeScanner, Refresh } from '@mui/icons-material'
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  MenuItem,
-  Paper,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Add, Refresh } from '@mui/icons-material'
+import { Box, Button, Chip, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../app/providers/AuthProvider'
-import { defaultOrderCreateForm, defaultScanOrderForm } from '../constants/orderForm'
-import {
-  useConfirmPickingMutation,
-  useCreateOrderMutation,
-  useFinishOrderMutation,
-  useOrderBOMOptionsQuery,
-  useOrderProgressQuery,
-  useOrderTasksQuery,
-  useOrdersQuery,
-  useScanOrderMutation,
-} from '../hooks/useOrders'
-import { OrderCreateDialog } from '../components/OrderCreateDialog'
+import { useDeleteOrderMutation, useOrdersQuery } from '../hooks/useOrders'
 import { OrderTable } from '../components/OrderTable'
-import { PickingPanel } from '../components/PickingPanel'
 import { orderService } from '../services/orderService'
-import type { ConfirmPickingPayload, Order, OrderCreatePayload, OrderStatus } from '../types/orderTypes'
-import { mapOrderApiError } from '../utils/orderError'
-import { validateOrderCreateForm, validateScanOrderForm } from '../utils/orderValidation'
+import type { Order, OrderStatus } from '../types/orderTypes'
+import { ListPagination } from '../../../shared/components/ListPagination'
+import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination'
+import { OrderCreateDialog } from '../components/OrderCreateDialog'
 
 export function OrdersPage() {
   const { user } = useAuth()
-  const location = useLocation()
   const navigate = useNavigate()
-
-  const canCreate = user?.role === 'ADMIN'
-  const canOperate = user?.role === 'ADMIN' || user?.role === 'STAFF'
+  const canCreateOrder = user?.role === 'ADMIN' || user?.role === 'WAREHOUSE'
+  const canManageOrder = user?.role === 'ADMIN'
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL')
-
-  const [createOpen, setCreateOpen] = useState(false)
-  const [createForm, setCreateForm] = useState<OrderCreatePayload>(defaultOrderCreateForm)
-  const [createError, setCreateError] = useState('')
-
-  const [scanForm, setScanForm] = useState(defaultScanOrderForm)
-  const [scanError, setScanError] = useState('')
-
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
-
-  const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [orderCreateOpen, setOrderCreateOpen] = useState(false)
 
   const ordersQuery = useOrdersQuery(statusFilter === 'ALL' ? undefined : statusFilter)
-  const bomOptionsQuery = useOrderBOMOptionsQuery()
-  const tasksQuery = useOrderTasksQuery(selectedOrder?.id ?? null)
-  const progressQuery = useOrderProgressQuery(selectedOrder?.id ?? null)
-
-  useEffect(() => {
-    const state = location.state as { selectedOrder?: Order } | null
-    if (state?.selectedOrder) {
-      setSelectedOrder(state.selectedOrder)
-    }
-  }, [location.state])
-
-  const createMutation = useCreateOrderMutation({
-    onSuccess: () => {
-      setBanner({ type: 'success', text: 'Tạo đơn hàng thành công.' })
-      setCreateOpen(false)
-      setCreateError('')
-      setCreateForm(defaultOrderCreateForm)
-    },
-    onError: (error) => {
-      setCreateError(mapOrderApiError(error))
-    },
-  })
-
-  const scanMutation = useScanOrderMutation({
-    onSuccess: () => {
-      setBanner({ type: 'success', text: 'Scan đơn hàng thành công, đã cập nhật luồng picking.' })
-      setScanError('')
-      setScanForm(defaultScanOrderForm)
-    },
-    onError: (error) => {
-      setScanError(mapOrderApiError(error))
-    },
-  })
-
-  const confirmMutation = useConfirmPickingMutation({
-    onSuccess: () => {
-      setBanner({ type: 'success', text: 'Xác nhận picking task thành công.' })
-    },
-    onError: (error) => {
-      setBanner({ type: 'error', text: mapOrderApiError(error) })
-    },
-  })
-
-  const finishMutation = useFinishOrderMutation({
-    onSuccess: () => {
-      setBanner({ type: 'success', text: 'Đã finish order thành công.' })
-    },
-    onError: (error) => {
-      setBanner({ type: 'error', text: mapOrderApiError(error) })
-    },
-  })
+  const deleteOrderMutation = useDeleteOrderMutation()
 
   const filteredOrders = useMemo(() => {
     return orderService.filterOrdersByKeyword(ordersQuery.data || [], search)
   }, [ordersQuery.data, search])
 
-  const handleSubmitCreate = () => {
-    setCreateError('')
+  useEffect(() => {
+    // Senior Handover: Reset page to 1 whenever search/filter changes.
+    setCurrentPage(1)
+  }, [search, statusFilter])
 
-    const validationError = validateOrderCreateForm(createForm)
-    if (validationError) {
-      setCreateError(validationError)
-      return
-    }
+  const paginatedOrders = useMemo(() => {
+    return paginateItems(filteredOrders, currentPage, DEFAULT_PAGE_SIZE)
+  }, [filteredOrders, currentPage])
 
-    createMutation.mutate(createForm)
+  const handleOpenDetail = (orderId: number) => {
+    navigate(`/orders/${orderId}`)
   }
 
-  const handleScanOrder = () => {
-    setScanError('')
-
-    const validationError = validateScanOrderForm(scanForm)
-    if (validationError) {
-      setScanError(validationError)
-      return
-    }
-
-    scanMutation.mutate(scanForm, {
-      onSuccess: (result) => {
-        setSelectedOrder(result.order)
-      },
-    })
+  const handleEditOrder = (order: Order) => {
+    if (!canManageOrder) return
+    navigate(`/orders/${order.id}/edit`)
   }
 
-  const handleOpenPicking = (order: Order) => {
-    setSelectedOrder(order)
-  }
-
-  const handleOpenDetail = (order: Order) => {
-    navigate(`/orders/${order.id}`)
-  }
-
-  const handleFinishOrder = (order: Order) => {
-    if (!canOperate) return
-
-    if (!window.confirm(`Finish order ${order.order_code}?`)) {
-      return
-    }
-
-    finishMutation.mutate(order.id)
-  }
-
-  const handleConfirmTask = (taskId: number, payload: ConfirmPickingPayload) => {
-    confirmMutation.mutate({ taskId, payload })
+  const handleDeleteOrder = (order: Order) => {
+    if (!canManageOrder) return
+    const ok = window.confirm(`Xóa đơn ${order.order_code}?`)
+    if (!ok) return
+    deleteOrderMutation.mutate(order.id)
   }
 
   return (
@@ -186,34 +78,26 @@ export function OrdersPage() {
         >
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 900 }}>
-              Quản lý đơn hàng & picking
+              Danh sách đơn hàng
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Tạo đơn từ BOM, scan để sinh picking tasks, xác nhận picking và hoàn tất đơn.
+              Trang này chỉ để xem danh sách, mở chi tiết, in đơn và theo dõi nhật ký nhặt/giao dịch kho.
             </Typography>
           </Box>
 
-          <Stack direction="row" spacing={1}>
-            <Button variant="outlined" startIcon={<Refresh />} onClick={() => ordersQuery.refetch()}>
-              Làm mới
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              disabled={!canCreate}
-              onClick={() => setCreateOpen(true)}
-            >
-              Tạo đơn
-            </Button>
-          </Stack>
+          <Button variant="outlined" startIcon={<Refresh />} onClick={() => ordersQuery.refetch()}>
+            Làm mới
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            disabled={!canCreateOrder}
+            onClick={() => setOrderCreateOpen(true)}
+          >
+            Tạo đơn mới
+          </Button>
         </Box>
       </Paper>
-
-      {banner && <Alert severity={banner.type}>{banner.text}</Alert>}
-
-      {!canCreate && (
-        <Alert severity="info">Role STAFF không được tạo đơn, nhưng có thể scan/confirm/finish.</Alert>
-      )}
 
       <Paper sx={{ p: 2.5 }}>
         <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5} sx={{ alignItems: { lg: 'center' } }}>
@@ -233,70 +117,43 @@ export function OrdersPage() {
             sx={{ minWidth: 180 }}
           >
             <MenuItem value="ALL">Tất cả</MenuItem>
-            <MenuItem value="PENDING">PENDING</MenuItem>
-            <MenuItem value="PICKING">PICKING</MenuItem>
-            <MenuItem value="COMPLETED">COMPLETED</MenuItem>
-            <MenuItem value="CANCELLED">CANCELLED</MenuItem>
+            <MenuItem value="PENDING">Chờ xử lý</MenuItem>
+            <MenuItem value="PICKING">Đang nhặt</MenuItem>
+            <MenuItem value="COMPLETED">Hoàn thành</MenuItem>
+            <MenuItem value="CANCELLED">Đã hủy</MenuItem>
           </TextField>
 
-          <Chip
-            color="secondary"
-            label={`Tổng đơn: ${filteredOrders.length}`}
-            sx={{ fontWeight: 800, alignSelf: { xs: 'flex-start', lg: 'center' } }}
-          />
+          <Chip color="secondary" label={`Tổng đơn: ${filteredOrders.length}`} sx={{ fontWeight: 800, alignSelf: { xs: 'flex-start', lg: 'center' } }} />
         </Stack>
-
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.2} sx={{ mt: 2 }}>
-          <TextField
-            label="Scan order code / QR"
-            value={scanForm.order_code}
-            onChange={(e) => setScanForm({ order_code: e.target.value })}
-            fullWidth
-          />
-          <Button
-            variant="contained"
-            startIcon={<QrCodeScanner />}
-            onClick={handleScanOrder}
-            disabled={!canOperate || scanMutation.isPending}
-          >
-            {scanMutation.isPending ? 'Đang scan...' : 'Scan order'}
-          </Button>
-        </Stack>
-
-        {scanError && <Alert severity="error" sx={{ mt: 1.2 }}>{scanError}</Alert>}
 
         <Box sx={{ mt: 2.2 }}>
           <OrderTable
-            orders={filteredOrders}
+            orders={paginatedOrders}
             isLoading={ordersQuery.isLoading}
             isError={ordersQuery.isError}
-            canOperate={canOperate}
-            onOpenDetail={handleOpenDetail}
-            onOpenPicking={handleOpenPicking}
-            onFinishOrder={handleFinishOrder}
+            canManage={canManageOrder}
+            onEdit={handleEditOrder}
+            onDelete={handleDeleteOrder}
+            onOpenDetail={(order) => handleOpenDetail(order.id)}
+          />
+          <ListPagination
+            currentPage={currentPage}
+            totalItems={filteredOrders.length}
+            pageSize={DEFAULT_PAGE_SIZE}
+            onPageChange={setCurrentPage}
           />
         </Box>
       </Paper>
 
-      <PickingPanel
-        order={selectedOrder}
-        tasks={tasksQuery.data?.tasks || []}
-        progress={progressQuery.data || null}
-        isLoadingTasks={tasksQuery.isLoading || progressQuery.isLoading}
-        canOperate={canOperate}
-        confirmPending={confirmMutation.isPending}
-        onConfirmTask={handleConfirmTask}
-      />
-
       <OrderCreateDialog
-        open={createOpen}
-        form={createForm}
-        bomOptions={bomOptionsQuery.data || []}
-        isSubmitting={createMutation.isPending}
-        errorMessage={createError}
-        onClose={() => setCreateOpen(false)}
-        onSubmit={handleSubmitCreate}
-        onChange={setCreateForm}
+        open={orderCreateOpen}
+        onClose={() => setOrderCreateOpen(false)}
+        canEditPrice={user?.role === 'ADMIN'}
+        onSuccess={(order: Order) => {
+          setOrderCreateOpen(false)
+          navigate(`/orders/${order.id}`)
+          void ordersQuery.refetch()
+        }}
       />
     </Stack>
   )

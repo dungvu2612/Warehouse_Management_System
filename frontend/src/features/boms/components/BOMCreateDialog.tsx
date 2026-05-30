@@ -11,6 +11,7 @@ Luong xu ly:
 
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Dialog,
@@ -18,7 +19,6 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  MenuItem,
   Stack,
   TextField,
   Typography,
@@ -89,19 +89,16 @@ export function BOMCreateDialog({
 
       <DialogContent>
         <Stack spacing={1.75} sx={{ mt: 0.5 }}>
-          <TextField
-            select
-            label="Thành phẩm cha (FINISHED_GOOD)"
-            value={form.product_id || ''}
-            onChange={(e) => onChange({ ...form, product_id: Number(e.target.value) })}
-            fullWidth
-          >
-            {parentProducts.map((product) => (
-              <MenuItem key={product.id} value={product.id}>
-                {product.product_code} - {product.product_name}
-              </MenuItem>
-            ))}
-          </TextField>
+          <Autocomplete
+            options={parentProducts}
+            value={parentProducts.find((product) => product.id === form.product_id) || null}
+            onChange={(_, product) => onChange({ ...form, product_id: product?.id || 0 })}
+            getOptionLabel={(option) => `${option.product_code} - ${option.product_name}`}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderInput={(params) => (
+              <TextField {...params} label="Thành phẩm cha (FINISHED_GOOD)" fullWidth />
+            )}
+          />
 
           <TextField
             label="Tên BOM"
@@ -137,21 +134,23 @@ export function BOMCreateDialog({
             <Stack spacing={1.2}>
               {form.items.map((item, index) => (
                 <Stack key={index} direction={{ xs: 'column', md: 'row' }} spacing={1}>
-                  <TextField
-                    select
-                    label={`Linh kiện #${index + 1}`}
-                    value={item.component_product_id || ''}
-                    onChange={(e) =>
-                      updateItem(index, { component_product_id: Number(e.target.value) })
+                  <Autocomplete
+                    options={componentProducts}
+                    value={
+                      componentProducts.find(
+                        (product) => product.id === item.component_product_id,
+                      ) || null
                     }
+                    onChange={(_, product) =>
+                      updateItem(index, { component_product_id: product?.id || 0 })
+                    }
+                    getOptionLabel={(option) => `${option.product_code} - ${option.product_name}`}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    renderInput={(params) => (
+                      <TextField {...params} label={`Linh kiện #${index + 1}`} fullWidth />
+                    )}
                     fullWidth
-                  >
-                    {componentProducts.map((product) => (
-                      <MenuItem key={product.id} value={product.id}>
-                        {product.product_code} - {product.product_name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                  />
 
                   <TextField
                     label="Số lượng"

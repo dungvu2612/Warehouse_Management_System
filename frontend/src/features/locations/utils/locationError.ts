@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File này chuẩn hóa mapping lỗi API của module Locations sang thông điệp UI.
 - Phụ thuộc vào shape lỗi axios (`error.response.status`, `error.response.data.error`).
 - Nếu backend đổi mã lỗi/ngữ nghĩa business, cập nhật rule mapping tại đây để UI đồng bộ.

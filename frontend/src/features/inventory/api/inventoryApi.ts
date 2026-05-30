@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay la API layer thuan HTTP cho module Inventory.
 - Phu thuoc vao shared `http` client de tai su dung auth token/interceptor hien co.
 - Chi chua request/response typed; khong dat business logic UI tai day.
@@ -8,12 +8,16 @@ Senior Handover Note:
 import { http } from '../../../shared/lib/http'
 import type {
   InventoryAdjustPayload,
+  InventoryAdjustByTrayPayload,
   InventoryAdjustResponse,
   InventoryCreatePayload,
   InventoryItem,
+  InventoryPutawayPayload,
+  InventoryStocktakingPayload,
+  InventoryStocktakingResponse,
+  InventoryTrayScanResponse,
   LocationOption,
   ProductOption,
-  StockTransactionItem,
   TrayOption,
 } from '../types/inventoryTypes'
 
@@ -39,6 +43,26 @@ export const inventoryApi = {
     return data
   },
 
+  adjustByTray: async (payload: InventoryAdjustByTrayPayload): Promise<InventoryAdjustResponse> => {
+    const { data } = await http.post<InventoryAdjustResponse>('/inventory/adjust-by-tray', payload)
+    return data
+  },
+
+  putaway: async (payload: InventoryPutawayPayload): Promise<InventoryAdjustResponse> => {
+    const { data } = await http.post<InventoryAdjustResponse>('/inventory/putaway', payload)
+    return data
+  },
+
+  stocktaking: async (payload: InventoryStocktakingPayload): Promise<InventoryStocktakingResponse> => {
+    const { data } = await http.post<InventoryStocktakingResponse>('/inventory/stocktaking', payload)
+    return data
+  },
+
+  scanTrayByQRCode: async (trayQRCode: string): Promise<InventoryTrayScanResponse> => {
+    const { data } = await http.get<InventoryTrayScanResponse>(`/trays/scan/${encodeURIComponent(trayQRCode)}`)
+    return data
+  },
+
   // Senior Handover: Lay products/trays/locations de enrich du lieu va filter UI.
   getProducts: async (): Promise<ProductOption[]> => {
     const { data } = await http.get<ProductOption[]>('/products')
@@ -55,12 +79,4 @@ export const inventoryApi = {
     return data
   },
 
-  // Senior Handover: Lay lich su stock transactions de hien thi ben duoi bang inventory.
-  getStockTransactions: async (params?: {
-    transaction_type?: string
-    limit?: number
-  }): Promise<StockTransactionItem[]> => {
-    const { data } = await http.get<StockTransactionItem[]>('/stock-transactions', { params })
-    return data
-  },
 }

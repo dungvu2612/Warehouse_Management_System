@@ -1,27 +1,17 @@
 /*
-Mo ta file:
-- Data-access layer (HTTP thuần) cho module Orders/Picking.
-- File nay chi goi endpoint backend, khong chua nghiep vu giao dien.
-
-Luong xu ly:
-1) Nhan params/payload tu service layer.
-2) Goi shared http client.
-3) Tra response typed ve service/hook.
+Senior Handover Note:
+- Purpose: Data-access layer read-only cho module Orders sau replacement refactor.
+- Dependencies: shared http client.
+- API contract: GET /orders, GET /orders/:id.
+- Business rules: Orders API tai module nay khong chua thao tac picking.
+- Replacement refactor notes: old endpoints scan/confirm/finish da dua sang PDA module va backend dedicated flow.
+- Maintenance notes: Neu can mutation moi cho orders, tao API rieng va tranh tron voi picking flow.
 */
 
 import { http } from '../../../shared/lib/http'
 import type {
-  BOMOption,
-  ConfirmPickingPayload,
-  ConfirmPickingResponse,
   Order,
-  OrderCreatePayload,
   OrderDetailResponse,
-  OrderFinishResponse,
-  OrderProgress,
-  PickingTasksResponse,
-  ScanOrderPayload,
-  ScanOrderResponse,
 } from '../types/orderTypes'
 
 export const ordersApi = {
@@ -36,45 +26,21 @@ export const ordersApi = {
     return data
   },
 
-  createOrder: async (payload: OrderCreatePayload): Promise<Order> => {
-    const { data } = await http.post<Order>('/orders', payload)
+  updateOrder: async (
+    id: number,
+    payload: {
+      customer_name: string
+      customer_phone?: string
+      customer_address?: string
+      items: Array<{ product_id: number; quantity: number; unit_price: number }>
+    },
+  ): Promise<Order> => {
+    const { data } = await http.put<Order>(`/orders/${id}`, payload)
     return data
   },
 
-  scanOrderForPicking: async (payload: ScanOrderPayload): Promise<ScanOrderResponse> => {
-    const { data } = await http.post<ScanOrderResponse>('/orders/scan', payload)
-    return data
-  },
-
-  getPickingTasks: async (orderId: number): Promise<PickingTasksResponse> => {
-    const { data } = await http.get<PickingTasksResponse>(`/orders/${orderId}/picking-tasks`)
-    return data
-  },
-
-  getOrderProgress: async (orderId: number): Promise<OrderProgress> => {
-    const { data } = await http.get<OrderProgress>(`/orders/${orderId}/progress`)
-    return data
-  },
-
-  confirmPickingTask: async (
-    taskId: number,
-    payload: ConfirmPickingPayload,
-  ): Promise<ConfirmPickingResponse> => {
-    const { data } = await http.patch<ConfirmPickingResponse>(
-      `/orders/picking-tasks/${taskId}/confirm`,
-      payload,
-    )
-    return data
-  },
-
-  finishOrder: async (orderId: number): Promise<OrderFinishResponse> => {
-    const { data } = await http.post<OrderFinishResponse>(`/orders/${orderId}/finish`)
-    return data
-  },
-
-  // Dung danh sach BOM lam source de tao order tu BOM.
-  getBOMOptions: async (): Promise<BOMOption[]> => {
-    const { data } = await http.get<BOMOption[]>('/boms')
+  deleteOrder: async (id: number): Promise<{ message: string }> => {
+    const { data } = await http.delete<{ message: string }>(`/orders/${id}`)
     return data
   },
 }

@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay chua validate/normalize payload cho tao ton va adjust ton kho.
 - Phu thuoc vao types `InventoryCreatePayload`, `InventoryAdjustPayload` de giu strict typing.
 - Khi doi rule nghiep vu inventory, cap nhat tai day de page/components khong bi ro logic validate.

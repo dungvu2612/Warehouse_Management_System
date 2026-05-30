@@ -49,8 +49,10 @@ func NewProductHandler(service services.ProductService) *ProductHandler {
 // Request DTO cho layer HTTP.
 type productRequest struct {
 	ProductCode     string  `json:"product_code" binding:"omitempty,max=100"`
+	QRCode          string  `json:"qr_code" binding:"omitempty,max=100"`
 	ProductName     string  `json:"product_name" binding:"required,max=255"`
 	ProductType     string  `json:"product_type" binding:"omitempty,max=30"`
+	ImageURL        string  `json:"image_url"`
 	Description     string  `json:"description"`
 	Unit            string  `json:"unit" binding:"omitempty,max=50"`
 	MinStock        int     `json:"min_stock" binding:"gte=0"`
@@ -69,13 +71,27 @@ func parseProductID(c *gin.Context) (uint, bool) {
 func toProductInput(req productRequest) services.ProductInput {
 	return services.ProductInput{
 		ProductCode: req.ProductCode,
+		QRCode:      req.QRCode,
 		ProductName: req.ProductName,
 		ProductType: req.ProductType,
+		ImageURL:    req.ImageURL,
 		Description: req.Description,
 		Unit:        req.Unit,
 		MinStock:    req.MinStock,
 		Price:       req.Price,
 	}
+}
+
+// ScanProductByQRCode tra product + inventory/trays theo qr_code de ho tro workflow scan PDA.
+func (h *ProductHandler) ScanProductByQRCode(c *gin.Context) {
+	qrCode := c.Param("qr_code")
+	result, err := h.service.ScanByQRCode(qrCode)
+	if err != nil {
+		mapProductServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }
 
 func mapProductServiceError(c *gin.Context, err error) {

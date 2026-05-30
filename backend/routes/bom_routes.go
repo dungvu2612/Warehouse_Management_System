@@ -1,20 +1,12 @@
 package routes
 
 /*
-Mo ta file:
-- File nay dang ky endpoint va wiring dependency injection cho module 'bom'.
-- Noi day quy dinh policy middleware/auth/role truoc khi request vao handler.
-
-Luong xu ly:
-1) Khoi tao repository -> service -> handler cho module.
-2) Gan middleware cho group route (neu co).
-3) Map URL + HTTP method vao handler method cu the.
-
-Cac ham chinh:
-- BOMRoutes
-
-Luu y khi sua:
-- Uu tien giu on dinh API contract va ten error message neu frontend dang phu thuoc.
+Senior Handover Note:
+- Purpose: Dang ky endpoint module BOM va role policy.
+- Dependencies: bom repository/service/handler + middleware.
+- API contract: /boms CRUD + items.
+- Role access: ADMIN + WAREHOUSE duoc quan ly BOM.
+- Maintenance notes: Permission BOM phai dong bo voi Orders/Picking vi BOM la nguon sinh task.
 */
 
 import (
@@ -35,15 +27,15 @@ func BOMRoutes(r *gin.Engine) {
 	boms := r.Group("/boms")
 	boms.Use(middleware.AuthRequired())
 	{
-		// Cho phép cả ADMIN và STAFF tạo BOM theo yêu cầu vận hành.
-		boms.POST("", middleware.RequireRoles("ADMIN", "STAFF"), handler.CreateBOM)
-		// Cho phép cả ADMIN và STAFF cập nhật BOM.
-		boms.PUT("/:id", middleware.RequireRoles("ADMIN", "STAFF"), handler.UpdateBOM)
-		// Cho phép cả ADMIN và STAFF xóa BOM.
-		boms.DELETE("/:id", middleware.RequireRoles("ADMIN", "STAFF"), handler.DeleteBOM)
+		// Cho phép cả ADMIN và WAREHOUSE tạo BOM theo yêu cầu vận hành.
+		boms.POST("", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.CreateBOM)
+		// Cho phép cả ADMIN và WAREHOUSE cập nhật BOM.
+		boms.PUT("/:id", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.UpdateBOM)
+		// Cho phép cả ADMIN và WAREHOUSE xóa BOM.
+		boms.DELETE("/:id", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.DeleteBOM)
 
-		// Xem BOM cho cả ADMIN và STAFF.
-		boms.GET("", middleware.RequireRoles("ADMIN", "STAFF"), handler.GetBOMs)
-		boms.GET("/:id/items", middleware.RequireRoles("ADMIN", "STAFF"), handler.GetBOMItems)
+		// Xem BOM cho cả ADMIN và WAREHOUSE.
+		boms.GET("", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetBOMs)
+		boms.GET("/:id/items", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetBOMItems)
 	}
 }

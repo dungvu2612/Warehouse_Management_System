@@ -36,6 +36,7 @@ func TrayRoutes(r *gin.Engine) {
 	trays.Use(middleware.AuthRequired())
 	{
 		trays.GET("", handler.GetTrays)
+		trays.GET("/scan/:qr_code", handler.ScanTrayByQRCode)
 		trays.POST("", middleware.RequireRoles("ADMIN"), handler.CreateTray)
 		trays.PUT("/:id", middleware.RequireRoles("ADMIN"), handler.UpdateTray)
 		trays.DELETE("/:id", middleware.RequireRoles("ADMIN"), handler.DeleteTray)

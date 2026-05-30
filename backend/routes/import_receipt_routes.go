@@ -1,20 +1,12 @@
 package routes
 
 /*
-Mo ta file:
-- File nay dang ky endpoint va wiring dependency injection cho module 'import_receipt'.
-- Noi day quy dinh policy middleware/auth/role truoc khi request vao handler.
-
-Luong xu ly:
-1) Khoi tao repository -> service -> handler cho module.
-2) Gan middleware cho group route (neu co).
-3) Map URL + HTTP method vao handler method cu the.
-
-Cac ham chinh:
-- ImportReceiptRoutes
-
-Luu y khi sua:
-- Uu tien giu on dinh API contract va ten error message neu frontend dang phu thuoc.
+Senior Handover Note:
+- Purpose: Dang ky endpoint import receipt va role policy.
+- Dependencies: import_receipt repository/service/handler + middleware.
+- API contract: /import-receipts create/list/detail.
+- Role access: ADMIN tao phieu; ADMIN + WAREHOUSE xem lich su.
+- Maintenance notes: Permission map nay dong bo voi frontend ImportReceiptsPage.
 */
 
 import (
@@ -36,7 +28,7 @@ func ImportReceiptRoutes(r *gin.Engine) {
 	importReceipts.Use(middleware.AuthRequired())
 	{
 		importReceipts.POST("", middleware.RequireRoles("ADMIN"), handler.CreateImportReceipt)
-		importReceipts.GET("", middleware.RequireRoles("ADMIN", "STAFF"), handler.GetImportReceipts)
-		importReceipts.GET("/:id", middleware.RequireRoles("ADMIN", "STAFF"), handler.GetImportReceiptByID)
+		importReceipts.GET("", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetImportReceipts)
+		importReceipts.GET("/:id", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetImportReceiptByID)
 	}
 }

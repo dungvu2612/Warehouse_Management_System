@@ -1,3 +1,12 @@
+/*
+Senior Handover Note:
+- Purpose: Route guards cho auth va role-level page access.
+- Dependencies: React Router Navigate + AuthProvider user/session state.
+- HT730 scanner behavior: Staff/PDA routes are WAREHOUSE-only entry points for scanner workflows.
+- API callback contract: Khong goi API; chi bao ve route frontend truoc khi page scan mount.
+- Maintenance notes: Keep role policy centralized here so menu visibility and route access do not drift.
+*/
+
 import type { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../app/providers/AuthProvider'
@@ -23,12 +32,11 @@ export function PublicRoute({ children }: { children: ReactNode }) {
   return children
 }
 
-// Guard theo role.
-export function RoleGuard({ children, roles }: { children: ReactNode; roles: UserRole[] }) {
-  const { user } = useAuth()
+export function RoleRoute({ allowedRoles, children }: { allowedRoles: UserRole[]; children: ReactNode }) {
+  const { isAuthenticated, user } = useAuth()
 
-  // Không có user hoặc role không nằm trong danh sách cho phép -> forbidden.
-  if (!user || !roles.includes(user.role)) return <Navigate to="/forbidden" replace />
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!user || !allowedRoles.includes(user.role)) return <Navigate to="/forbidden" replace />
 
   return children
 }

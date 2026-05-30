@@ -1,12 +1,8 @@
 /*
-Mo ta file:
+Thong tin handover:
 - Dialog hien thi danh sach linh kien cua 1 BOM.
-- Presentation-only component: nhan data va state tu page, khong goi API truc tiep.
-
-Luong xu ly:
-1) Nhan BOM header + items + loading/error flags.
-2) Render thong tin tong quan BOM va bang components.
-3) Cho phep dong dialog de quay lai list.
+- Phu thuoc vao types BOM/BOMItem va state tu BOM page (khong goi API truc tiep).
+- Luu y bao tri: item component_product can render anh de dong nhat voi cac bang co san pham khac trong he thong.
 */
 
 import {
@@ -27,6 +23,7 @@ import {
   Typography,
 } from '@mui/material'
 import type { BOM, BOMItem } from '../types/bomTypes'
+import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
 
 interface BOMItemsDialogProps {
   open: boolean
@@ -81,6 +78,7 @@ export function BOMItemsDialog({
             <TableHead sx={{ bgcolor: 'grey.50' }}>
               <TableRow>
                 <TableCell sx={{ fontWeight: 800 }}>#</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>Ảnh</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Mã linh kiện</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Tên linh kiện</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Số lượng</TableCell>
@@ -90,13 +88,13 @@ export function BOMItemsDialog({
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={4}>Đang tải BOM items...</TableCell>
+                  <TableCell colSpan={5}>Đang tải BOM items...</TableCell>
                 </TableRow>
               )}
 
               {isError && (
                 <TableRow>
-                  <TableCell colSpan={4}>
+                  <TableCell colSpan={5}>
                     <Alert severity="error">Không tải được chi tiết BOM items.</Alert>
                   </TableCell>
                 </TableRow>
@@ -104,13 +102,21 @@ export function BOMItemsDialog({
 
               {!isLoading && !isError && items.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4}>BOM chưa có linh kiện.</TableCell>
+                  <TableCell colSpan={5}>BOM chưa có linh kiện.</TableCell>
                 </TableRow>
               )}
 
               {items.map((item, index) => (
                 <TableRow key={item.id || `${item.component_product_id}-${index}`} hover>
                   <TableCell>{index + 1}</TableCell>
+                  <TableCell>
+                    {/* Senior Handover: Render thumbnail linh kien theo image_url de doi van hanh nhan dien hang hoa nhanh. */}
+                    <ProductImageThumb
+                      src={item.component_product?.image_url}
+                      alt={item.component_product?.product_name || `Linh kiện ${item.component_product_id}`}
+                      size={38}
+                    />
+                  </TableCell>
                   <TableCell sx={{ fontFamily: 'monospace', fontWeight: 700 }}>
                     {item.component_product?.product_code || `#${item.component_product_id}`}
                   </TableCell>

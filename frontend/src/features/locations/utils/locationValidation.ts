@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File này chứa validate/normalize cho form Location trước khi submit.
 - Phụ thuộc vào type `CreateLocationPayload` để giữ strict TypeScript ở luồng create.
 - Khi thay đổi rule nghiệp vụ (độ dài mã, shelf bắt buộc), cập nhật tại đây thay vì nhúng rải rác trong page.

@@ -1,19 +1,13 @@
 /*
-Mo ta file:
-- Trang BOM chinh theo clean architecture o FE.
-- Page nay chi lam orchestration: quan ly state man hinh, goi hooks, ghep components.
-
-Luong xu ly:
-1) Lay data list BOM + product options qua hooks.
-2) Xu ly state dialog tao/sua BOM va dialog view items.
-3) Validate/normalize form truoc submit va map loi API sang banner UI.
-
-Luu y khi sua:
-- Giu page o vai tro coordinator, khong chen logic HTTP truc tiep.
-- Neu mo rong them luong detail phuc tap, tiep tuc tach component/hook rieng.
+Senior Handover Note:
+- Purpose: Trang BOM chinh theo clean architecture o FE.
+- Dependencies: BOM hooks/service/components + auth context.
+- API contract: GET/POST/PUT/DELETE /boms va GET /boms/:id/items.
+- Role access: ADMIN va WAREHOUSE duoc quan ly BOM; VIEWER chi xem neu backend cho phep.
+- Maintenance notes: Giu page o vai tro coordinator, khong chen HTTP/business logic truc tiep.
 */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Add, Refresh } from '@mui/icons-material'
 import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
 import { useAuth } from '../../../app/providers/AuthProvider'
@@ -34,13 +28,17 @@ import { bomService } from '../services/bomService'
 import { BOMCreateDialog } from '../components/BOMCreateDialog'
 import { BOMItemsDialog } from '../components/BOMItemsDialog'
 import { BOMTable } from '../components/BOMTable'
+import { OrderCreateDialog } from '../../orders/components/OrderCreateDialog'
+import type { Order } from '../../orders/types/orderTypes'
+import { ListPagination } from '../../../shared/components/ListPagination'
+import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination'
 
 // BOMs page.
 export function BOMsPage() {
   // Lay user de xu ly role UI.
   const { user } = useAuth()
-  // Theo yêu cầu nghiệp vụ mới: ADMIN và STAFF đều được tạo/sửa/xóa BOM.
-  const canManage = user?.role === 'ADMIN' || user?.role === 'STAFF'
+  // Theo yêu cầu nghiệp vụ mới: ADMIN và WAREHOUSE đều được tạo/sửa/xóa BOM.
+  const canManage = user?.role === 'ADMIN' || user?.role === 'WAREHOUSE'
 
   // State search cục bộ cho trải nghiệm lọc nhanh.
   const [search, setSearch] = useState('')
@@ -54,6 +52,8 @@ export function BOMsPage() {
   const [selectedBOM, setSelectedBOM] = useState<BOM | null>(null)
   // State mo dong dialog xem items.
   const [itemsOpen, setItemsOpen] = useState(false)
+  // Senior Handover: State mo dong dialog tao order tu BOM.
+  const [orderCreateOpen, setOrderCreateOpen] = useState(false)
 
   // Form create/update BOM state.
   const [form, setForm] = useState<BOMPayload>(defaultBOMForm)
@@ -61,6 +61,7 @@ export function BOMsPage() {
   const [formError, setFormError] = useState('')
   // Banner thong bao tong quan man hinh.
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Query danh sach BOM.
   const bomsQuery = useBOMsQuery()
@@ -113,6 +114,15 @@ export function BOMsPage() {
     const list = bomsQuery.data || []
     return bomService.filterBOMsByKeyword(list, search)
   }, [bomsQuery.data, search])
+
+  useEffect(() => {
+    // Senior Handover: Reset page to 1 whenever search/filter changes.
+    setCurrentPage(1)
+  }, [search])
+
+  const paginatedBOMs = useMemo(() => {
+    return paginateItems(filteredBOMs, currentPage, DEFAULT_PAGE_SIZE)
+  }, [filteredBOMs, currentPage])
 
   // Mo dialog tao BOM.
   const openCreateDialog = () => {
@@ -244,13 +254,23 @@ export function BOMsPage() {
         </Stack>
 
         <BOMTable
-          boms={filteredBOMs}
+          boms={paginatedBOMs}
           isLoading={bomsQuery.isLoading}
           isError={bomsQuery.isError}
           canManage={canManage}
           onViewItems={handleOpenItems}
           onEdit={openEditDialog}
           onDelete={handleDeleteBOM}
+          onCreateOrder={(bom) => {
+            void bom
+            setOrderCreateOpen(true)
+          }}
+        />
+        <ListPagination
+          currentPage={currentPage}
+          totalItems={filteredBOMs.length}
+          pageSize={DEFAULT_PAGE_SIZE}
+          onPageChange={setCurrentPage}
         />
       </Paper>
 
@@ -274,6 +294,18 @@ export function BOMsPage() {
         isLoading={bomItemsQuery.isLoading}
         isError={bomItemsQuery.isError}
         onClose={handleCloseItems}
+      />
+
+      <OrderCreateDialog
+        open={orderCreateOpen}
+        onClose={() => {
+          setOrderCreateOpen(false)
+        }}
+        canEditPrice={user?.role === 'ADMIN'}
+        onSuccess={(order: Order) => {
+          setBanner({ type: 'success', text: `Tạo đơn hàng thành công: ${order.order_code}` })
+          void bomsQuery.refetch()
+        }}
       />
     </Stack>
   )

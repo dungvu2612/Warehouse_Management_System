@@ -24,6 +24,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"time"
 
 	"quan_ly_kho/models"
 	"quan_ly_kho/repositories"
@@ -35,6 +36,8 @@ var (
 	ErrInvalidAdjustPayload   = errors.New("delta must not be 0")
 	ErrTrayProductMismatch    = errors.New("tray does not belong to the provided product")
 	ErrInsufficientStock      = errors.New("insufficient inventory quantity")
+	ErrPutawayRequestPending  = errors.New("putaway request is pending admin approval")
+	ErrPutawayRequestNotPending = errors.New("putaway request is not pending")
 )
 
 type InventoryListQuery struct {
@@ -55,10 +58,52 @@ type AdjustInventoryInput struct {
 	CreatedBy   uint
 }
 
+type AdjustByTrayInput struct {
+	TrayQRCode   string
+	Delta        int
+	Note         string
+	CreatedBy    uint
+	ReferenceCode string
+}
+
+type PutawayInput struct {
+	ProductQRCode string
+	TrayQRCode    string
+	Quantity      int
+	Note          string
+	CreatedBy     uint
+	ReferenceCode string
+}
+
+type PutawayApprovalActionInput struct {
+	RequestID  uint
+	ApprovedBy uint
+	Reason     string
+}
+
+type StocktakeInput struct {
+	TrayQRCode    string
+	PhysicalQty   int
+	Note          string
+	CreatedBy     uint
+	ReferenceCode string
+}
+
+type StocktakeResult struct {
+	Inventory *models.Inventory `json:"inventory"`
+	Delta     int               `json:"delta"`
+}
+
 type InventoryService interface {
 	GetAll(query InventoryListQuery) ([]models.Inventory, error)
 	Create(input CreateInventoryInput) (*models.Inventory, error)
 	Adjust(input AdjustInventoryInput) (*models.Inventory, error)
+	AdjustByTray(input AdjustByTrayInput) (*models.Inventory, error)
+	Putaway(input PutawayInput) (*models.Inventory, error)
+	GetPutawayRequests(status string) ([]models.PutawayRequest, error)
+	ApprovePutawayRequest(input PutawayApprovalActionInput) (*models.PutawayRequest, *models.Inventory, error)
+	RejectPutawayRequest(input PutawayApprovalActionInput) (*models.PutawayRequest, error)
+	Stocktake(input StocktakeInput) (*StocktakeResult, error)
 }
 
 type inventoryService struct {
@@ -145,4 +190,105 @@ func (s *inventoryService) Adjust(input AdjustInventoryInput) (*models.Inventory
 		return nil, err
 	}
 	return updated, nil
+}
+
+func (s *inventoryService) AdjustByTray(input AdjustByTrayInput) (*models.Inventory, error) {
+	if strings.TrimSpace(input.TrayQRCode) == "" {
+		return nil, ErrInvalidAdjustPayload
+	}
+	if input.Delta == 0 {
+		return nil, ErrInvalidAdjustPayload
+	}
+
+	note := strings.TrimSpace(input.Note)
+	updated, err := s.repo.AdjustByTrayQRCode(
+		input.TrayQRCode,
+		input.Delta,
+		note,
+		input.CreatedBy,
+		strings.TrimSpace(input.ReferenceCode),
+	)
+	if err != nil {
+		if errors.Is(err, repositories.ErrInventoryInsufficient) {
+			return nil, ErrInsufficientStock
+		}
+		return nil, err
+	}
+	return updated, nil
+}
+
+func (s *inventoryService) Putaway(input PutawayInput) (*models.Inventory, error) {
+	if strings.TrimSpace(input.ProductQRCode) == "" || strings.TrimSpace(input.TrayQRCode) == "" || input.Quantity <= 0 {
+		return nil, ErrInvalidInventoryFilter
+	}
+	req := &models.PutawayRequest{
+		ProductQRCode: strings.TrimSpace(input.ProductQRCode),
+		TrayQRCode:    strings.TrimSpace(input.TrayQRCode),
+		Quantity:      input.Quantity,
+		Note:          strings.TrimSpace(input.Note),
+		ReferenceCode: strings.TrimSpace(input.ReferenceCode),
+		Status:        "PENDING",
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+	}
+	if input.CreatedBy > 0 {
+		req.RequestedBy = &input.CreatedBy
+	}
+	if err := s.repo.CreatePutawayRequest(req); err != nil {
+		return nil, err
+	}
+	return nil, ErrPutawayRequestPending
+}
+
+func (s *inventoryService) GetPutawayRequests(status string) ([]models.PutawayRequest, error) {
+	return s.repo.FindPutawayRequestsByStatus(status)
+}
+
+func (s *inventoryService) ApprovePutawayRequest(input PutawayApprovalActionInput) (*models.PutawayRequest, *models.Inventory, error) {
+	if input.RequestID == 0 {
+		return nil, nil, ErrInvalidInventoryID
+	}
+	req, inv, err := s.repo.ApprovePutawayRequest(input.RequestID, input.ApprovedBy)
+	if err != nil {
+		if strings.Contains(err.Error(), "not pending") {
+			return nil, nil, ErrPutawayRequestNotPending
+		}
+		return nil, nil, err
+	}
+	return req, inv, nil
+}
+
+func (s *inventoryService) RejectPutawayRequest(input PutawayApprovalActionInput) (*models.PutawayRequest, error) {
+	if input.RequestID == 0 {
+		return nil, ErrInvalidInventoryID
+	}
+	req, err := s.repo.RejectPutawayRequest(input.RequestID, input.ApprovedBy, input.Reason)
+	if err != nil {
+		if strings.Contains(err.Error(), "not pending") {
+			return nil, ErrPutawayRequestNotPending
+		}
+		return nil, err
+	}
+	return req, nil
+}
+
+func (s *inventoryService) Stocktake(input StocktakeInput) (*StocktakeResult, error) {
+	if strings.TrimSpace(input.TrayQRCode) == "" || input.PhysicalQty < 0 {
+		return nil, ErrInvalidInventoryFilter
+	}
+	note := strings.TrimSpace(input.Note)
+	inventory, delta, err := s.repo.StocktakeByTrayQRCode(
+		input.TrayQRCode,
+		input.PhysicalQty,
+		note,
+		input.CreatedBy,
+		strings.TrimSpace(input.ReferenceCode),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &StocktakeResult{
+		Inventory: inventory,
+		Delta:     delta,
+	}, nil
 }

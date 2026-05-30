@@ -1,11 +1,11 @@
 /*
-Mo ta file:
-- Dinh nghia toan bo data contracts TypeScript cho module Orders/Picking.
-- File nay la nguon su that ve shape du lieu giua FE va BE, tranh dung any.
-
-Luong xu ly:
-1) Api/Service/Hooks/Components import type tu day.
-2) Khi backend doi contract JSON, cap nhat file nay truoc de compile canh bao cac diem anh huong.
+Senior Handover Note:
+- Purpose: Data contracts TypeScript cho module Orders (list/detail/read-only).
+- Dependencies: Dung boi orders api/service/hooks/pages va module audit/pda.
+- API contract: Shape mapping theo GET /orders va GET /orders/:id.
+- Business rules: Orders module khong chua payload mutation picking sau replacement refactor.
+- Replacement refactor notes: Loai bo types mutation create/scan/confirm/finish cu trong module orders.
+- Maintenance notes: Khi backend doi contract detail/list, cap nhat file nay truoc de compiler canh bao diem anh huong.
 */
 
 export type OrderStatus = 'PENDING' | 'PICKING' | 'COMPLETED' | 'CANCELLED'
@@ -26,6 +26,8 @@ export interface Order {
   id: number
   order_code: string
   customer_name: string
+  customer_phone?: string
+  customer_address?: string
   status: OrderStatus
   total_amount: number
   qr_code: string
@@ -55,6 +57,7 @@ export interface OrderDetailPickingTask {
   product_id: number
   product_code: string
   product_name: string
+  product_image_url?: string
   tray_id: number
   tray_code: string
   location_code: string
@@ -63,22 +66,6 @@ export interface OrderDetailPickingTask {
   inventory_qty: number
   status: PickingStatus
   verified: boolean
-}
-
-export interface OrderProgress {
-  order_id: number
-  order_status: OrderStatus
-  done_tasks: number
-  total_tasks: number
-  progress: number
-}
-
-export interface OrderShortageItem {
-  picking_task_id: number
-  product_id: number
-  required_qty: number
-  picked_qty: number
-  missing_qty: number
 }
 
 export interface OrderDetailShortageItem {
@@ -107,58 +94,8 @@ export interface OrderDetailResponse {
   }
 }
 
-export interface OrderFinishResponse {
-  message: string
-  order: Order
-  shortage: {
-    has_shortage: boolean
-    items: OrderShortageItem[]
-  }
-}
-
 export interface ScanOrderResponse {
   message: string
   order: Order
   tasks: PickingTask[]
-}
-
-export interface PickingTasksResponse {
-  order_id: number
-  status: OrderStatus
-  tasks: PickingTask[]
-}
-
-export interface ConfirmPickingResponse {
-  message: string
-  task: PickingTask
-  remaining_quantity: number
-}
-
-export interface OrderCreatePayload {
-  bom_id: number
-  machine_qty: number
-  customer_name: string
-}
-
-export interface ScanOrderPayload {
-  order_code: string
-}
-
-export interface ConfirmPickingPayload {
-  tray_code: string
-  quantity: number
-  note?: string
-}
-
-// Option toi gian de render combobox chon BOM khi tao order.
-export interface BOMOption {
-  id: number
-  product_id: number
-  bom_name: string
-  description: string
-  product?: {
-    id: number
-    product_code: string
-    product_name: string
-  }
 }

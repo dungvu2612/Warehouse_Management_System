@@ -1,92 +1,116 @@
 /*
-Mo ta file:
-- Dialog tao order tu BOM.
-- Component nay la presentation layer, khong goi API truc tiep.
-
-Luong xu ly:
-1) Render form chon BOM + machine_qty + customer_name.
-2) Day su kien onChange/onSubmit cho page coordinator.
+Senior Handover Note:
+- Purpose: Dialog tao don hang theo items[] da chon, khong con flow BOM single-select.
+- Dependencies: Products query + OrderItemsEditor + orders API POST /orders.
+- API contract: POST /orders { customer_name, customer_phone, customer_address, items[] }.
+- Multi-item order behavior: Cho phep them/sua/xoa nhieu dong item truoc khi tao don.
+- Permission rule: Gia san pham cho phep sua khi canEditPrice=true (ADMIN).
+- Maintenance notes: Validate items o FE de feedback nhanh, backend van la nguon su that cuoi.
 */
 
-import {
-  Alert,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  MenuItem,
-  Stack,
-  TextField,
-} from '@mui/material'
-import type { OrderCreatePayload, BOMOption } from '../types/orderTypes'
+import { useMemo, useState } from 'react'
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField } from '@mui/material'
+import { http } from '../../../shared/lib/http'
+import type { Order } from '../types/orderTypes'
+import { OrderItemsEditor, type OrderEditorItem } from './OrderItemsEditor'
+import { useProductsQuery } from '../../products/hooks/useProducts'
 
-interface OrderCreateDialogProps {
+export interface OrderCreateDialogProps {
   open: boolean
-  form: OrderCreatePayload
-  bomOptions: BOMOption[]
-  isSubmitting: boolean
-  errorMessage: string
   onClose: () => void
-  onSubmit: () => void
-  onChange: (next: OrderCreatePayload) => void
+  onSuccess: (order: Order) => void
+  canEditPrice: boolean
 }
 
 export function OrderCreateDialog({
   open,
-  form,
-  bomOptions,
-  isSubmitting,
-  errorMessage,
   onClose,
-  onSubmit,
-  onChange,
+  onSuccess,
+  canEditPrice,
 }: OrderCreateDialogProps) {
+  const productsQuery = useProductsQuery()
+  const [customerName, setCustomerName] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
+  const [customerAddress, setCustomerAddress] = useState('')
+  const [items, setItems] = useState<OrderEditorItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const hasDuplicateProduct = useMemo(() => {
+    const set = new Set<number>()
+    for (const item of items) {
+      if (set.has(item.product_id)) return true
+      set.add(item.product_id)
+    }
+    return false
+  }, [items])
+
+  const handleClose = () => {
+    setCustomerName('')
+    setCustomerPhone('')
+    setCustomerAddress('')
+    setItems([])
+    setError('')
+    onClose()
+  }
+
+  const handleSubmit = async () => {
+    const name = customerName.trim()
+    const phone = customerPhone.trim()
+    const address = customerAddress.trim()
+    if (!name) return setError('Tên khách hàng không được để trống')
+    if (items.length === 0) return setError('Đơn hàng phải có ít nhất 1 sản phẩm')
+    if (hasDuplicateProduct) return setError('Không được trùng sản phẩm trong cùng đơn')
+
+    for (const item of items) {
+      if (!item.product_id || item.quantity <= 0 || item.unit_price < 0) {
+        return setError('Dữ liệu sản phẩm không hợp lệ')
+      }
+    }
+
+    setLoading(true)
+    setError('')
+    try {
+      const { data } = await http.post<Order>('/orders', {
+        customer_name: name,
+        customer_phone: phone,
+        customer_address: address,
+        items,
+      })
+      onSuccess(data)
+      handleClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không tạo được đơn hàng')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle sx={{ fontWeight: 900 }}>Tạo đơn hàng từ BOM</DialogTitle>
-      <DialogContent>
-        <Stack spacing={1.6} sx={{ mt: 0.5 }}>
-          <TextField
-            select
-            label="BOM"
-            value={form.bom_id || ''}
-            onChange={(e) => onChange({ ...form, bom_id: Number(e.target.value) })}
-            fullWidth
-          >
-            {bomOptions.map((bom) => (
-              <MenuItem key={bom.id} value={bom.id}>
-                #{bom.id} - {bom.bom_name || 'BOM không tên'}
-                {bom.product ? ` (${bom.product.product_code} - ${bom.product.product_name})` : ''}
-              </MenuItem>
-            ))}
-          </TextField>
+    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
+      <DialogTitle>Tạo đơn hàng mới</DialogTitle>
+      <DialogContent sx={{ pt: 1 }}>
+        <Stack spacing={2}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
+            <TextField label="Tên khách hàng" value={customerName} onChange={(e) => setCustomerName(e.target.value)} required fullWidth />
+            <TextField label="Số điện thoại" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} fullWidth />
+          </Stack>
+          <TextField label="Địa chỉ giao hàng" value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} fullWidth multiline rows={2} />
 
-          <TextField
-            label="Số lượng máy cần sản xuất"
-            type="number"
-            value={form.machine_qty}
-            onChange={(e) => onChange({ ...form, machine_qty: Number(e.target.value) })}
-            fullWidth
+          <OrderItemsEditor
+            products={productsQuery.data || []}
+            items={items}
+            onChange={setItems}
+            canEditPrice={canEditPrice}
           />
 
-          <TextField
-            label="Tên khách hàng"
-            value={form.customer_name}
-            onChange={(e) => onChange({ ...form, customer_name: e.target.value })}
-            fullWidth
-          />
-
-          {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
+          {error && <Alert severity="error">{error}</Alert>}
         </Stack>
       </DialogContent>
-
-      <DialogActions sx={{ p: 2 }}>
-        <Button variant="outlined" onClick={onClose}>
-          Hủy
-        </Button>
-        <Button variant="contained" onClick={onSubmit} disabled={isSubmitting}>
-          {isSubmitting ? 'Đang tạo...' : 'Tạo đơn'}
+      <DialogActions>
+        <Button onClick={handleClose} disabled={loading}>Hủy</Button>
+        <Button onClick={handleSubmit} variant="contained" disabled={loading || productsQuery.isLoading}>
+          {loading ? 'Đang tạo...' : 'Tạo đơn'}
         </Button>
       </DialogActions>
     </Dialog>

@@ -1,5 +1,12 @@
 import type { ProductPayload } from '../types/productTypes'
 
+/*
+Thong tin handover:
+- File nay chua validate/normalize form Product truoc khi submit API.
+- Phu thuoc vao type `ProductPayload`.
+- Luu y bao tri: khi doi rule nghiep vu product, cap nhat tai day de tranh ro logic validate o page/component.
+*/
+
 // Validate form product phía frontend trước khi gọi API.
 export function validateProductForm(form: ProductPayload): string | null {
   if (!form.product_name.trim()) {
@@ -15,10 +22,15 @@ export function validateProductForm(form: ProductPayload): string | null {
 
 // Chuẩn hóa payload trước khi gửi backend.
 export function normalizeProductPayload(form: ProductPayload): ProductPayload {
+  const normalizedCode = form.product_code.trim().toUpperCase()
+  const normalizedQRCode = form.qr_code.trim().toUpperCase()
+
   return {
-    product_code: form.product_code.trim().toUpperCase(),
+    product_code: normalizedCode,
+    qr_code: normalizedQRCode || normalizedCode,
     product_name: form.product_name.trim(),
     product_type: form.product_type,
+    image_url: form.image_url.trim(),
     description: form.description.trim(),
     unit: form.unit.trim() || 'pcs',
     min_stock: Number(form.min_stock),

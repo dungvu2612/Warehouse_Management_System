@@ -1,5 +1,5 @@
 /*
-Senior Handover Note:
+Thong tin handover:
 - File nay chua validate/normalize form Tray truoc khi submit API.
 - Phu thuoc vao `TrayPayload` de giu strict typing va tranh dung any.
 - Khi doi rule nghiep vu (do dai ma, bat buoc field), cap nhat tai day de page/components khong bi roi.

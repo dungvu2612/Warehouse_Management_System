@@ -38,9 +38,21 @@ type ProductRepository interface {
 	Create(product *models.Product) error
 	FindAllActive() ([]models.Product, error)
 	FindActiveByID(id uint) (*models.Product, error)
+	FindActiveByQRCode(qrCode string) (*models.Product, error)
+	FindScanRowsByProductID(productID uint) ([]ProductScanRow, error)
 	Update(product *models.Product) error
 	SoftDeleteByID(id uint) error
 	FindMaxSequenceByCodeBase(codeBase string) (int, error)
+}
+
+// ProductScanRow la read-model inventory/tray/location khi scan product QR.
+type ProductScanRow struct {
+	InventoryID  uint
+	TrayID       uint
+	TrayCode     string
+	LocationID   uint
+	LocationCode string
+	Quantity     int
 }
 
 type productRepository struct {
@@ -80,6 +92,17 @@ func (r *productRepository) FindActiveByID(id uint) (*models.Product, error) {
 	return &product, nil
 }
 
+func (r *productRepository) FindActiveByQRCode(qrCode string) (*models.Product, error) {
+	var product models.Product
+	if err := r.db.Where("qr_code = ? AND is_active = ?", qrCode, true).First(&product).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrProductEntityNotFound
+		}
+		return nil, err
+	}
+	return &product, nil
+}
+
 func (r *productRepository) Update(product *models.Product) error {
 	if err := r.db.Save(product).Error; err != nil {
 		if isUniqueViolation(err) {
@@ -88,6 +111,28 @@ func (r *productRepository) Update(product *models.Product) error {
 		return err
 	}
 	return nil
+}
+
+func (r *productRepository) FindScanRowsByProductID(productID uint) ([]ProductScanRow, error) {
+	rows := make([]ProductScanRow, 0)
+	if err := r.db.Raw(`
+		SELECT
+			i.id AS inventory_id,
+			i.tray_id AS tray_id,
+			COALESCE(t.tray_code, '') AS tray_code,
+			COALESCE(t.location_id, 0) AS location_id,
+			COALESCE(l.location_code, '') AS location_code,
+			COALESCE(i.quantity, 0) AS quantity
+		FROM inventory i
+		LEFT JOIN trays t ON t.id = i.tray_id
+		LEFT JOIN locations l ON l.id = t.location_id
+		WHERE i.product_id = ?
+		ORDER BY i.updated_at DESC, i.id DESC
+	`, productID).Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func (r *productRepository) SoftDeleteByID(id uint) error {

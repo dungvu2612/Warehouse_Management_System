@@ -1,25 +1,18 @@
 package handlers
 
 /*
-Mo ta file:
-- File nay la transport layer HTTP cho module 'dashboard'.
-- Trach nhiem: bind request, parse params, goi service, map domain error sang status code.
-
-Luong xu ly:
-1) Nhan request tu router va validate input o muc API.
-2) Goi service use-case tuong ung.
-3) Tra JSON response nhat quan cho frontend/PDA.
-
-Cac ham chinh:
-- NewDashboardHandler
-- GetDashboardStats
-
-Luu y khi sua:
-- Uu tien giu on dinh API contract va ten error message neu frontend dang phu thuoc.
+Senior Handover Note:
+- Purpose: HTTP transport layer cho Dashboard role-based.
+- Dependencies: Dashboard service + auth middleware context (`role`).
+- API contract: GET /dashboard/stats tra payload tong hop theo role.
+- Role access: Middleware da chan role; handler van fallback 403 neu role context sai.
+- Maintenance notes: Neu thay doi response shape, cap nhat service truoc roi toi handler.
 */
 
 import (
+	"errors"
 	"net/http"
+	"strings"
 
 	"quan_ly_kho/services"
 
@@ -35,8 +28,24 @@ func NewDashboardHandler(service services.DashboardService) *DashboardHandler {
 }
 
 func (h *DashboardHandler) GetDashboardStats(c *gin.Context) {
-	stats, err := h.service.GetStats()
+	roleRaw, exists := c.Get("role")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing auth context"})
+		return
+	}
+
+	role, ok := roleRaw.(string)
+	if !ok || strings.TrimSpace(role) == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid auth role"})
+		return
+	}
+
+	stats, err := h.service.GetStatsByRole(role)
 	if err != nil {
+		if errors.Is(err, services.ErrDashboardForbiddenRole) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden - insufficient role"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

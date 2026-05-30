@@ -37,6 +37,7 @@ func ProductRoutes(r *gin.Engine) {
 	{
 		products.GET("", handler.GetProducts)
 		products.GET("/code-preview", handler.GetProductCodePreview)
+		products.GET("/scan/:qr_code", handler.ScanProductByQRCode)
 		products.GET("/:id", handler.GetProductByID)
 		products.POST("", middleware.RequireRoles("ADMIN"), handler.CreateProduct)
 		products.PUT("/:id", middleware.RequireRoles("ADMIN"), handler.UpdateProduct)
