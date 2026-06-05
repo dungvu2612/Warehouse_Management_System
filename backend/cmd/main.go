@@ -1,7 +1,9 @@
 package main
 
 import (
+	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -16,7 +18,6 @@ import (
 func main() {
 
 	_ = godotenv.Load()
-
 	config.ConnectDatabase()
 	config.RunDatabaseMigrations()
 	config.SeedDefaultUsers()
@@ -51,10 +52,81 @@ func main() {
 	routes.LocationRoutes(r)
 	routes.TrayRoutes(r)
 	routes.ProductRoutes(r)
+	routes.UserRoutes(r)
+
+	serveFrontend(r)
 
 	host := envValue("APP_HOST", "0.0.0.0")
 	port := envValue("APP_PORT", "8080")
 	r.Run(host + ":" + port)
+}
+
+func serveFrontend(r *gin.Engine) {
+	distDir := envValue("FRONTEND_DIST_DIR", "")
+	if distDir == "" {
+		distDir = firstExistingDir([]string{
+			filepath.Join("..", "frontend", "dist"),
+			filepath.Join("frontend", "dist"),
+			"dist",
+		})
+	}
+	if distDir == "" {
+		return
+	}
+
+	assetsDir := filepath.Join(distDir, "assets")
+	if _, err := os.Stat(assetsDir); err == nil {
+		r.Static("/assets", assetsDir)
+	}
+	r.StaticFile("/favicon.ico", filepath.Join(distDir, "favicon.ico"))
+
+	indexFile := filepath.Join(distDir, "index.html")
+	r.NoRoute(func(c *gin.Context) {
+		if c.Request.Method != http.MethodGet {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		if isAPIRoute(c.Request.URL.Path) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		c.File(indexFile)
+	})
+}
+
+func firstExistingDir(candidates []string) string {
+	for _, candidate := range candidates {
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			return candidate
+		}
+	}
+	return ""
+}
+
+func isAPIRoute(path string) bool {
+	apiPrefixes := []string{
+		"/auth",
+		"/audit",
+		"/boms",
+		"/dashboard",
+		"/health",
+		"/import-receipts",
+		"/inventory",
+		"/locations",
+		"/orders",
+		"/pick-logs",
+		"/products",
+		"/staff",
+		"/stock-transactions",
+		"/trays",
+		"/users",
+	}
+	for _, prefix := range apiPrefixes {
+		if path == prefix || strings.HasPrefix(path, prefix+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 func envValue(key string, fallback string) string {

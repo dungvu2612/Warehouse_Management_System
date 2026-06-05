@@ -1,11 +1,4 @@
-/*
-Senior Handover Note:
-- Purpose: Component reusable hien thi Pick Logs dang table compact trong Order Detail/Audit context.
-- Dependencies: Nhan rows da enrich tu pickLogsService; dung MUI + navigator clipboard de copy tray_code nhanh.
-- Maintenance notes: Neu can timeline UI, co the doi view tai file nay ma khong can doi API/service.
-- API contract: Khong goi API truc tiep; chi render props da fetch qua hooks.
-- Audit usage: Hien thi lich su pick de doi soat thao tac nhan vien va truy vet loi don hang.
-*/
+/* Bảng hiển thị pick logs cho màn hình chi tiết/audit. */
 
 import { ContentCopy } from '@mui/icons-material'
 import {
@@ -21,6 +14,7 @@ import {
   Tooltip,
 } from '@mui/material'
 import type { PickLogDisplayItem } from '../types/pickLogTypes'
+import { formatDateTimeVN } from '../../../shared/lib/datetime'
 
 interface PickLogsTableProps {
   rows: PickLogDisplayItem[]
@@ -65,10 +59,9 @@ export function PickLogsTable({ rows, isLoading, isError, onCopyTrayCode }: Pick
             </TableRow>
           )}
 
-          {/* Senior Handover: Render timeline/table block - table compact uu tien audit va truy vet nhanh. */}
           {rows.map((row) => (
             <TableRow key={row.id} hover>
-              <TableCell>{new Date(row.picked_at).toLocaleString('vi-VN')}</TableCell>
+              <TableCell>{formatDateTimeVN(row.picked_at)}</TableCell>
               <TableCell sx={{ fontFamily: 'monospace', fontWeight: 700 }}>{row.order_code}</TableCell>
               <TableCell>
                 {row.product_code} - {row.product_name}

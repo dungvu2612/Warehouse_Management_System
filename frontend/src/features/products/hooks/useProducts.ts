@@ -6,7 +6,7 @@ Mo ta file:
 Luong xu ly:
 1) Query/mutation goi qua productService.
 2) Sau mutation thanh cong, invalidate cache products.
-3) Tra ket qua loading/error/data cho page/components.
+3) Tra ket qua loading/error/data cho trang/components.
 
 Luu y khi sua:
 - Neu them query key moi, can cap nhat invalidate dong bo.

@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Orders page read-only quan ly danh sach va dieu huong den Order Detail.
-- Dependencies: useOrdersQuery + OrderTable + orderService filter helper.
-- API contract: GET /orders.
-- Business rules: Orders page khong van hanh picking; picking chi chay o PDA route.
-- Replacement refactor notes: old scan/confirm/finish/picking panel da bi xoa khoi trang nay.
-- Maintenance notes: Neu can tao order lai tren trang rieng, dung module route khac, khong ghep lai vao day.
+- Mục đích: Orders trang chỉ xem quan ly danh sach va dieu huong den Order Detail.
+- Phụ thuộc: useOrdersQuery + OrderTable + orderService filter helper.
+- Hợp đồng API: GET /orders.
+- Quy tắc nghiệp vụ: Orders trang khong van hanh picking; picking chi chay o PDA route.
+- Ghi chú refactor thay thế: old scan/confirm/finish/picking panel da bi xoa khoi trang nay.
+- Ghi chú bảo trì: Neu can tao order lai tren trang rieng, dung module route khac, khong ghep lai vao day.
 */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -17,6 +16,7 @@ import { useDeleteOrderMutation, useOrdersQuery } from '../hooks/useOrders'
 import { OrderTable } from '../components/OrderTable'
 import { orderService } from '../services/orderService'
 import type { Order, OrderStatus } from '../types/orderTypes'
+import { orderPrintService } from '../services/orderPrintService'
 import { ListPagination } from '../../../shared/components/ListPagination'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination'
 import { OrderCreateDialog } from '../components/OrderCreateDialog'
@@ -31,6 +31,7 @@ export function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL')
   const [currentPage, setCurrentPage] = useState(1)
   const [orderCreateOpen, setOrderCreateOpen] = useState(false)
+  const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([])
 
   const ordersQuery = useOrdersQuery(statusFilter === 'ALL' ? undefined : statusFilter)
   const deleteOrderMutation = useDeleteOrderMutation()
@@ -40,13 +41,23 @@ export function OrdersPage() {
   }, [ordersQuery.data, search])
 
   useEffect(() => {
-    // Senior Handover: Reset page to 1 whenever search/filter changes.
+    // Ghi chú: Reset trang to 1 whenever search/filter changes.
     setCurrentPage(1)
   }, [search, statusFilter])
+
+  useEffect(() => {
+    const validIds = new Set((ordersQuery.data || []).map((order) => order.id))
+    setSelectedOrderIds((prev) => prev.filter((id) => validIds.has(id)))
+  }, [ordersQuery.data])
 
   const paginatedOrders = useMemo(() => {
     return paginateItems(filteredOrders, currentPage, DEFAULT_PAGE_SIZE)
   }, [filteredOrders, currentPage])
+
+  const selectedOrders = useMemo(() => {
+    const selectedSet = new Set(selectedOrderIds)
+    return filteredOrders.filter((order) => selectedSet.has(order.id))
+  }, [filteredOrders, selectedOrderIds])
 
   const handleOpenDetail = (orderId: number) => {
     navigate(`/orders/${orderId}`)
@@ -62,6 +73,24 @@ export function OrdersPage() {
     const ok = window.confirm(`Xóa đơn ${order.order_code}?`)
     if (!ok) return
     deleteOrderMutation.mutate(order.id)
+  }
+
+  const handleToggleSelectOrder = (orderId: number) => {
+    setSelectedOrderIds((prev) =>
+      prev.includes(orderId) ? prev.filter((id) => id !== orderId) : [...prev, orderId],
+    )
+  }
+
+  const handleToggleSelectAllInPage = (orderIds: number[]) => {
+    setSelectedOrderIds((prev) => {
+      const allSelected = orderIds.every((id) => prev.includes(id))
+      if (allSelected) return prev.filter((id) => !orderIds.includes(id))
+      return Array.from(new Set([...prev, ...orderIds]))
+    })
+  }
+
+  const handlePrintSelectedOrders = async () => {
+    await orderPrintService.printSelectedOrders(selectedOrders)
   }
 
   return (
@@ -85,17 +114,26 @@ export function OrdersPage() {
             </Typography>
           </Box>
 
-          <Button variant="outlined" startIcon={<Refresh />} onClick={() => ordersQuery.refetch()}>
-            Làm mới
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            disabled={!canCreateOrder}
-            onClick={() => setOrderCreateOpen(true)}
-          >
-            Tạo đơn mới
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button variant="outlined" startIcon={<Refresh />} onClick={() => ordersQuery.refetch()}>
+              Làm mới
+            </Button>
+            <Button
+              variant="outlined"
+              disabled={selectedOrders.length === 0}
+              onClick={() => void handlePrintSelectedOrders()}
+            >
+              In đơn đã chọn ({selectedOrders.length})
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              disabled={!canCreateOrder}
+              onClick={() => setOrderCreateOpen(true)}
+            >
+              Tạo đơn mới
+            </Button>
+          </Stack>
         </Box>
       </Paper>
 
@@ -135,11 +173,14 @@ export function OrdersPage() {
             onEdit={handleEditOrder}
             onDelete={handleDeleteOrder}
             onOpenDetail={(order) => handleOpenDetail(order.id)}
+            selectedIds={selectedOrderIds}
+            onToggleSelect={handleToggleSelectOrder}
+            onToggleSelectAll={handleToggleSelectAllInPage}
           />
           <ListPagination
             currentPage={currentPage}
             totalItems={filteredOrders.length}
-            pageSize={DEFAULT_PAGE_SIZE}
+            trangSize={DEFAULT_PAGE_SIZE}
             onPageChange={setCurrentPage}
           />
         </Box>

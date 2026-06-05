@@ -1,20 +1,27 @@
 /*
-Senior Handover Note:
-- Purpose: Mobile card thay cho table row tren /staff/tasks.
-- Dependencies: StaffTaskItem type, MUI card primitives.
-- HT730 screen assumptions: Order code and action are visible without zoom on 480x800 portrait.
-- Responsive rules: One card per order, no multi-column table, 48px primary button.
-- Scanner workflow: Whole card and Start Picking both open picking detail.
-- Maintenance notes: Keep list summary short; full customer/order details live in detail page.
+- Mục đích: Mobile card thay cho table row tren /staff/tasks.
+- Phụ thuộc: StaffTaskItem type, MUI card primitives.
+- Giả định màn hình HT730: Mã đơn và thao tác phải thấy rõ không cần zoom trên màn hình dọc 480x800.
+- Quy tắc responsive: One card per order, no multi-column table, 48px primary button.
+- Luồng scanner: Whole card and Start Picking both open picking detail.
+- Ghi chú bảo trì: Giữ tóm tắt danh sách ngắn; chi tiết khách hàng/đơn đầy đủ nằm ở trang chi tiết.
 */
 
 import { ArrowForward, PhoneOutlined } from '@mui/icons-material'
 import { Box, Button, Chip, LinearProgress, Paper, Stack, Typography } from '@mui/material'
 import type { StaffTaskItem } from '../types/staffTasks.types'
+import { formatDateVN } from '../../../shared/lib/datetime'
 
 interface StaffOrderCardProps {
   item: StaffTaskItem
   onStart: (orderId: number) => void
+}
+
+const statusLabel: Record<string, string> = {
+  PENDING: 'Chờ xử lý',
+  PICKING: 'Đang nhặt',
+  COMPLETED: 'Hoàn thành',
+  CANCELLED: 'Đã hủy',
 }
 
 export function StaffOrderCard({ item, onStart }: StaffOrderCardProps) {
@@ -31,7 +38,7 @@ export function StaffOrderCard({ item, onStart }: StaffOrderCardProps) {
         '&:active': { bgcolor: 'action.selected' },
       }}
     >
-      {/* Senior Handover: PDA routes use card layout instead of desktop tables */}
+      {/* Ghi chú: PDA dùng layout dạng thẻ thay cho bảng desktop */}
       <Stack spacing={1}>
         <Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Box sx={{ minWidth: 0 }}>
@@ -42,13 +49,13 @@ export function StaffOrderCard({ item, onStart }: StaffOrderCardProps) {
               {item.customer_name || '-'}
             </Typography>
           </Box>
-          <Chip
-            size="small"
-            color={item.status === 'PENDING' ? 'warning' : 'secondary'}
-            label={item.status}
-            sx={{ fontWeight: 900 }}
-          />
-        </Stack>
+            <Chip
+              size="small"
+              color={item.status === 'PENDING' ? 'warning' : 'secondary'}
+              label={statusLabel[item.status] || item.status}
+              sx={{ fontWeight: 900 }}
+            />
+          </Stack>
 
         {item.customer_phone && (
           <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
@@ -60,10 +67,10 @@ export function StaffOrderCard({ item, onStart }: StaffOrderCardProps) {
         <Box>
           <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
             <Typography sx={{ fontSize: 14, fontWeight: 800 }}>
-              Items {item.picked_items}/{item.total_items}
+              Đã nhặt {item.picked_items}/{item.total_items}
             </Typography>
             <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>
-              {new Date(item.created_at).toLocaleDateString('vi-VN')}
+              {formatDateVN(item.created_at)}
             </Typography>
           </Stack>
           <LinearProgress variant="determinate" value={progress} sx={{ mt: 0.75, height: 8, borderRadius: 99 }} />
@@ -80,7 +87,7 @@ export function StaffOrderCard({ item, onStart }: StaffOrderCardProps) {
           }}
           sx={{ minHeight: 48, fontSize: 15, fontWeight: 900 }}
         >
-          Start Picking
+          Mở chi tiết
         </Button>
       </Stack>
     </Paper>

@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Tao QR image data URL tu gia tri text de scan bang PDA/scanner.
-- Dependencies: package `qrcode`.
-- API contract: Khong call backend; utility thuần frontend.
+- Mục đích: Tao QR image data URL tu gia tri text de scan bang PDA/scanner.
+- Phụ thuộc: package `qrcode`.
+- Hợp đồng API: Khong call backend; utility thuần frontend.
 - Warehouse business rules: QR image phai map 1-1 voi qr_code text duoc backend cap.
-- Scanner workflow notes: Mau QR render do phan giai vua du de HT730 scan nhanh.
-- Maintenance notes: Neu can doi density/margin, sua opts trong ham toQrDataUrl.
+- Ghi chú luồng scanner: Mau QR render do phan giai vua du de HT730 scan nhanh.
+- Ghi chú bảo trì: Neu can doi density/margin, sua opts trong ham toQrDataUrl.
 */
 
 import QRCode from 'qrcode'

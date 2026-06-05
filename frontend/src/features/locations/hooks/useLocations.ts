@@ -1,7 +1,7 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File này tập trung React Query hooks cho module Locations.
-- Phụ thuộc vào `locationService` để giữ page sạch khỏi logic data-fetch/cache.
+- Phụ thuộc vào `locationService` để giữ trang sạch khỏi logic data-fetch/cache.
 - Query key và invalidate strategy tại file này đã bao phủ create/update/delete.
 */
 
@@ -14,7 +14,7 @@ const LOCATIONS_QUERY_KEY = ['locations'] as const
 export function useLocationsQuery() {
   return useQuery({
     queryKey: LOCATIONS_QUERY_KEY,
-    // Senior Handover: Block fetch danh sách locations cho màn hình list.
+    // Ghi chú: Block fetch danh sách locations cho màn hình list.
     queryFn: locationService.getLocations,
   })
 }
@@ -26,7 +26,7 @@ export function useCreateLocationMutation(options?: {
   const queryClient = useQueryClient()
 
   return useMutation({
-    // Senior Handover: Block submit tạo location mới.
+    // Ghi chú: Block submit tạo location mới.
     mutationFn: (payload: CreateLocationPayload) => locationService.createLocation(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: LOCATIONS_QUERY_KEY })
@@ -43,7 +43,7 @@ export function useUpdateLocationMutation(options?: {
   const queryClient = useQueryClient()
 
   return useMutation({
-    // Senior Handover: Block submit cập nhật location.
+    // Ghi chú: Block submit cập nhật location.
     mutationFn: ({ id, payload }: { id: number; payload: UpdateLocationPayload }) =>
       locationService.updateLocation(id, payload),
     onSuccess: async () => {
@@ -61,7 +61,7 @@ export function useDeleteLocationMutation(options?: {
   const queryClient = useQueryClient()
 
   return useMutation({
-    // Senior Handover: Block submit xóa mềm location.
+    // Ghi chú: Block submit xóa mềm location.
     mutationFn: (id: number) => locationService.deleteLocation(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: LOCATIONS_QUERY_KEY })

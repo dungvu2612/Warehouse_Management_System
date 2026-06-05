@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Shared scan action/status panel without exposing a text input.
-- Dependencies: MUI button/alert primitives and scanner hook state.
-- HT730 scanner behavior: User presses action, then physical scan key types QR into hidden input.
-- API callback contract: Parent starts the correct ScanMode and handles API in useScannerInput callback.
-- Maintenance notes: Keep status rendering generic; business-specific details stay in pages.
+- Mục đích: Panel thao tác/trạng thái quét dùng chung, không hiển thị ô nhập text.
+- Phụ thuộc: Button/Alert của MUI và state từ scanner hook.
+- Hành vi máy quét HT730: Người dùng bấm thao tác, sau đó phím quét vật lý nhập QR vào input ẩn.
+- Hợp đồng callback API: Component cha khởi động đúng ScanMode và xử lý API trong callback của useScannerInput.
+- Ghi chú bảo trì: Giữ phần render trạng thái ở mức dùng chung; chi tiết nghiệp vụ nằm ở page.
 */
 
 import { Alert, Button, Paper, Stack, Typography } from '@mui/material'

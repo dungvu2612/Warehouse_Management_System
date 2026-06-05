@@ -1,5 +1,5 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay dinh nghia contracts TypeScript cho module Import Receipts o frontend.
 - Phu thuoc truc tiep vao API backend da xac minh: GET /import-receipts, GET /import-receipts/:id, POST /import-receipts.
 - Khi backend doi field JSON cua receipt/items, cap nhat type tai day truoc de giu an toan strict typing cho toan module.
@@ -29,6 +29,7 @@ export interface ImportReceipt {
 export interface CreateImportReceiptItemPayload {
   product_id: number
   tray_id: number
+  tray_qr_code?: string
   quantity: number
 }
 
@@ -54,6 +55,7 @@ export interface ProductOption {
 export interface TrayOption {
   id: number
   tray_code: string
+  qr_code: string
   product_id: number
   location_id: number
   is_active: boolean

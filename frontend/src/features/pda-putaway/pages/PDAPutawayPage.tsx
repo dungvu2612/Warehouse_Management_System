@@ -1,13 +1,12 @@
 /*
-Senior Handover Note:
-- Purpose: PDA Putaway page theo flow HT730: scan product trước, sau đó chọn khay hợp lệ và nhập số lượng.
-- Dependencies: PdaLayout, scanner hook dùng chung, products scan API, trays/inventory queries, putaway mutation.
-- HT730 scanner behavior: TagAccess Keyboard nhập QR vào hidden input đang focus, Enter để submit scan.
-- API callback contract: PRODUCT mode gọi GET /products/scan/:qr_code, submit gọi POST /inventory/putaway.
-- Maintenance notes: Chỉ cho putaway vào khay thuộc đúng sản phẩm; không tạo scanner flow song song.
+- Mục đích: PDA Putaway theo flow QR cũ trên HT730: quét sản phẩm, quét QR khay hợp lệ, nhập số lượng.
+- Phụ thuộc: PdaLayout, scanner hook dùng chung, products scan API, trays scan API, putaway mutation.
+- Hành vi máy quét HT730: TagAccess Keyboard nhập QR vào input ẩn đang focus, Enter để gửi lượt quét.
+- Hợp đồng API: PRODUCT mode gọi GET /products/scan/:qr_code, TRAY mode gọi GET /trays/scan/:qr_code, submit gọi POST /inventory/putaway.
+- Ghi chú bảo trì: Chỉ cho nhập vào khay thuộc đúng sản phẩm, giữ flow nhập kho bằng QR.
 */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { QrCodeScanner } from '@mui/icons-material'
 import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
@@ -17,92 +16,49 @@ import { ScannerHiddenInput } from '../../scanner/components/ScannerHiddenInput'
 import { usePDAPutawayMutation } from '../hooks/usePdaPutaway'
 import { productsApi } from '../../products/api/productsApi'
 import type { ProductScanResponse } from '../../products/types/productTypes'
-import { useTraysQuery, useTrayLocationOptionsQuery } from '../../trays/hooks/useTrays'
-import { useInventoryQuery } from '../../inventory/hooks/useInventory'
+import { traysApi } from '../../trays/api/traysApi'
+import type { TrayScanResponse } from '../../trays/types/trayTypes'
 
 export function PDAPutawayPage() {
   const [productScanResult, setProductScanResult] = useState<ProductScanResponse | null>(null)
-  const [traySearch, setTraySearch] = useState('')
-  const [selectedTrayId, setSelectedTrayId] = useState<number | null>(null)
+  const [trayScanResult, setTrayScanResult] = useState<TrayScanResponse | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [note, setNote] = useState('')
   const [message, setMessage] = useState('')
   const [errorText, setErrorText] = useState('')
-
-  const traysQuery = useTraysQuery()
-  const locationsQuery = useTrayLocationOptionsQuery()
-  const inventoryQuery = useInventoryQuery()
+  const [requestedScanMode, setRequestedScanMode] = useState<'PRODUCT' | 'TRAY'>('PRODUCT')
 
   const scanProductMutation = useMutation({
     mutationFn: (qrCode: string) => productsApi.scanProductByQRCode(qrCode),
+  })
+
+  const scanTrayMutation = useMutation({
+    mutationFn: (qrCode: string) => traysApi.scanTrayByQRCode(qrCode),
   })
 
   const putawayMutation = usePDAPutawayMutation({
     onError: () => setErrorText('Nhập kho thất bại.'),
   })
 
-  const locationCodeById = useMemo(() => {
-    return new Map((locationsQuery.data || []).map((location) => [location.id, location.location_code]))
-  }, [locationsQuery.data])
-
-  const inventoryByTrayId = useMemo(() => {
-    const map = new Map<number, { totalQty: number; sameProductQty: number }>()
-    const productId = productScanResult?.product.id
-    for (const row of inventoryQuery.data || []) {
-      const prev = map.get(row.tray_id) || { totalQty: 0, sameProductQty: 0 }
-      const next = {
-        totalQty: prev.totalQty + Number(row.quantity || 0),
-        sameProductQty: prev.sameProductQty + (productId && row.product_id === productId ? Number(row.quantity || 0) : 0),
-      }
-      map.set(row.tray_id, next)
+  const handleScanTray = async (code: string) => {
+    if (!productScanResult) throw new Error('Vui lòng quét sản phẩm trước khi quét khay.')
+    const data = await scanTrayMutation.mutateAsync(code)
+    if (data.tray.product_id !== productScanResult.product.id) {
+      setTrayScanResult(null)
+      throw new Error('Khay vừa quét không thuộc sản phẩm đã chọn.')
     }
-    return map
-  }, [inventoryQuery.data, productScanResult?.product.id])
-
-  const trayCandidates = useMemo(() => {
-    const keyword = traySearch.trim().toLowerCase()
-    const productId = productScanResult?.product.id
-    return (traysQuery.data || [])
-      .map((tray) => {
-        const inv = inventoryByTrayId.get(tray.id) || { totalQty: 0, sameProductQty: 0 }
-        const locationCode = locationCodeById.get(tray.location_id) || '-'
-        const belongsToProduct = productId ? tray.product_id === productId : false
-        const hasSameProduct = inv.sameProductQty > 0
-        const isEmpty = inv.totalQty <= 0
-        const isAllowed = belongsToProduct && (hasSameProduct || isEmpty)
-
-        return {
-          tray,
-          locationCode,
-          isAllowed,
-          hasSameProduct,
-          isEmpty,
-          currentQty: inv.sameProductQty,
-        }
-      })
-      .filter((item) => {
-        if (!productId) return false
-        if (!keyword) return true
-        return (
-          item.tray.tray_code.toLowerCase().includes(keyword) ||
-          item.locationCode.toLowerCase().includes(keyword)
-        )
-      })
-  }, [inventoryByTrayId, locationCodeById, productScanResult?.product.id, traySearch, traysQuery.data])
-
-  const selectedTray = useMemo(() => {
-    if (!selectedTrayId) return null
-    return trayCandidates.find((candidate) => candidate.tray.id === selectedTrayId) || null
-  }, [selectedTrayId, trayCandidates])
+    setTrayScanResult(data)
+    setMessage(`Đã quét khay ${data.tray.tray_code}.`)
+  }
 
   const handleSubmit = async () => {
-    if (!productScanResult || !selectedTray || quantity <= 0) return
+    if (!productScanResult || !trayScanResult || quantity <= 0) return
     setErrorText('')
     setMessage('')
 
     const result = await putawayMutation.mutateAsync({
       product_qr_code: productScanResult.product.qr_code,
-      tray_qr_code: selectedTray.tray.qr_code,
+      tray_qr_code: trayScanResult.tray.qr_code || trayScanResult.tray.tray_code,
       quantity,
       note: note.trim(),
     })
@@ -113,27 +69,34 @@ export function PDAPutawayPage() {
   }
 
   const scanner = useScannerInput({
-    autoStart: true,
-    initialMode: 'PRODUCT',
-    // Senior Handover: Scanner logic is centralized here to avoid duplicate handlers.
     onScanComplete: async ({ mode, code }) => {
+      if (mode === 'TRAY') {
+        setErrorText('')
+        setMessage('')
+        await handleScanTray(code)
+        return
+      }
       if (mode !== 'PRODUCT') return
       setErrorText('')
       setMessage('')
       const data = await scanProductMutation.mutateAsync(code)
       setProductScanResult(data)
-      setTraySearch('')
-      setSelectedTrayId(null)
+      setTrayScanResult(null)
+      setRequestedScanMode('TRAY')
     },
   })
 
+  useEffect(() => {
+    scanner.startScan(requestedScanMode)
+  }, [requestedScanMode, scanner.startScan])
+
   return (
-    <PdaLayout title="Nhập kho PDA" subtitle="Quét sản phẩm rồi chọn khay">
+    <PdaLayout title="Nhập kho PDA" subtitle="Quét sản phẩm rồi quét QR khay">
       <Paper sx={{ p: 1.5, borderRadius: 2 }}>
         <Stack spacing={0.75}>
           <Typography sx={{ fontSize: 16, fontWeight: 900 }}>Sẵn sàng quét mã sản phẩm</Typography>
           <Typography sx={{ fontSize: 15, color: 'text.secondary' }}>Không cần bấm nút scan, có thể quét ngay bằng HT730.</Typography>
-          <Button type="button" variant="outlined" onClick={() => scanner.focusScannerInput()}>
+          <Button type="button" variant="outlined" onClick={() => scanner.startScan(requestedScanMode)}>
             Đưa con trỏ quét về máy scan
           </Button>
         </Stack>
@@ -147,6 +110,18 @@ export function PDAPutawayPage() {
             </Typography>
             <Typography sx={{ fontSize: 16, fontWeight: 800 }}>{productScanResult.product.product_name}</Typography>
             <Chip color="secondary" label={`Tồn hiện tại: ${productScanResult.inventory_total}`} sx={{ fontWeight: 900 }} />
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={() => {
+                setProductScanResult(null)
+                setTrayScanResult(null)
+                setRequestedScanMode('PRODUCT')
+                scanner.startScan('PRODUCT')
+              }}
+            >
+              Quét sản phẩm khác
+            </Button>
           </Stack>
         </Paper>
       )}
@@ -154,44 +129,61 @@ export function PDAPutawayPage() {
       {productScanResult && (
         <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
           <Stack spacing={1}>
-            <Typography sx={{ fontSize: 16, fontWeight: 900 }}>Chọn khay nhập</Typography>
-            <TextField
-              label="Nhập mã khay / vị trí"
-              placeholder="Ví dụ: TRAY-001 hoặc A-01"
-              value={traySearch}
-              onChange={(event) => setTraySearch(event.target.value)}
-              fullWidth
-            />
+            <Typography sx={{ fontSize: 16, fontWeight: 900 }}>Khay đang có sản phẩm này</Typography>
+            <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>
+              Đi tới đúng khay bên dưới rồi quét QR khay để nhập thêm hàng.
+            </Typography>
+            {productScanResult.trays.length === 0 && <Alert severity="info">Sản phẩm này chưa có tồn trong khay nào.</Alert>}
+            {productScanResult.trays.length > 0 && (
+              <Box sx={{ maxHeight: 220, overflowY: 'auto', pr: 0.5 }}>
+                <Stack spacing={0.75}>
+                  {productScanResult.trays.map((tray) => (
+                    <Paper key={tray.tray_id} variant="outlined" sx={{ p: 1, borderRadius: 1.5 }}>
+                      <Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography sx={{ fontFamily: 'monospace', fontSize: 16, fontWeight: 900 }} noWrap>
+                            {tray.tray_code}
+                          </Typography>
+                          <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>
+                            Vị trí: {tray.location_code || '-'}
+                          </Typography>
+                        </Box>
+                        <Chip color="info" label={`SL: ${tray.quantity}`} sx={{ fontWeight: 900 }} />
+                      </Stack>
+                    </Paper>
+                  ))}
+                </Stack>
+              </Box>
+            )}
+          </Stack>
+        </Paper>
+      )}
 
-            <Stack spacing={0.8}>
-              {trayCandidates.slice(0, 20).map((candidate) => (
-                <Button
-                  key={candidate.tray.id}
-                  type="button"
-                  variant={selectedTrayId === candidate.tray.id ? 'contained' : 'outlined'}
-                  color={candidate.isAllowed ? 'primary' : 'inherit'}
-                  disabled={!candidate.isAllowed}
-                  onClick={() => setSelectedTrayId(candidate.tray.id)}
-                  sx={{ justifyContent: 'space-between', minHeight: 48, textTransform: 'none' }}
-                >
-                  <span style={{ fontFamily: 'monospace', fontWeight: 800 }}>
-                    {candidate.tray.tray_code} · {candidate.locationCode}
-                  </span>
-                  <span>
-                    {candidate.hasSameProduct
-                      ? `Đang có: ${candidate.currentQty}`
-                      : candidate.isEmpty
-                        ? 'Khay trống'
-                        : 'Không hợp lệ'}
-                  </span>
-                </Button>
-              ))}
-              {trayCandidates.length === 0 && (
-                <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>
-                  Không có khay phù hợp cho sản phẩm này.
-                </Typography>
-              )}
-            </Stack>
+      {productScanResult && (
+        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+          <Stack spacing={1}>
+            <Typography sx={{ fontSize: 16, fontWeight: 900 }}>Quét QR khay nhập</Typography>
+            <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>
+              Không chọn khay thủ công. Nếu QR khay thuộc sản phẩm khác, hệ thống sẽ chặn nhập kho.
+            </Typography>
+            <Button
+              type="button"
+              variant={trayScanResult ? 'outlined' : 'contained'}
+              startIcon={<QrCodeScanner />}
+              onClick={() => {
+                setRequestedScanMode('TRAY')
+                scanner.startScan('TRAY')
+              }}
+              sx={{ minHeight: 52, fontSize: 16, fontWeight: 900 }}
+            >
+              {scanner.scanMode === 'TRAY' && scanner.isScanning ? 'Đang chờ QR khay...' : 'Quét QR khay'}
+            </Button>
+            {trayScanResult && (
+              <Alert severity="success">
+                Đã quét khay {trayScanResult.tray.tray_code} · vị trí {trayScanResult.location_code || '-'} · tồn trong khay:{' '}
+                {trayScanResult.inventory_total}
+              </Alert>
+            )}
 
             <TextField
               label="Số lượng nhập"
@@ -212,7 +204,7 @@ export function PDAPutawayPage() {
               variant="contained"
               startIcon={<QrCodeScanner />}
               onClick={() => void handleSubmit()}
-              disabled={!selectedTray || putawayMutation.isPending}
+              disabled={!trayScanResult || putawayMutation.isPending}
               sx={{ minHeight: 52, fontSize: 16, fontWeight: 900 }}
             >
               {putawayMutation.isPending ? 'Đang xử lý...' : 'Xác nhận nhập kho'}

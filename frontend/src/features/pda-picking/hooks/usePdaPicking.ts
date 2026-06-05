@@ -1,12 +1,11 @@
 /*
-Senior Handover Note:
-- Purpose: React Query hooks cho PDA Picking replacement flow.
-- Dependencies: pdaPickingApi.
-- API contract: scan order + detail + verify tray + scan product.
-- Business rules: Sau moi scan product can refresh state de cap nhat remaining qty realtime.
-- Replacement refactor notes: bo mutation confirm quantity cu.
-- Scanner workflow notes: Hook tra loading state de khoa scanner action khi request dang chay.
-- Maintenance notes: query key tach rieng theo order/task context de de invalidate.
+- Mục đích: React Query hooks cho PDA Picking replacement flow.
+- Phụ thuộc: pdaPickingApi.
+- Hợp đồng API: scan order + detail + verify tray + scan product.
+- Quy tắc nghiệp vụ: Sau moi scan product can refresh state de cap nhat remaining qty realtime.
+- Ghi chú refactor thay thế: bo mutation confirm quantity cu.
+- Ghi chú luồng scanner: Hook tra loading state de khoa scanner action khi request dang chay.
+- Ghi chú bảo trì: query key tach rieng theo order/task context de de invalidate.
 */
 
 import { useMutation } from '@tanstack/react-query'

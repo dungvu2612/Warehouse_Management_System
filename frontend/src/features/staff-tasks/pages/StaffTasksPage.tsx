@@ -1,16 +1,15 @@
 /*
-Senior Handover Note:
-- Purpose: Trang danh sach cong viec can lam cho staff warehouse.
-- Dependencies: staffTasksApi + StaffTaskList + centralized scanner + order scan endpoint.
-- API contract: GET /staff/tasks, GET /orders/scan/:qr_code.
-- Business rules: staff task list is the entry point for warehouse workers.
-- Replacement refactor notes: replacement refactor, no duplicate picking flow.
-- HT730 scanner behavior: TagAccess Keyboard types QR into focused hidden input and sends Enter.
-- API callback contract: ORDER mode calls GET /orders/scan/:qr_code.
-- Permission notes: ADMIN/WAREHOUSE duoc vao route nay.
-- HT730 screen assumptions: 480x800 portrait, no table, no visible scanner input by default.
-- Responsive rules: PdaLayout maxes content to 480px and action buttons are >=48px.
-- Maintenance notes: Neu can assign task theo user sau nay, mo rong filter tai page nay.
+- Mục đích: Trang danh sach cong viec can lam cho staff warehouse.
+- Phụ thuộc: staffTasksApi + StaffTaskList + centralized scanner + order scan endpoint.
+- Hợp đồng API: GET /staff/tasks, GET /orders/scan/:qr_code.
+- Quy tắc nghiệp vụ: danh sách tác vụ staff là điểm vào cho nhân viên kho.
+- Ghi chú refactor thay thế: replacement refactor, no duplicate picking flow.
+- Hành vi máy quét HT730: TagAccess Keyboard nhập QR vào input ẩn đang focus và gửi Enter.
+- Hợp đồng callback API: Mode ORDER gọi GET /orders/scan/:qr_code.
+- Ghi chú phân quyền: ADMIN/WAREHOUSE duoc vao route nay.
+- Giả định màn hình HT730: Màn hình dọc 480x800, không dùng bảng, mặc định không hiển thị input quét.
+- Quy tắc responsive: PdaLayout maxes content to 480px and action buttons are >=48px.
+- Ghi chú bảo trì: Neu can assign task theo user sau nay, mo rong filter tai trang nay.
 */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -46,7 +45,7 @@ export function StaffTasksPage() {
   }, [search, statusFilter, tasksQuery.data])
 
   useEffect(() => {
-    // Senior Handover: Reset page to 1 whenever search/filter changes.
+    // Ghi chú: Reset trang to 1 whenever search/filter changes.
     setCurrentPage(1)
   }, [search, statusFilter])
 
@@ -82,7 +81,7 @@ export function StaffTasksPage() {
       <ListPagination
         currentPage={currentPage}
         totalItems={filteredTasks.length}
-        pageSize={DEFAULT_PAGE_SIZE}
+        trangSize={DEFAULT_PAGE_SIZE}
         onPageChange={setCurrentPage}
       />
 

@@ -1,10 +1,6 @@
 /*
-Senior Handover Note:
-- Purpose: API layer cho Dashboard role-based.
-- Dependencies: Shared `http` client.
-- API contract: GET /dashboard/stats tra payload gom role, admin_revenue, warehouse_operations.
-- Role access: Backend tu enforce role; frontend chi doc response.
-- Maintenance notes: Co normalize adapter de tuong thich backend shape cu, tranh crash UI khi backend chua restart/chua migrate.
+API layer cho Dashboard role-based.
+Có normalize adapter để tương thích response cũ.
 */
 
 import { http } from '../../../shared/lib/http'
@@ -44,6 +40,7 @@ function createEmptyDashboardResponse(): DashboardStatsResponse {
         out_of_stock_products: 0,
       },
       top_moving_products: [],
+      order_status_chart: [],
     },
   }
 }
@@ -57,7 +54,7 @@ function normalizeDashboardStatsResponse(raw: unknown): DashboardStatsResponse {
 
   const candidate = raw as Partial<DashboardStatsResponse> & LegacyDashboardStats
 
-  // Senior Handover: fallback handling - backend shape cu khong co warehouse_operations.
+  // Tương thích backend cũ không có warehouse_operations.
   if (!candidate.warehouse_operations) {
     return {
       ...fallback,
@@ -74,7 +71,7 @@ function normalizeDashboardStatsResponse(raw: unknown): DashboardStatsResponse {
 
   return {
     role:
-      candidate.role === 'ADMIN' || candidate.role === 'WAREHOUSE' || candidate.role === 'VIEWER'
+      candidate.role === 'ADMIN' || candidate.role === 'WAREHOUSE'
         ? candidate.role
         : fallback.role,
     admin_revenue: candidate.admin_revenue ?? null,
@@ -94,12 +91,12 @@ function normalizeDashboardStatsResponse(raw: unknown): DashboardStatsResponse {
         ...candidate.warehouse_operations.inventory_health,
       },
       top_moving_products: candidate.warehouse_operations.top_moving_products || [],
+      order_status_chart: candidate.warehouse_operations.order_status_chart || [],
     },
   }
 }
 
 export const dashboardApi = {
-  // Senior Handover: admin revenue fetch + warehouse stats fetch thong qua 1 endpoint role-based.
   getDashboardStats: async (): Promise<DashboardStatsResponse> => {
     const { data } = await http.get<unknown>('/dashboard/stats')
     return normalizeDashboardStatsResponse(data)

@@ -1,7 +1,7 @@
 package services
 
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay chua business use-cases cho module location, gom create/list/update/delete.
 - Phu thuoc vao repository layer de doc/ghi model Location va map domain error len handler.
 - Khi doi nghiep vu phan quyen/validate, cap nhat tai service truoc de giu transport layer mong.
@@ -37,8 +37,14 @@ var ErrInvalidLocationPayload = errors.New("location_code is required")
 type LocationService interface {
 	Create(locationCode, shelf, description string) (*models.Location, error)
 	GetAllActive() ([]models.Location, error)
+	GetTraysByLocationID(id uint) (*LocationTraysResponse, error)
 	Update(id uint, locationCode, shelf, description string) (*models.Location, error)
 	Delete(id uint) error
+}
+
+type LocationTraysResponse struct {
+	Location *models.Location               `json:"location"`
+	Trays    []repositories.LocationTrayRow `json:"trays"`
 }
 
 type locationService struct {
@@ -50,11 +56,18 @@ func NewLocationService(repo repositories.LocationRepository) LocationService {
 }
 
 func (s *locationService) Create(locationCode, shelf, description string) (*models.Location, error) {
-	locationCode = strings.TrimSpace(locationCode)
+	locationCode = strings.ToUpper(strings.TrimSpace(locationCode))
 	shelf = strings.TrimSpace(shelf)
 
 	if locationCode == "" {
 		return nil, ErrInvalidLocationPayload
+	}
+	exists, err := s.repo.ExistsActiveByCode(locationCode, nil)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, repositories.ErrLocationCodeExists
 	}
 
 	location := &models.Location{
@@ -75,18 +88,46 @@ func (s *locationService) GetAllActive() ([]models.Location, error) {
 	return s.repo.FindAllActive()
 }
 
-func (s *locationService) Update(id uint, locationCode, shelf, description string) (*models.Location, error) {
-	// Senior Handover: Validate id truoc khi truy van DB.
+func (s *locationService) GetTraysByLocationID(id uint) (*LocationTraysResponse, error) {
 	if id == 0 {
 		return nil, ErrInvalidLocationID
 	}
 
-	locationCode = strings.TrimSpace(locationCode)
+	location, err := s.repo.FindActiveByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	trays, err := s.repo.FindTraysByLocationID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LocationTraysResponse{
+		Location: location,
+		Trays:    trays,
+	}, nil
+}
+
+func (s *locationService) Update(id uint, locationCode, shelf, description string) (*models.Location, error) {
+	// Ghi chú: Validate id truoc khi truy van DB.
+	if id == 0 {
+		return nil, ErrInvalidLocationID
+	}
+
+	locationCode = strings.ToUpper(strings.TrimSpace(locationCode))
 	shelf = strings.TrimSpace(shelf)
 
-	// Senior Handover: location_code van la field bat buoc khi cap nhat.
+	// Ghi chú: location_code van la field bat buoc khi cap nhat.
 	if locationCode == "" {
 		return nil, ErrInvalidLocationPayload
+	}
+	exists, err := s.repo.ExistsActiveByCode(locationCode, &id)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, repositories.ErrLocationCodeExists
 	}
 
 	location, err := s.repo.FindActiveByID(id)
@@ -106,7 +147,7 @@ func (s *locationService) Update(id uint, locationCode, shelf, description strin
 }
 
 func (s *locationService) Delete(id uint) error {
-	// Senior Handover: Soft delete bang cach set is_active=false de giu lich su.
+	// Ghi chú: Soft delete bang cach set is_active=false de giu lich su.
 	if id == 0 {
 		return ErrInvalidLocationID
 	}

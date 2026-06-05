@@ -1,12 +1,11 @@
 /*
-Senior Handover Note:
-- Purpose: Editor dung chung cho create/edit order voi danh sach nhieu san pham.
-- Dependencies: MUI table/form controls va product list da load san.
-- API contract: Tra ve items array { product_id, quantity, unit_price } de submit /orders.
+- Mục đích: Editor dung chung cho create/edit order voi danh sach nhieu san pham.
+- Phụ thuộc: MUI table/form controls va product list da load san.
+- Hợp đồng API: Tra ve items array { product_id, quantity, unit_price } de submit /orders.
 - Multi-item order behavior: Them/sua/xoa theo dong, tinh line_total va total_amount realtime.
 - Add/edit/delete item behavior: Chan duplicate product_id, validate quantity > 0, unit_price >= 0.
-- Permission rule: unit_price chi cho sua khi canEditPrice=true (thuong la ADMIN).
-- Maintenance notes: Giu state items o page cha; component nay chi la controlled editor.
+- Quy tắc phân quyền: unit_price chi cho sua khi canEditPrice=true (thuong la ADMIN).
+- Ghi chú bảo trì: Giu state items o trang cha; component nay chi la controlled editor.
 */
 
 import { useMemo, useState } from 'react'
@@ -88,6 +87,9 @@ export function OrderItemsEditor({
     [items],
   )
 
+  // Thêm sản phẩm vào đơn theo state chọn hiện tại.
+  // Cách dùng: gọi khi user bấm "Thêm sản phẩm".
+  // Quy tắc: không cho quantity <= 0, unit_price < 0, và gộp quantity nếu sản phẩm đã tồn tại.
   const handleAddProduct = () => {
     if (!selectedProduct) return
     if (addQuantity <= 0) return
@@ -115,12 +117,16 @@ export function OrderItemsEditor({
     setAddPrice(0)
   }
 
+  // Cập nhật 1 dòng sản phẩm theo index.
+  // Cách dùng: truyền patch cần đổi (quantity hoặc unit_price), hàm sẽ merge và emit onChange.
   const updateItem = (index: number, patch: Partial<OrderEditorItem>) => {
     const nextItems = [...items]
     nextItems[index] = { ...nextItems[index], ...patch }
     onChange(nextItems)
   }
 
+  // Xóa 1 dòng sản phẩm theo index (có xác nhận).
+  // Cách dùng: gọi từ nút xóa ở từng dòng item.
   const removeItem = (index: number) => {
     const ok = window.confirm('Bạn có chắc muốn xóa sản phẩm này khỏi đơn?')
     if (!ok) return

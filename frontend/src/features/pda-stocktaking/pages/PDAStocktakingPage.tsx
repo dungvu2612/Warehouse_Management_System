@@ -1,15 +1,14 @@
 /*
-Senior Handover Note:
-- Purpose: PDA Stocktaking page toi uu thao tac nhanh tren HT730.
-- Dependencies: PdaLayout, centralized scanner hook, scan tray + stocktaking mutations.
-- API contract: GET /trays/scan/:qr_code, POST /inventory/stocktaking.
-- HT730 scanner behavior: TagAccess Keyboard types QR into the focused hidden input, then Enter.
-- API callback contract: STOCKTAKING mode calls GET /trays/scan/:qr_code.
-- Maintenance notes: Stocktaking legitimately needs physical quantity input; picking flow does not.
+- Mục đích: PDA Stocktaking trang toi uu thao tac nhanh tren HT730.
+- Phụ thuộc: PdaLayout, centralized scanner hook, scan tray + stocktaking mutations.
+- Hợp đồng API: GET /trays/scan/:qr_code, POST /inventory/stocktaking.
+- Hành vi máy quét HT730: TagAccess Keyboard nhập QR vào input ẩn đang focus, sau đó gửi Enter.
+- Hợp đồng callback API: Mode STOCKTAKING gọi GET /trays/scan/:qr_code.
+- Ghi chú bảo trì: Stocktaking legitimately needs physical quantity input; picking flow does not.
 */
 
 import { useMemo, useState } from 'react'
-import { Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
+import { Box, Button, Paper, Stack, TextField, Typography } from '@mui/material'
 import { PdaLayout } from '../../pda/layout/PdaLayout'
 import { ScanResultPanel } from '../../pda/components/ScanResultPanel'
 import { useScannerInput } from '../../scanner/hooks/useScannerInput'
@@ -49,7 +48,7 @@ export function PDAStocktakingPage() {
   const scanner = useScannerInput({
     autoStart: true,
     initialMode: 'STOCKTAKING',
-    // Senior Handover: Scanner logic is centralized here to avoid duplicate handlers.
+    // Ghi chú: Tập trung logic quét tại đây để tránh lặp handler.
     onScanComplete: async ({ mode, code }) => {
       if (mode !== 'STOCKTAKING') return
       setErrorText('')
@@ -60,10 +59,7 @@ export function PDAStocktakingPage() {
   })
 
   return (
-    <PdaLayout
-      title="Kiểm kê"
-      subtitle="Kiểm kê khay"
-    >
+    <PdaLayout title="Kiểm kê" subtitle="Kiểm kê khay">
       <Paper sx={{ p: 1.5, borderRadius: 2 }}>
         <Stack spacing={0.75}>
           <Typography sx={{ fontSize: 16, fontWeight: 900 }}>Sẵn sàng quét mã khay</Typography>
@@ -87,7 +83,6 @@ export function PDAStocktakingPage() {
               {scanMutation.data.tray.tray_code}
             </Typography>
             <Typography sx={{ fontSize: 15 }}>Vị trí: {scanMutation.data.location_code || '-'}</Typography>
-            <Chip color="secondary" label={`Hệ thống ${systemQty}`} sx={{ minHeight: 36, fontWeight: 900 }} />
             <TextField
               label="Số lượng thực tế"
               type="number"
@@ -110,12 +105,7 @@ export function PDAStocktakingPage() {
                 </Stack>
               </Paper>
             ))}
-            <TextField
-              label="Ghi chú"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              fullWidth
-            />
+            <TextField label="Ghi chú" value={note} onChange={(event) => setNote(event.target.value)} fullWidth />
             <Button
               type="button"
               variant="contained"

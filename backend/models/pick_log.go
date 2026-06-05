@@ -10,6 +10,7 @@ type PickLog struct {
 	TrayID         *uint     `json:"tray_id"`
 	PickedQuantity int       `gorm:"not null;check:picked_quantity > 0" json:"picked_quantity"`
 	PickedBy       *uint     `json:"picked_by"`
+	Picker         *User     `gorm:"foreignKey:PickedBy;references:ID" json:"picker,omitempty"`
 	PickedAt       time.Time `json:"picked_at"`
 	Note           string    `json:"note"`
 }

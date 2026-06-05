@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Panel cho trang thai dang cho scan tren HT730.
-- Dependencies: MUI Paper/Typography.
-- HT730 screen assumptions: Staff reads this at arm length on a 4-inch screen.
-- Responsive rules: Large text, no columns, icon-sized visual cue only.
-- Scanner workflow: Used after pressing Scan Order/Tray/Product to focus hidden input.
-- Maintenance notes: Keep copy short and operational.
+- Mục đích: Panel cho trang thai dang cho scan tren HT730.
+- Phụ thuộc: MUI Paper/Typography.
+- Giả định màn hình HT730: Nhân viên đọc nội dung này ở khoảng cách thao tác trên màn hình 4 inch.
+- Quy tắc responsive: Large text, no columns, icon-sized visual cue only.
+- Luồng scanner: Dùng sau khi bấm quét đơn/khay/sản phẩm để focus input ẩn.
+- Ghi chú bảo trì: Keep copy short and operational.
 */
 
 import { QrCodeScanner } from '@mui/icons-material'

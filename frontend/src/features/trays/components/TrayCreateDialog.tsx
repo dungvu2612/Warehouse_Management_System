@@ -1,7 +1,7 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay la dialog form tao/cap nhat tray, chi xu ly UI/form controls.
-- Phu thuoc vao `TrayPayload` va option lists (`ProductOption`, `LocationOption`) tu page.
+- Phu thuoc vao `TrayPayload` va option lists (`ProductOption`, `LocationOption`) tu trang.
 - Khong tich hop API truc tiep trong component de giu phan tang ro rang.
 */
 

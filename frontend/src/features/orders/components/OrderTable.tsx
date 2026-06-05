@@ -1,14 +1,14 @@
 /*
-Senior Handover Note:
-- Purpose: Bang read-only danh sach orders sau replacement refactor.
-- Dependencies: Nhan du lieu order tu OrdersPage, khong chua logic API/mutation.
-- API contract: Render field theo GET /orders.
-- Business rules: Khong render thao tac picking/finish/create tai Orders page.
-- Replacement refactor notes: old action Picking/Finish da bi xoa.
-- Maintenance notes: Neu can them action read-only (print shortcut), bo sung callback tu page cha.
+- Mục đích: Bang chỉ xem danh sach orders sau replacement refactor.
+- Phụ thuộc: Nhan du lieu order tu OrdersPage, khong chua logic API/mutation.
+- Hợp đồng API: Render field theo GET /orders.
+- Quy tắc nghiệp vụ: Khong render thao tac picking/finish/create tai Orders trang.
+- Ghi chú refactor thay thế: old action Picking/Finish da bi xoa.
+- Ghi chú bảo trì: Neu can them action chỉ xem (print shortcut), bo sung callback tu trang cha.
 */
 
 import {
+  Checkbox,
   Chip,
   IconButton,
   Table,
@@ -21,6 +21,7 @@ import {
 } from '@mui/material'
 import { DeleteOutlined, EditOutlined, VisibilityOutlined } from '@mui/icons-material'
 import type { Order } from '../types/orderTypes'
+import { formatDateTimeVN } from '../../../shared/lib/datetime'
 
 interface OrderTableProps {
   orders: Order[]
@@ -30,6 +31,9 @@ interface OrderTableProps {
   canManage?: boolean
   onEdit?: (order: Order) => void
   onDelete?: (order: Order) => void
+  selectedIds: number[]
+  onToggleSelect: (orderId: number) => void
+  onToggleSelectAll: (orderIds: number[]) => void
 }
 
 function statusColor(status: string): 'warning' | 'secondary' | 'success' | 'default' {
@@ -55,12 +59,25 @@ export function OrderTable({
   canManage = false,
   onEdit,
   onDelete,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
 }: OrderTableProps) {
+  const selectedCountInPage = orders.filter((order) => selectedIds.includes(order.id)).length
+  const allSelectedInPage = orders.length > 0 && selectedCountInPage === orders.length
+
   return (
     <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: 2 }}>
       <Table>
         <TableHead sx={{ bgcolor: 'grey.50' }}>
           <TableRow>
+            <TableCell padding="checkbox">
+              <Checkbox
+                checked={allSelectedInPage}
+                indeterminate={selectedCountInPage > 0 && !allSelectedInPage}
+                onChange={() => onToggleSelectAll(orders.map((order) => order.id))}
+              />
+            </TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Mã đơn</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Khách hàng</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Số điện thoại</TableCell>
@@ -75,24 +92,27 @@ export function OrderTable({
         <TableBody>
           {isLoading && (
             <TableRow>
-              <TableCell colSpan={8}>Đang tải danh sách đơn hàng...</TableCell>
+              <TableCell colSpan={9}>Đang tải danh sách đơn hàng...</TableCell>
             </TableRow>
           )}
 
           {isError && (
             <TableRow>
-              <TableCell colSpan={8}>Không tải được danh sách đơn hàng.</TableCell>
+              <TableCell colSpan={9}>Không tải được danh sách đơn hàng.</TableCell>
             </TableRow>
           )}
 
           {!isLoading && !isError && orders.length === 0 && (
             <TableRow>
-              <TableCell colSpan={8}>Không có đơn hàng phù hợp.</TableCell>
+              <TableCell colSpan={9}>Không có đơn hàng phù hợp.</TableCell>
             </TableRow>
           )}
 
           {orders.map((order) => (
             <TableRow key={order.id} hover>
+              <TableCell padding="checkbox">
+                <Checkbox checked={selectedIds.includes(order.id)} onChange={() => onToggleSelect(order.id)} />
+              </TableCell>
               <TableCell sx={{ fontWeight: 800, fontFamily: 'monospace' }}>{order.order_code}</TableCell>
               <TableCell>{order.customer_name || '-'}</TableCell>
               <TableCell>{order.customer_phone || '-'}</TableCell>
@@ -103,7 +123,7 @@ export function OrderTable({
               <TableCell sx={{ textAlign: 'right', fontWeight: 700 }}>
                 {Number(order.total_amount || 0).toLocaleString('vi-VN')} đ
               </TableCell>
-              <TableCell>{new Date(order.created_at).toLocaleString('vi-VN')}</TableCell>
+              <TableCell>{formatDateTimeVN(order.created_at)}</TableCell>
               <TableCell sx={{ textAlign: 'center' }}>
                 <Tooltip title="Xem chi tiết">
                   <IconButton size="small" color="primary" onClick={() => onOpenDetail(order)}>

@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: KPI cards cho Warehouse Operations Dashboard.
-- Dependencies: DashboardWarehouseOperations type.
-- API contract: warehouse_operations summary fields.
-- Role access: ADMIN/WAREHOUSE/VIEWER.
-- Maintenance notes: Card values read-only, khong trigger action.
+- Mục đích: KPI cards cho Warehouse Operations Dashboard.
+- Phụ thuộc: DashboardWarehouseOperations type.
+- Hợp đồng API: các field tổng hợp warehouse_operations.
+- Role access: ADMIN/WAREHOUSE.
+- Ghi chú bảo trì: Card values chỉ xem, khong trigger action.
 */
 
 import { Box, Card, CardContent, Typography } from '@mui/material'

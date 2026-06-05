@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: API layer cho PDA Stocktaking mode.
-- Dependencies: shared http client.
-- API contract: GET /trays/scan/:qr_code, POST /inventory/stocktaking.
+- Mục đích: API layer cho PDA Stocktaking mode.
+- Phụ thuộc: shared http client.
+- Hợp đồng API: GET /trays/scan/:qr_code, POST /inventory/stocktaking.
 - Warehouse business rules: stocktaking workflow scan tray -> compare -> confirm adjustment.
-- Scanner workflow notes: Enter submit cho scan va confirm.
-- Maintenance notes: endpoint scan tray duoc dung de auto fill system qty.
+- Ghi chú luồng scanner: Enter submit cho scan va confirm.
+- Ghi chú bảo trì: endpoint scan tray duoc dung de auto fill system qty.
 */
 
 import { http } from '../../../shared/lib/http'

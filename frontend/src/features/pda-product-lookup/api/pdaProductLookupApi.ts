@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: API layer cho PDA Product Lookup.
-- Dependencies: shared http client.
-- API contract: GET /products/scan/:qr_code.
+- Mục đích: API layer cho PDA Product Lookup.
+- Phụ thuộc: shared http client.
+- Hợp đồng API: GET /products/scan/:qr_code.
 - Warehouse business rules: product QR workflow de lookup vi tri ton kho, khong dung cho picking direct.
-- Scanner workflow notes: HT730 scan -> Enter -> call endpoint.
-- Maintenance notes: Neu backend bo sung field trays, map typed contract tai file type.
+- Ghi chú luồng scanner: HT730 scan -> Enter -> call endpoint.
+- Ghi chú bảo trì: Neu backend bo sung field trays, map typed contract tai file type.
 */
 
 import { http } from '../../../shared/lib/http'

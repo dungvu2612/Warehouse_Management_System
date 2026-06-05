@@ -1,7 +1,7 @@
 package services
 
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay la service layer module Tray, da mo rong CRUD va sinh tray_code/qr_code tu dong theo location.
 - Phu thuoc vao TrayRepository de validate references va cap nhat du lieu theo soft-delete.
 - Luu y bao tri: nguoi dung khong nhap tray_code/qr_code; service sinh theo format `<LOCATION_CODE>-T<NN>`.
@@ -56,10 +56,10 @@ type TrayScanInventoryResult struct {
 
 // TrayScanResult la response contract cua GET /trays/scan/:qr_code.
 type TrayScanResult struct {
-	Tray            *models.Tray               `json:"tray"`
-	LocationCode    string                     `json:"location_code"`
-	InventoryItems  []TrayScanInventoryResult  `json:"inventory_items"`
-	InventoryTotal  int                        `json:"inventory_total"`
+	Tray           *models.Tray              `json:"tray"`
+	LocationCode   string                    `json:"location_code"`
+	InventoryItems []TrayScanInventoryResult `json:"inventory_items"`
+	InventoryTotal int                       `json:"inventory_total"`
 }
 
 type trayService struct {
@@ -71,7 +71,7 @@ func NewTrayService(repo repositories.TrayRepository) TrayService {
 }
 
 func (s *trayService) Create(productID uint, locationID uint, description string) (*models.Tray, error) {
-	// Senior Handover: Validate payload references, khong cho tao tray neu product/location khong hop le.
+	// Ghi chú: Validate payload references, khong cho tao tray neu product/location khong hop le.
 	if productID == 0 || locationID == 0 {
 		return nil, ErrInvalidTrayPayload
 	}
@@ -83,6 +83,14 @@ func (s *trayService) Create(productID uint, locationID uint, description string
 	location, err := s.repo.FindActiveLocationByID(locationID)
 	if err != nil {
 		return nil, err
+	}
+
+	exists, err := s.repo.ExistsActiveByProductAndLocation(productID, locationID, nil)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, repositories.ErrTrayPairExists
 	}
 
 	trayCode, qrCode, err := s.buildTrayAndQRByLocation(location.LocationCode)
@@ -155,7 +163,7 @@ func (s *trayService) ScanByQRCode(qrCode string) (*TrayScanResult, error) {
 }
 
 func (s *trayService) Update(id uint, productID uint, locationID uint, description string) (*models.Tray, error) {
-	// Senior Handover: Update se sinh lai tray_code/qr_code neu doi location de giu format nhat quan.
+	// Ghi chú: Update se sinh lai tray_code/qr_code neu doi location de giu format nhat quan.
 	if id == 0 {
 		return nil, ErrInvalidTrayID
 	}
@@ -175,6 +183,14 @@ func (s *trayService) Update(id uint, productID uint, locationID uint, descripti
 	location, err := s.repo.FindActiveLocationByID(locationID)
 	if err != nil {
 		return nil, err
+	}
+
+	exists, err := s.repo.ExistsActiveByProductAndLocation(productID, locationID, &id)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, repositories.ErrTrayPairExists
 	}
 
 	oldLocationID := tray.LocationID
@@ -200,7 +216,7 @@ func (s *trayService) Update(id uint, productID uint, locationID uint, descripti
 }
 
 func (s *trayService) Delete(id uint) error {
-	// Senior Handover: Soft delete tray bang is_active=false de giu lich su giao dich kho.
+	// Ghi chú: Soft delete tray bang is_active=false de giu lich su giao dich kho.
 	if id == 0 {
 		return ErrInvalidTrayID
 	}
@@ -220,7 +236,7 @@ func (s *trayService) buildTrayAndQRByLocation(locationCode string) (string, str
 
 	nextSeq := maxSeq + 1
 	trayCode := fmt.Sprintf("%s-T%02d", locationCode, nextSeq)
-	// Senior Handover: QR code dung cung gia tri tray_code de scan nhanh va truy vet de dang.
+	// Ghi chú: QR code dung cung gia tri tray_code de scan nhanh va truy vet de dang.
 	qrCode := trayCode
 
 	return trayCode, qrCode, nil

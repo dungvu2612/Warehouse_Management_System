@@ -1,5 +1,5 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay dinh nghia contracts TypeScript cho module Trays o frontend (CRUD + read-model display).
 - Phu thuoc truc tiep vao schema backend cho cac endpoint: GET/POST/PUT/DELETE /trays, GET /products, GET /locations.
 - Khi backend doi ten field JSON, cap nhat type tai day truoc de compile bao cac diem anh huong.

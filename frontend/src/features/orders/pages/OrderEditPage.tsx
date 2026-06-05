@@ -1,12 +1,11 @@
 /*
-Senior Handover Note:
-- Purpose: Trang sua don hang (PENDING) voi multi-item editor va xem linh kien BOM theo tung san pham.
-- Dependencies: Orders hooks, Products hook, BOM hooks, OrderItemsEditor.
-- API contract: PUT /orders/:id { customer_name, customer_phone, customer_address, items[] }.
+- Mục đích: Trang sua don hang (PENDING) voi multi-item editor va xem linh kien BOM theo tung san pham.
+- Phụ thuộc: Orders hooks, Products hook, BOM hooks, OrderItemsEditor.
+- Hợp đồng API: PUT /orders/:id { customer_name, customer_phone, customer_address, items[] }.
 - Multi-item order behavior: Them/sua/xoa item truc tiep va tinh tong realtime.
 - Picking task regeneration rule: Backend regen picking_tasks tu items moi trong transaction.
-- Permission rule: Chi ADMIN duoc sua don gia; chi order PENDING moi duoc luu.
-- Maintenance notes: Khi mo rong role, cap nhat canEditPrice va trang thai khoa sua tai day.
+- Quy tắc phân quyền: Chi ADMIN duoc sua don gia; chi order PENDING moi duoc luu.
+- Ghi chú bảo trì: Khi mo rong role, cap nhat canEditPrice va trang thai khoa sua tai day.
 */
 
 import { useEffect, useMemo, useState } from 'react'

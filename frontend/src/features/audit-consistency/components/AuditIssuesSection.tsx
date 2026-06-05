@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Section D - hien thi danh sach warning/error/critical de supervisor uu tien xu ly.
-- Dependencies: Nhan `issues` da duoc adapter map severity/source/title/message.
-- Audit logic: Component render badge theo severity, khong tu phan loai lai.
-- API assumptions: issue list co the rong khi audit OK.
-- Maintenance notes: Badge color can de nhin nhanh muc do nghiem trong.
+- Mục đích: Section D - hien thi danh sach warning/error/critical de supervisor uu tien xu ly.
+- Phụ thuộc: Nhan `issues` da duoc adapter map severity/source/title/message.
+- Logic audit: Component render badge theo severity, khong tu phan loai lai.
+- Giả định API: issue list co the rong khi audit OK.
+- Ghi chú bảo trì: Badge color can de nhin nhanh muc do nghiem trong.
 */
 
 import { Chip, Paper, Stack, Typography } from '@mui/material'

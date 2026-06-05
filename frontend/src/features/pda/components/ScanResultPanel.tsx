@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Success/error feedback panel readable on HT730.
-- Dependencies: MUI Alert.
-- HT730 screen assumptions: Scan feedback must be readable on a 4-inch screen.
-- Responsive rules: One message per panel, 15px text minimum, no color-only status.
-- Scanner workflow: Display after every scan success/error.
-- Maintenance notes: Include concrete expected/scanned codes for mismatch errors.
+- Mục đích: Panel phản hồi thành công/lỗi phải dễ đọc trên HT730.
+- Phụ thuộc: MUI Alert.
+- Giả định màn hình HT730: Phản hồi quét phải dễ đọc trên màn hình 4 inch.
+- Quy tắc responsive: One message per panel, 15px text minimum, no color-only status.
+- Luồng scanner: Display after every scan success/error.
+- Ghi chú bảo trì: Include concrete expected/scanned codes for mismatch errors.
 */
 
 import { Alert, Typography } from '@mui/material'
@@ -18,7 +17,7 @@ interface ScanResultPanelProps {
 
 export function ScanResultPanel({ severity, title, message }: ScanResultPanelProps) {
   return (
-    // Senior Handover: scan feedback must be readable on a 4-inch screen
+    // Ghi chú: Phản hồi quét phải dễ đọc trên màn hình 4 inch
     <Alert severity={severity} sx={{ '& .MuiAlert-message': { width: '100%' } }}>
       <Typography sx={{ fontSize: 15, fontWeight: 900 }}>{title}</Typography>
       {message && <Typography sx={{ fontSize: 14 }}>{message}</Typography>}

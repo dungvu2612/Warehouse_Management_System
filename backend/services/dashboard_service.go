@@ -1,16 +1,13 @@
 package services
 
 /*
-Senior Handover Note:
-- Purpose: Business layer cho Dashboard role-based, tach du lieu admin revenue va warehouse operations.
-- Dependencies: Dashboard repository + role normalize tu auth middleware.
-- API contract: GET /dashboard/stats tra payload gom `role`, `admin_revenue`, `warehouse_operations`.
-- Role access: ADMIN nhan du ca 2 khoi; WAREHOUSE/VIEWER chi nhan warehouse block.
-- Maintenance notes: Khong de component frontend tu suy dien role; contract da quyet dinh tai day.
+Business layer cho Dashboard role-based.
+ADMIN nhan block doanh thu + van hanh kho, WAREHOUSE chi nhan van hanh kho.
 */
 
 import (
 	"errors"
+	"math"
 	"strings"
 
 	"quan_ly_kho/repositories"
@@ -26,6 +23,21 @@ type DashboardRevenueSeriesItem struct {
 type DashboardOrderStatusItem struct {
 	Status string `json:"status"`
 	Count  int64  `json:"count"`
+}
+
+type DashboardTrendMetric struct {
+	Value         float64 `json:"value"`
+	PreviousValue float64 `json:"previous_value"`
+	ChangePercent float64 `json:"change_percent"`
+	Trend         string  `json:"trend"`
+}
+
+type DashboardRevenueSummary struct {
+	TotalRevenue      DashboardTrendMetric `json:"total_revenue"`
+	TodayRevenue      DashboardTrendMetric `json:"today_revenue"`
+	MonthRevenue      DashboardTrendMetric `json:"month_revenue"`
+	CompletedOrders   DashboardTrendMetric `json:"completed_orders"`
+	AverageOrderValue DashboardTrendMetric `json:"average_order_value"`
 }
 
 type DashboardTopFinishedProductItem struct {
@@ -50,6 +62,7 @@ type DashboardAdminRevenue struct {
 	RevenueThisMonth      float64                             `json:"revenue_this_month"`
 	CompletedOrders       int64                               `json:"completed_orders"`
 	AverageOrderValue     float64                             `json:"average_order_value"`
+	RevenueSummary        DashboardRevenueSummary             `json:"revenue_summary"`
 	RevenueSeries         []DashboardRevenueSeriesItem        `json:"revenue_series"`
 	OrderStatusSummary    []DashboardOrderStatusItem          `json:"order_status_summary"`
 	TopFinishedProducts   []DashboardTopFinishedProductItem   `json:"top_finished_products"`
@@ -93,6 +106,7 @@ type DashboardWarehouseOperations struct {
 	RecentOrders           []repositories.RecentOrderRow             `json:"recent_orders"`
 	InventoryHealth        DashboardInventoryHealth                  `json:"inventory_health"`
 	TopMovingProducts      []repositories.TopMovingProductRow        `json:"top_moving_products"`
+	OrderStatusChart       []DashboardOrderStatusItem                `json:"order_status_chart"`
 }
 
 type DashboardStatsResponse struct {
@@ -116,7 +130,7 @@ func NewDashboardService(repo repositories.DashboardRepository) DashboardService
 func normalizeDashboardRole(role string) string {
 	normalized := strings.ToUpper(strings.TrimSpace(role))
 	switch normalized {
-	case "ADMIN", "WAREHOUSE", "VIEWER":
+	case "ADMIN", "WAREHOUSE":
 		return normalized
 	case "STAFF":
 		return "WAREHOUSE"
@@ -126,9 +140,8 @@ func normalizeDashboardRole(role string) string {
 }
 
 func (s *dashboardService) GetStatsByRole(role string) (*DashboardStatsResponse, error) {
-	// Senior Handover: dashboard role split - service quyet dinh khoi du lieu nao duoc tra theo role.
 	normalizedRole := normalizeDashboardRole(role)
-	if normalizedRole != "ADMIN" && normalizedRole != "WAREHOUSE" && normalizedRole != "VIEWER" {
+	if normalizedRole != "ADMIN" && normalizedRole != "WAREHOUSE" {
 		return nil, ErrDashboardForbiddenRole
 	}
 
@@ -144,7 +157,6 @@ func (s *dashboardService) GetStatsByRole(role string) (*DashboardStatsResponse,
 	}
 
 	if normalizedRole == "ADMIN" {
-		// Senior Handover: admin revenue fetch block - chi ADMIN moi duoc lay va nhan du lieu doanh thu.
 		adminRevenue, adminErr := s.buildAdminRevenue()
 		if adminErr != nil {
 			return nil, adminErr
@@ -214,16 +226,51 @@ func (s *dashboardService) buildAdminRevenue() (*DashboardAdminRevenue, error) {
 	}
 
 	return &DashboardAdminRevenue{
-		TotalRevenue:          metrics.TotalRevenue,
-		RevenueToday:          metrics.RevenueToday,
-		RevenueThisMonth:      metrics.RevenueThisMonth,
-		CompletedOrders:       metrics.CompletedOrders,
-		AverageOrderValue:     metrics.AverageOrderValue,
+		TotalRevenue:      metrics.TotalRevenue,
+		RevenueToday:      metrics.RevenueToday,
+		RevenueThisMonth:  metrics.RevenueThisMonth,
+		CompletedOrders:   metrics.CompletedOrders,
+		AverageOrderValue: metrics.AverageOrderValue,
+		RevenueSummary: DashboardRevenueSummary{
+			TotalRevenue:      buildTrendMetric(metrics.TotalRevenue, metrics.PreviousTotalRevenue),
+			TodayRevenue:      buildTrendMetric(metrics.RevenueToday, metrics.PreviousRevenueToday),
+			MonthRevenue:      buildTrendMetric(metrics.RevenueThisMonth, metrics.PreviousRevenueThisMonth),
+			CompletedOrders:   buildTrendMetric(float64(metrics.CompletedOrdersThisMonth), float64(metrics.PreviousCompletedOrders)),
+			AverageOrderValue: buildTrendMetric(metrics.AverageOrderValueThisMonth, metrics.PreviousAverageOrderValue),
+		},
 		RevenueSeries:         revenueSeries,
 		OrderStatusSummary:    orderStatus,
 		TopFinishedProducts:   topFinished,
 		RecentCompletedOrders: recentCompleted,
 	}, nil
+}
+
+func buildTrendMetric(current float64, previous float64) DashboardTrendMetric {
+	trend := "NEUTRAL"
+	changePercent := 0.0
+
+	if current > previous {
+		trend = "UP"
+	} else if current < previous {
+		trend = "DOWN"
+	}
+
+	if previous == 0 {
+		if current > 0 {
+			changePercent = 100
+		} else if current < 0 {
+			changePercent = -100
+		}
+	} else {
+		changePercent = ((current - previous) / previous) * 100
+	}
+
+	return DashboardTrendMetric{
+		Value:         current,
+		PreviousValue: previous,
+		ChangePercent: math.Round(changePercent*10) / 10,
+		Trend:         trend,
+	}
 }
 
 func (s *dashboardService) buildWarehouseOperations() (*DashboardWarehouseOperations, error) {
@@ -266,6 +313,10 @@ func (s *dashboardService) buildWarehouseOperations() (*DashboardWarehouseOperat
 	if err != nil {
 		return nil, err
 	}
+	statusRows, err := s.repo.GetOrderStatusSummary()
+	if err != nil {
+		return nil, err
+	}
 
 	alerts := make([]DashboardWarehouseAlert, 0, len(alertRows))
 	for _, row := range alertRows {
@@ -279,6 +330,11 @@ func (s *dashboardService) buildWarehouseOperations() (*DashboardWarehouseOperat
 			MinStock:        row.MinStock,
 			Message:         row.Message,
 		})
+	}
+
+	orderStatus := make([]DashboardOrderStatusItem, 0, len(statusRows))
+	for _, row := range statusRows {
+		orderStatus = append(orderStatus, DashboardOrderStatusItem{Status: row.Status, Count: row.Count})
 	}
 
 	return &DashboardWarehouseOperations{
@@ -303,5 +359,6 @@ func (s *dashboardService) buildWarehouseOperations() (*DashboardWarehouseOperat
 			OutOfStockProducts: inventoryHealthRow.OutOfStockProducts,
 		},
 		TopMovingProducts: topMovingProducts,
+		OrderStatusChart:  orderStatus,
 	}, nil
 }

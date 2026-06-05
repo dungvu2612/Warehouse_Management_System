@@ -49,6 +49,7 @@ type createBOMItemRequest struct {
 	Quantity           int  `json:"quantity" binding:"required,gt=0"`
 }
 
+
 // createBOMRequest là DTO request tạo BOM.
 type createBOMRequest struct {
 	ProductID   uint                   `json:"product_id" binding:"required,gt=0"`

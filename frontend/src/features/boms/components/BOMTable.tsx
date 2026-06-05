@@ -1,7 +1,7 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File hien thi bang danh sach BOM.
-- Phu thuoc vao types BOM va callback tu page container.
+- Phu thuoc vao types BOM va callback tu trang container.
 - Luu y bao tri: cot "Thanh pham cha" can hien thi du anh + ma + ten de thao tac kho truc quan.
 */
 
@@ -94,7 +94,7 @@ export function BOMTable({
               <TableRow key={bom.id} hover>
                 <TableCell>#{bom.id}</TableCell>
                 <TableCell>
-                  {/* Senior Handover: Hien thi anh + ma + ten thanh pham de nguoi van hanh nhan dien nhanh tren bang BOM. */}
+                  {/* Ghi chú: Hien thi anh + ma + ten thanh pham de nguoi van hanh nhan dien nhanh tren bang BOM. */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <ProductImageThumb
                       src={bom.product?.image_url}

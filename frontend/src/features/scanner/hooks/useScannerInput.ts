@@ -1,12 +1,9 @@
-/*
-Senior Handover Note:
-- Purpose: Central HT730 scanner hook for all keyboard-wedge scan flows.
-- Dependencies: React refs/state and scanner API callback supplied by the page.
-- HT730 scanner behavior: TagAccess Keyboard sends QR text into the focused input, then Enter.
-- API callback contract: onScanComplete({ mode, code }) performs the mode-specific API call.
-- Maintenance notes: Keep scanner input handling here; pages should not duplicate key/change handlers.
+/* - Mục đích: Điểm kết nối trung tâm cho scanner HT730 đối với tất cả các luồng quét bằng bàn phím.
+- Các phụ thuộc: Tham chiếu/trạng thái React và hàm gọi lại API scanner do trang cung cấp.
+- Hành vi của scanner HT730: Bàn phím TagAccess gửi văn bản mã QR vào ô nhập liệu được chọn, sau đó nhấn Enter.
+- Hợp đồng hàm gọi lại API: onScanComplete({ mode, code }) thực hiện cuộc gọi API cụ thể cho từng chế độ.
+- Ghi chú bảo trì: Giữ việc xử lý đầu vào scanner ở đây; các trang không nên sao chép các trình xử lý phím/thay đổi.
 */
-
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, KeyboardEvent } from 'react'
 
@@ -78,7 +75,7 @@ export function useScannerInput({ onScanComplete, autoStart = false, initialMode
     if (shouldPauseForFocusedElement()) return
     window.setTimeout(() => {
       const currentScrollY = window.scrollY
-      // Senior Handover: Focus hidden scanner input with preventScroll to keep HT730 screen position stable.
+      // Ghi chú: Focus input quét ẩn với preventScroll để giữ vị trí màn hình HT730 ổn định.
       scannerInputRef.current?.focus({ preventScroll: true })
       restoreScrollPosition(currentScrollY)
     }, 50)
@@ -96,7 +93,7 @@ export function useScannerInput({ onScanComplete, autoStart = false, initialMode
       setScanValue('')
       setLastScannedCode('')
       setScanMessage('Đang chờ quét mã...')
-      // Senior Handover: HT730 uses TagAccess Keyboard as keyboard wedge.
+      // Ghi chú: HT730 dùng TagAccess Keyboard theo cơ chế keyboard wedge.
       focusScannerInput()
     },
     [focusScannerInput],
@@ -144,8 +141,8 @@ export function useScannerInput({ onScanComplete, autoStart = false, initialMode
     async (event: KeyboardEvent<HTMLInputElement>) => {
       if (pausedRef.current) return
       if (event.key !== 'Enter') return
-      // Senior Handover: Enter suffix triggers scan completion.
-      // Senior Handover: Prevent scanner Enter from submitting forms and causing page reload.
+      // Ghi chú: Hậu tố Enter kích hoạt hoàn tất lượt quét.
+      // Ghi chú: Prevent scanner Enter from submitting forms and causing trang reload.
       event.preventDefault()
 
       const code = scanValue.trim()
@@ -157,7 +154,7 @@ export function useScannerInput({ onScanComplete, autoStart = false, initialMode
 
       try {
         await onScanComplete({ mode: scanMode, code })
-        // Senior Handover: Update picking state in-place instead of reloading the page after scan.
+        // Ghi chú: Update picking state in-place instead of reloading the trang after scan.
         setScanStatus('SUCCESS')
         setScanMessage(`Đã quét: ${code}`)
       } catch (error) {
@@ -166,7 +163,7 @@ export function useScannerInput({ onScanComplete, autoStart = false, initialMode
       } finally {
         restoreScrollPosition(currentScrollY)
         if (isScanningRef.current) {
-          // Senior Handover: Refocus hidden input after scan to support continuous scanning.
+          // Ghi chú: Focus lại input ẩn sau khi quét để hỗ trợ quét liên tục.
           focusScannerInput()
         }
       }

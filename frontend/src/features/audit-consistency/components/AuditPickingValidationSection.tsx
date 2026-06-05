@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Section B - doi soat thong so picking task va cac sai lech thao tac pick.
-- Dependencies: Nhan `picking_validation` tu ket qua audit da normalize.
-- Audit logic: Chi hien thi metric, khong tinh toan lai.
-- API assumptions: Gia tri duplicated/tray mismatch da duoc adapter map san.
-- Maintenance notes: Co the them metric moi ma khong anh huong section khac.
+- Mục đích: Section B - doi soat thong so picking task va cac sai lech thao tac pick.
+- Phụ thuộc: Nhan `picking_validation` tu ket qua audit da normalize.
+- Logic audit: Chi hien thi metric, khong tinh toan lai.
+- Giả định API: Gia tri duplicated/tray mismatch da duoc adapter map san.
+- Ghi chú bảo trì: Co the them metric moi ma khong anh huong section khac.
 */
 
 import { Paper, Stack, Typography } from '@mui/material'

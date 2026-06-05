@@ -1,12 +1,12 @@
 /*
 Mo ta file:
-- Application service layer cua module Products.
+- Service ứng dụng layer cua module Products.
 - Tap trung nghiep vu FE cua products: filter/search theo type+keyword va goi API layer.
 
 Luong xu ly:
 1) Hooks goi service thay vi goi API truc tiep.
 2) Service goi API de lay/ghi du lieu.
-3) Service cung cap helper nghiep vu de page reuse, tranh lap logic.
+3) Service cung cap helper nghiep vu de trang reuse, tranh lap logic.
 
 Luu y khi sua:
 - Khong dat React/UI state vao service.

@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Panel scan tray cho item dang chon.
-- Dependencies: ScanWaitingPanel/ScanResultPanel, MUI Button.
-- HT730 screen assumptions: Wrong tray feedback must be readable immediately.
-- Responsive rules: One primary button, expected/scanned codes use monospace.
-- Scanner workflow: Product scan remains disabled until tray verification succeeds.
-- Maintenance notes: Include expected tray code in every tray scan state.
+- Mục đích: Panel scan tray cho item dang chon.
+- Phụ thuộc: ScanWaitingPanel/ScanResultPanel, MUI Button.
+- Giả định màn hình HT730: Phản hồi sai khay phải đọc được ngay.
+- Quy tắc responsive: One primary button, expected/scanned codes use monospace.
+- Luồng scanner: Product scan remains disabled until tray verification succeeds.
+- Ghi chú bảo trì: Include expected tray code in every tray scan state.
 */
 
 import { QrCodeScanner } from '@mui/icons-material'

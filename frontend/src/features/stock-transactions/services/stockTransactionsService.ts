@@ -1,8 +1,7 @@
 /*
-Senior Handover Note:
 - File nay la service layer cua module Stock Transactions, nam giua hooks va API layer.
 - Phu thuoc vao `stockTransactionsApi` de fetch du lieu va xu ly map/filter phuc vu UI.
-- Giu page/components sach khoi logic bien doi data de de bao tri theo clean architecture.
+- Giu trang/components sach khoi logic bien doi data de de bao tri theo clean architecture.
 */
 
 import { stockTransactionsApi } from '../api/stockTransactionsApi'
@@ -52,7 +51,7 @@ export const stockTransactionsService = {
     })
   },
 
-  // Senior Handover: Filter block - tim theo product_code/product_name/reference_code tren dataset da enrich.
+  // Ghi chú: Khối lọc dữ liệu - tim theo product_code/product_name/reference_code tren dataset da enrich.
   filterTransactions: (
     transactions: StockTransactionDisplayItem[],
     filters: StockTransactionFilters,

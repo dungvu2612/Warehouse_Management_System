@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Page orchestration cho man Locations.
-- Dependencies: `useLocationsQuery` + mutations create/update/delete, `locationService`, `useAuth`.
-- API contract: GET/POST/PUT/DELETE /locations.
-- Role access: ADMIN thao tac ghi; WAREHOUSE/VIEWER chi xem.
-- Maintenance notes: Giu logic permission tai page de dong bo route policy.
+- Mục đích: Page orchestration cho man Locations.
+- Phụ thuộc: `useLocationsQuery` + mutations create/update/delete, `locationService`, `useAuth`.
+- Hợp đồng API: GET/POST/PUT/DELETE /locations.
+- Role access: ADMIN thao tac ghi; WAREHOUSE chi xem.
+- Ghi chú bảo trì: Giu logic permission tai trang de dong bo route policy.
 */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -20,7 +19,7 @@ import {
   useUpdateLocationMutation,
 } from '../hooks/useLocations'
 import { locationService } from '../services/locationService'
-import type { CreateLocationPayload, Location } from '../types/locationTypes'
+import type { CreateLocationPayload, Location, LocationTray } from '../types/locationTypes'
 import { mapLocationApiError } from '../utils/locationError'
 import { normalizeLocationPayload, validateLocationForm } from '../utils/locationValidation'
 import { ListPagination } from '../../../shared/components/ListPagination'
@@ -34,7 +33,7 @@ const defaultLocationForm: CreateLocationPayload = {
 
 export function LocationsPage() {
   const { user } = useAuth()
-  // Senior Handover: Permission block - chỉ ADMIN được quyền mở form tạo location.
+  // Ghi chú: Permission block - chỉ ADMIN được quyền mở form tạo location.
   const isAdmin = user?.role === 'ADMIN'
 
   const [search, setSearch] = useState('')
@@ -45,6 +44,10 @@ export function LocationsPage() {
   const [formError, setFormError] = useState('')
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [expandedLocationId, setExpandedLocationId] = useState<number | null>(null)
+  const [traysByLocationId, setTraysByLocationId] = useState<Record<number, LocationTray[]>>({})
+  const [loadingLocationId, setLoadingLocationId] = useState<number | null>(null)
+  const [errorByLocationId, setErrorByLocationId] = useState<Record<number, string>>({})
 
   const locationsQuery = useLocationsQuery()
 
@@ -86,7 +89,7 @@ export function LocationsPage() {
   }, [locationsQuery.data, search])
 
   useEffect(() => {
-    // Senior Handover: Reset page to 1 whenever search/filter changes.
+    // Ghi chú: Reset trang to 1 whenever search/filter changes.
     setCurrentPage(1)
   }, [search])
 
@@ -95,7 +98,7 @@ export function LocationsPage() {
   }, [filteredLocations, currentPage])
 
   const openCreateDialog = () => {
-    // Senior Handover: Permission block - chỉ ADMIN được quyền mở dialog thao tác ghi.
+    // Ghi chú: Permission block - chỉ ADMIN được quyền mở dialog thao tác ghi.
     if (!isAdmin) return
     setFormMode('create')
     setEditingLocation(null)
@@ -105,7 +108,7 @@ export function LocationsPage() {
   }
 
   const openEditDialog = (location: Location) => {
-    // Senior Handover: Permission block - chỉ ADMIN được quyền mở edit.
+    // Ghi chú: Permission block - chỉ ADMIN được quyền mở edit.
     if (!isAdmin) return
     setFormMode('edit')
     setEditingLocation(location)
@@ -118,11 +121,41 @@ export function LocationsPage() {
     setFormOpen(true)
   }
 
+  const loadLocationTrays = async (location: Location, forceRefresh = false) => {
+    if (!forceRefresh && traysByLocationId[location.id]) return
+
+    setLoadingLocationId(location.id)
+    setErrorByLocationId((current) => ({ ...current, [location.id]: '' }))
+
+    try {
+      const response = await locationService.getLocationTrays(location.id)
+      setTraysByLocationId((current) => ({ ...current, [location.id]: response.trays }))
+    } catch {
+      setErrorByLocationId((current) => ({ ...current, [location.id]: 'Không tải được danh sách khay.' }))
+    } finally {
+      setLoadingLocationId((current) => (current === location.id ? null : current))
+    }
+  }
+
+  const handleToggleLocation = (location: Location) => {
+    if (expandedLocationId === location.id) {
+      setExpandedLocationId(null)
+      return
+    }
+
+    setExpandedLocationId(location.id)
+    void loadLocationTrays(location)
+  }
+
+  const handleRetryLocationTrays = (location: Location) => {
+    void loadLocationTrays(location, true)
+  }
+
   const handleSubmitForm = () => {
     if (!isAdmin) return
     setFormError('')
 
-    // Senior Handover: Submit block - validate/normalize payload trước khi gọi POST/PUT /locations.
+    // Ghi chú: Submit block - validate/normalize payload trước khi gọi POST/PUT /locations.
     const validationError = validateLocationForm(form)
     if (validationError) {
       setFormError(validationError)
@@ -140,7 +173,7 @@ export function LocationsPage() {
   }
 
   const handleDeleteLocation = (location: Location) => {
-    // Senior Handover: Permission block - chỉ ADMIN được quyền xóa mềm.
+    // Ghi chú: Permission block - chỉ ADMIN được quyền xóa mềm.
     if (!isAdmin) return
     if (!window.confirm(`Xóa mềm vị trí ${location.location_code}?`)) return
     deleteMutation.mutate(location.id)
@@ -199,19 +232,25 @@ export function LocationsPage() {
           />
         </Stack>
 
-        {/* Senior Handover: Fetch/render block - tập trung loading/error/empty state ở table component. */}
+        {/* Ghi chú: Fetch/render block - tập trung loading/error/empty state ở table component. */}
         <LocationTable
           locations={paginatedLocations}
           isLoading={locationsQuery.isLoading}
           isError={locationsQuery.isError}
           isAdmin={isAdmin}
+          expandedLocationId={expandedLocationId}
+          traysByLocationId={traysByLocationId}
+          loadingLocationId={loadingLocationId}
+          errorByLocationId={errorByLocationId}
+          onToggleLocation={handleToggleLocation}
+          onRetryLocationTrays={handleRetryLocationTrays}
           onEdit={openEditDialog}
           onDelete={handleDeleteLocation}
         />
         <ListPagination
           currentPage={currentPage}
           totalItems={filteredLocations.length}
-          pageSize={DEFAULT_PAGE_SIZE}
+          trangSize={DEFAULT_PAGE_SIZE}
           onPageChange={setCurrentPage}
         />
       </Paper>

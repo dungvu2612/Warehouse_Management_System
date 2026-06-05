@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Hooks cho PDA Stocktaking.
-- Dependencies: pdaStocktakingApi.
-- API contract: scan tray + submit stocktaking.
+- Mục đích: Hooks cho PDA Stocktaking.
+- Phụ thuộc: pdaStocktakingApi.
+- Hợp đồng API: scan tray + submit stocktaking.
 - Warehouse business rules: UI chi trigger API; tinh atomic va stock transaction do backend dam bao.
-- Scanner workflow notes: loading state de chan duplicate scan/submit.
-- Maintenance notes: cach ly API calls khoi component UI.
+- Ghi chú luồng scanner: loading state de chan duplicate scan/submit.
+- Ghi chú bảo trì: cach ly API calls khoi component UI.
 */
 
 import { useMutation } from '@tanstack/react-query'

@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: API + adapter layer cho man Audit Consistency; gom du lieu tu nhieu endpoint va normalize thanh 1 contract UI duy nhat.
-- Dependencies: Shared `http` client, va type contracts cua orders/pick-logs/inventory/stock-transactions.
-- Audit logic: Ket hop du lieu order, picking tasks, pick logs, inventory, stock transactions de tao ket qua doi soat tong hop.
-- API assumptions: GET /audit/consistency/:order_id la endpoint chinh; cac endpoint bo tro co the thieu field va can fallback.
-- Maintenance notes: Toan bo normalize/issue mapping/status calculation dat tai day, UI KHONG tu xu ly normalize.
+- Mục đích: API + adapter layer cho man Audit Consistency; gom du lieu tu nhieu endpoint va normalize thanh 1 contract UI duy nhat.
+- Phụ thuộc: Shared `http` client, va type contracts cua orders/pick-logs/inventory/stock-transactions.
+- Logic audit: Ket hop du lieu order, picking tasks, pick logs, inventory, stock transactions de tao ket qua doi soat tong hop.
+- Giả định API: GET /audit/consistency/:order_id la endpoint chinh; cac endpoint bo tro co the thieu field va can fallback.
+- Ghi chú bảo trì: Toan bo normalize/issue mapping/status calculation dat tai day, UI KHONG tu xu ly normalize.
 */
 
 import { http } from '../../../shared/lib/http'
@@ -34,7 +33,7 @@ function sum(values: number[]): number {
 }
 
 function calculateOverallStatus(issues: AuditIssue[]): AuditOverallStatus {
-  // Senior Handover: Status calculation block - ERROR uu tien cao nhat, sau do WARNING, cuoi cung la OK.
+  // Ghi chú: Status calculation block - ERROR uu tien cao nhat, sau do WARNING, cuoi cung la OK.
   const hasCriticalOrError = issues.some((issue) => issue.severity === 'CRITICAL' || issue.severity === 'ERROR')
   if (hasCriticalOrError) return 'ERROR'
 
@@ -68,7 +67,7 @@ function buildSummary(issues: AuditIssue[]): AuditSummary {
 
 export const auditConsistencyApi = {
   getAuditConsistency: async (orderId: number): Promise<AuditConsistencyResult> => {
-    // Senior Handover: Audit fetch block - goi endpoint chinh + endpoint bo tro song song de doi soat workflow tong hop.
+    // Ghi chú: Audit fetch block - goi endpoint chinh + endpoint bo tro song song de doi soat workflow tong hop.
     const [
       consistencyResult,
       orderDetailResult,
@@ -131,7 +130,7 @@ export const auditConsistencyApi = {
 
     const duplicatedPicking = Array.from(pickLogCountByTask.values()).filter((count) => count > 1).length
 
-    // Senior Handover: Map response block - map pick logs ve read-model day du field phuc vu audit table.
+    // Ghi chú: Map response block - map pick logs ve read-model day du field phuc vu audit table.
     const pickLogsMapped = pickLogs.map((log) => {
       const task = log.picking_task_id ? taskById.get(log.picking_task_id) : undefined
       const productId = task?.product_id || log.product_id || 0
@@ -192,7 +191,7 @@ export const auditConsistencyApi = {
 
     const issues: AuditIssue[] = []
 
-    // Senior Handover: Issue mapping block - suy ra warning/error/critical tu du lieu doi soat tong hop.
+    // Ghi chú: Issue mapping block - suy ra warning/error/critical tu du lieu doi soat tong hop.
     if (!consistency.is_consistent) {
       issues.push({
         id: 'consistency-mismatch',
@@ -279,7 +278,7 @@ export const auditConsistencyApi = {
       .filter((issue) => issue.severity === 'WARNING')
       .map((issue) => ({ id: issue.id, source: issue.source, message: issue.message }))
 
-    // Senior Handover: Fallback handling block - ghi chu ro truong nao khong duoc backend cung cap.
+    // Ghi chú: Fallback handling block - ghi chu ro truong nao khong duoc backend cung cap.
     const fallbackNote =
       orderDetailResult.status === 'rejected' ||
       pickLogsResult.status === 'rejected' ||

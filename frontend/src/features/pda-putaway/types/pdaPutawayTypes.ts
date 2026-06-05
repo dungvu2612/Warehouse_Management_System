@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Types cho PDA Putaway mode.
-- Dependencies: endpoint POST /inventory/putaway.
-- API contract: payload product_qr_code + tray_qr_code + quantity + note/reference.
+- Mục đích: Types cho PDA Putaway mode.
+- Phụ thuộc: endpoint POST /inventory/putaway.
+- Hợp đồng API: payload product_qr_code + tray_qr_code + quantity + note/reference.
 - Warehouse business rules: putaway tang ton va tao stock transaction IMPORT.
-- Scanner workflow notes: scan product -> scan tray -> enter qty -> enter submit.
-- Maintenance notes: bo sung field neu backend update response.
+- Ghi chú luồng scanner: scan product -> scan tray -> enter qty -> enter submit.
+- Ghi chú bảo trì: bo sung field neu backend update response.
 */
 
 export interface PDAPutawayPayload {

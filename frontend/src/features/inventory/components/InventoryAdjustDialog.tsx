@@ -1,7 +1,7 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay la dialog dieu chinh ton kho (PATCH /inventory/:id/adjust), chi xu ly UI form.
-- Phu thuoc vao `InventoryAdjustFormValues` va thong tin item duoc chon tu page.
+- Phu thuoc vao `InventoryAdjustFormValues` va thong tin item duoc chon tu trang.
 - Khong goi API truc tiep trong component de giu clean architecture.
 */
 
@@ -56,7 +56,7 @@ export function InventoryAdjustDialog({
             label="Loại điều chỉnh"
             value={form.operation}
             onChange={(e) =>
-              // Senior Handover: Nguoi dung chon import/export, service validation se map sang delta backend.
+              // Ghi chú: Nguoi dung chon import/export, service validation se map sang delta backend.
               onChange({ ...form, operation: e.target.value as InventoryAdjustFormValues['operation'] })
             }
             fullWidth

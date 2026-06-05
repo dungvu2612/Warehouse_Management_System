@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Hien thi suc khoe ton kho (healthy/low/out).
-- Dependencies: DashboardInventoryHealth.
-- API contract: warehouse_operations.inventory_health.
-- Role access: ADMIN/WAREHOUSE/VIEWER.
-- Maintenance notes: Nhom metric read-only cho supervisor.
+- Mục đích: Hien thi suc khoe ton kho (healthy/low/out).
+- Phụ thuộc: DashboardInventoryHealth.
+- Hợp đồng API: warehouse_operations.inventory_health.
+- Role access: ADMIN/WAREHOUSE.
+- Ghi chú bảo trì: Nhom metric chỉ xem cho supervisor.
 */
 
 import { Box, Card, CardContent, Typography } from '@mui/material'

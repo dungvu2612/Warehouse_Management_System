@@ -106,6 +106,8 @@ func mapProductServiceError(c *gin.Context, err error) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	case errors.Is(err, repositories.ErrProductEntityCodeExists):
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	case errors.Is(err, repositories.ErrProductEntityNameExists):
+		c.JSON(http.StatusConflict, gin.H{"error": "product_name already exists"})
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}

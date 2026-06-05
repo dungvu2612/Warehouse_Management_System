@@ -1,7 +1,7 @@
 package repositories
 
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay la data-access layer cho module Tray, da mo rong CRUD + helper sequence cho sinh ma khay.
 - Phu thuoc vao DBTX abstraction trong common.go de query/soft-delete ma khong khoa chat vao *gorm.DB.
 - Luu y bao tri: sequence lay theo pattern `<LOCATION_CODE>-T<number>` tren toan bo bang trays (ca active va inactive) de tranh reuse ma.
@@ -38,6 +38,7 @@ var (
 	ErrTrayNotFound     = errors.New("tray not found")
 	ErrProductNotFound  = errors.New("product not found")
 	ErrLocationNotFound = errors.New("location not found")
+	ErrTrayPairExists   = errors.New("tray for this product and location already exists")
 )
 
 type TrayRepository interface {
@@ -49,6 +50,7 @@ type TrayRepository interface {
 	SoftDeleteByID(id uint) error
 	FindActiveProductByID(id uint) (*models.Product, error)
 	FindActiveLocationByID(id uint) (*models.Location, error)
+	ExistsActiveByProductAndLocation(productID uint, locationID uint, excludeID *uint) (bool, error)
 	FindMaxTraySequenceByLocationCode(locationCode string) (int, error)
 	FindScanInventoryByTrayID(trayID uint) ([]TrayScanInventoryRow, error)
 }
@@ -154,11 +156,25 @@ func (r *trayRepository) FindActiveLocationByID(id uint) (*models.Location, erro
 	return &location, nil
 }
 
+func (r *trayRepository) ExistsActiveByProductAndLocation(productID uint, locationID uint, excludeID *uint) (bool, error) {
+	var count int64
+	query := r.db.Model(&models.Tray{}).
+		Where("is_active = ?", true).
+		Where("product_id = ? AND location_id = ?", productID, locationID)
+	if excludeID != nil && *excludeID > 0 {
+		query = query.Where("id <> ?", *excludeID)
+	}
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func (r *trayRepository) FindMaxTraySequenceByLocationCode(locationCode string) (int, error) {
 	var maxSeq int
 	pattern := locationCode + "-T%"
 
-	// Senior Handover: Lay sequence lon nhat theo prefix location_code, de sinh ma tiep theo dang A-01-T01.
+	// Ghi chú: Lay sequence lon nhat theo prefix location_code, de sinh ma tiep theo dang A-01-T01.
 	if err := r.db.Raw(`
 		SELECT COALESCE(MAX(CAST(SUBSTRING(tray_code FROM '.+-T([0-9]+)$') AS INTEGER)), 0) AS max_seq
 		FROM trays

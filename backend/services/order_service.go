@@ -58,7 +58,6 @@ type OrderUpdateInput struct {
 	Items           []OrderItemInput
 }
 
-// Senior Handover: Order items are edited as an array, not a single product.
 type OrderItemInput struct {
 	ProductID uint
 	Quantity  int
@@ -119,6 +118,9 @@ type OrderDetailTaskResult struct {
 	InventoryQty     int    `json:"inventory_qty"`
 	Status           string `json:"status"`
 	Verified         bool   `json:"verified"`
+	AssignedTo       *uint  `json:"assigned_to"`
+	AssigneeName     string `json:"assignee_name"`
+	AssigneeUsername string `json:"assignee_username"`
 }
 
 // OrderDetailProgressResult la DTO progress trong chi tiet order.
@@ -345,6 +347,9 @@ func (s *orderService) GetByID(orderID uint) (*OrderDetailResult, error) {
 			InventoryQty:     row.InventoryQty,
 			Status:           row.Status,
 			Verified:         row.Verified,
+			AssignedTo:       row.AssignedTo,
+			AssigneeName:     row.AssigneeName,
+			AssigneeUsername: row.AssigneeUsername,
 		}
 		tasks = append(tasks, task)
 

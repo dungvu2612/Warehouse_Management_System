@@ -36,6 +36,7 @@ func LocationRoutes(r *gin.Engine) {
 	locations.Use(middleware.AuthRequired())
 	{
 		locations.GET("", handler.GetLocations)
+		locations.GET("/:id/trays", handler.GetLocationTrays)
 		locations.POST("", middleware.RequireRoles("ADMIN"), handler.CreateLocation)
 		locations.PUT("/:id", middleware.RequireRoles("ADMIN"), handler.UpdateLocation)
 		locations.DELETE("/:id", middleware.RequireRoles("ADMIN"), handler.DeleteLocation)

@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Mutation hook cho PDA Putaway.
-- Dependencies: pdaPutawayApi.
-- API contract: POST /inventory/putaway.
+- Mục đích: Mutation hook cho PDA Putaway.
+- Phụ thuộc: pdaPutawayApi.
+- Hợp đồng API: POST /inventory/putaway.
 - Warehouse business rules: frontend khong fake stock transaction, chi goi endpoint nghiep vu.
-- Scanner workflow notes: Enter submit nhanh, tranh multi click.
-- Maintenance notes: canh bao loi ngay tren man PDA de thao tac vien sua scan.
+- Ghi chú luồng scanner: Enter submit nhanh, tranh multi click.
+- Ghi chú bảo trì: canh bao loi ngay tren man PDA de thao tac vien sua scan.
 */
 
 import { useMutation } from '@tanstack/react-query'

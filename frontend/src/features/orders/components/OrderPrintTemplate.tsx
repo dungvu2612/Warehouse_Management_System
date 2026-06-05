@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Print template rieng cho phieu don hang khach hang (browser print -> PDF).
-- Dependencies: `OrderQrCode` component va CSS print `orderPrint.css`.
-- API contract: Nhan du lieu tu Order Detail (order + order_items da map) khong goi API truc tiep.
-- Business rules: Chi hien thi finished products, khong hien thi BOM/component breakdown/picking/internal data.
-- Permission notes: Read-only print view cho ADMIN/WAREHOUSE co quyen xem order detail.
-- Maintenance notes: Neu doi layout giay A4/A5, cap nhat class CSS trong file print css.
+- Mục đích: Print template rieng cho phieu don hang khach hang (browser print -> PDF).
+- Phụ thuộc: `OrderQrCode` component va CSS print `orderPrint.css`.
+- Hợp đồng API: Nhan du lieu tu Order Detail (order + order_items da map) khong goi API truc tiep.
+- Quy tắc nghiệp vụ: Chi hien thi finished products, khong hien thi BOM/component breakdown/picking/internal data.
+- Ghi chú phân quyền: Chỉ xem print view cho ADMIN/WAREHOUSE co quyen xem order detail.
+- Ghi chú bảo trì: Neu doi layout giay A4/A5, cap nhat class CSS trong file print css.
 */
 
 import { OrderQrCode } from './OrderQrCode'
@@ -80,7 +79,7 @@ export function OrderPrintTemplate({
         <p><strong>Ngày tạo:</strong> {createdAtLabel}</p>
       </section>
 
-      {/* Senior Handover: print template only shows finished products from order_items. */}
+      {/* Ghi chú: print template only shows finished products from order_items. */}
       <table className="order-print-table">
         <thead>
           <tr>

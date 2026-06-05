@@ -1,11 +1,4 @@
-/*
-Senior Handover Note:
-- Purpose: Service layer cua Pick Logs, map/enrich/filter du lieu audit de component co the render gon.
-- Dependencies: Goi `pickLogsApi`, nhan context tu Order Detail (order, tasks, trays) de map code/ten hien thi.
-- Maintenance notes: Neu backend bo sung join fields, co the rut gon phan enrich tai day ma khong doi component.
-- API contract: Lay du lieu goc tu GET /pick-logs (flat list), enrich phia frontend.
-- Audit usage: Tap trung cho truy vet thao tac picker theo order/product/tray/picked_by.
-*/
+/* Service map/filter dữ liệu pick logs cho UI. */
 
 import { pickLogsApi } from '../api/pickLogsApi'
 import type {
@@ -39,7 +32,6 @@ export const pickLogsService = {
     return pickLogsApi.getPickLogs(params)
   },
 
-  // Senior Handover: Map response block - enrich pick log tu order/tasks/trays de co order_code/product/tray/picker labels.
   mapPickLogsForDisplay: (
     logs: PickLog[],
     context: MapPickLogsContext,
@@ -57,14 +49,13 @@ export const pickLogsService = {
         product_code: task?.product_code || (log.product_id ? `#${log.product_id}` : '-'),
         product_name: task?.product_name || '-',
         tray_code: trayCode,
-        picked_by_label: log.picked_by ? `User #${log.picked_by}` : '-',
+        picked_by_label: log.picker?.full_name || log.picker?.username || (log.picked_by ? `User #${log.picked_by}` : '-'),
         picked_status: 'PICKED',
         verified: Boolean(task?.verified),
       }
     })
   },
 
-  // Senior Handover: Filter/search logic block - filter nhanh theo product/tray/picker + keyword realtime tren frontend.
   filterPickLogs: (rows: PickLogDisplayItem[], filters: PickLogFilterValues): PickLogDisplayItem[] => {
     const keyword = filters.searchKeyword.trim().toLowerCase()
 

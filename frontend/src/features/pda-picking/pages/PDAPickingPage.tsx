@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: PDA scan order entry screen cho HT730; sau khi scan thi mo staff picking detail.
-- Dependencies: PdaLayout, centralized scanner hook, pdaPickingApi, React Router.
-- API contract: GET /orders/scan/:qr_code.
-- HT730 scanner behavior: TagAccess Keyboard types QR into the focused hidden input, then Enter.
-- API callback contract: ORDER mode calls GET /orders/scan/:qr_code.
-- Maintenance notes: Tray/product scan belongs to /staff/picking/:orderId to avoid duplicate picking flows.
+- Mục đích: Màn hình PDA quét đơn cho HT730; sau khi quét thì mở chi tiết picking của staff.
+- Phụ thuộc: PdaLayout, centralized scanner hook, pdaPickingApi, React Router.
+- Hợp đồng API: GET /orders/scan/:qr_code.
+- Hành vi máy quét HT730: TagAccess Keyboard nhập QR vào input ẩn đang focus, sau đó gửi Enter.
+- Hợp đồng callback API: Mode ORDER gọi GET /orders/scan/:qr_code.
+- Ghi chú bảo trì: Tray/product scan belongs to /staff/picking/:orderId to avoid duplicate picking flows.
 */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -35,9 +34,9 @@ export function PDAPickingPage() {
   const scanner = useScannerInput({
     autoStart: true,
     initialMode: 'ORDER',
-    // Senior Handover: HT730 scanner works as keyboard wedge, so this page keeps a hidden input focused.
-    // Senior Handover: Auto scan mode removes the need to press Scan QR before every scan.
-    // Senior Handover: Scanner logic is centralized here to avoid duplicate handlers.
+    // Ghi chú: Máy quét HT730 hoạt động như keyboard wedge, nên trang này luôn focus input ẩn.
+    // Ghi chú: Chế độ quét tự động bỏ nhu cầu bấm Scan QR trước mỗi lần quét.
+    // Ghi chú: Tập trung logic quét tại đây để tránh lặp handler.
     onScanComplete: async ({ mode, code }) => {
       if (mode !== 'ORDER') return
       const data = await scanOrderMutation.mutateAsync(code)

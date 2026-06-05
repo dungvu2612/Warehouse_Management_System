@@ -1,35 +1,39 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File này là service layer của module Locations, đứng giữa hooks và API layer (CRUD).
-- Phụ thuộc vào `locationsApi` để thao tác dữ liệu và export helper lọc danh sách cho page.
-- Không đưa React state vào đây; chỉ giữ use-case dùng chung để page/components tái sử dụng.
+- Phụ thuộc vào `locationsApi` để thao tác dữ liệu và export helper lọc danh sách cho trang.
+- Không đưa React state vào đây; chỉ giữ use-case dùng chung để trang/components tái sử dụng.
 */
 
 import { locationsApi } from '../api/locationsApi'
-import type { CreateLocationPayload, Location, UpdateLocationPayload } from '../types/locationTypes'
+import type { CreateLocationPayload, Location, LocationTraysResponse, UpdateLocationPayload } from '../types/locationTypes'
 
 export const locationService = {
-  // Senior Handover: Lấy danh sách location từ backend.
+  // Ghi chú: Lấy danh sách location từ backend.
   getLocations: async (): Promise<Location[]> => {
     return locationsApi.getLocations()
   },
 
-  // Senior Handover: Tạo location mới thông qua API layer.
+  getLocationTrays: async (locationId: number): Promise<LocationTraysResponse> => {
+    return locationsApi.getLocationTrays(locationId)
+  },
+
+  // Ghi chú: Tạo location mới thông qua API layer.
   createLocation: async (payload: CreateLocationPayload): Promise<Location> => {
     return locationsApi.createLocation(payload)
   },
 
-  // Senior Handover: Cập nhật location theo id.
+  // Ghi chú: Cập nhật location theo id.
   updateLocation: async (id: number, payload: UpdateLocationPayload): Promise<Location> => {
     return locationsApi.updateLocation(id, payload)
   },
 
-  // Senior Handover: Xóa mềm location theo id.
+  // Ghi chú: Xóa mềm location theo id.
   deleteLocation: async (id: number): Promise<{ message: string }> => {
     return locationsApi.deleteLocation(id)
   },
 
-  // Senior Handover: Lọc cục bộ theo mã vị trí, shelf, mô tả để UX tìm kiếm nhanh.
+  // Ghi chú: Lọc cục bộ theo mã vị trí, shelf, mô tả để UX tìm kiếm nhanh.
   filterLocationsByKeyword: (locations: Location[], keywordRaw: string): Location[] => {
     const keyword = keywordRaw.trim().toLowerCase()
     if (!keyword) return locations

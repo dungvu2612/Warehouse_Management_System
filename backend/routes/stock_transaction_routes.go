@@ -1,12 +1,11 @@
 package routes
 
 /*
-Senior Handover Note:
-- Purpose: Dang ky endpoint stock transactions read-only cho audit/warehouse monitoring.
-- Dependencies: stock_transaction repository/service/handler + middleware.
-- API contract: GET /stock-transactions.
+- Mục đích: Dang ky endpoint stock transactions chỉ xem cho audit/warehouse monitoring.
+- Phụ thuộc: stock_transaction repository/service/handler + middleware.
+- Hợp đồng API: GET /stock-transactions.
 - Role access: ADMIN + WAREHOUSE.
-- Maintenance notes: Frontend dashboard va warehouse-overview phu thuoc endpoint nay.
+- Ghi chú bảo trì: Frontend dashboard va warehouse-overview phu thuoc endpoint nay.
 */
 
 import (

@@ -39,6 +39,7 @@ type ProductRepository interface {
 	FindAllActive() ([]models.Product, error)
 	FindActiveByID(id uint) (*models.Product, error)
 	FindActiveByQRCode(qrCode string) (*models.Product, error)
+	ExistsByName(productName string, excludeID *uint) (bool, error)
 	FindScanRowsByProductID(productID uint) ([]ProductScanRow, error)
 	Update(product *models.Product) error
 	SoftDeleteByID(id uint) error
@@ -101,6 +102,19 @@ func (r *productRepository) FindActiveByQRCode(qrCode string) (*models.Product, 
 		return nil, err
 	}
 	return &product, nil
+}
+
+func (r *productRepository) ExistsByName(productName string, excludeID *uint) (bool, error) {
+	var count int64
+	query := r.db.Model(&models.Product{}).
+		Where("LOWER(REGEXP_REPLACE(TRIM(product_name), '\\s+', ' ', 'g')) = LOWER(REGEXP_REPLACE(TRIM(?), '\\s+', ' ', 'g'))", productName)
+	if excludeID != nil && *excludeID > 0 {
+		query = query.Where("id <> ?", *excludeID)
+	}
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func (r *productRepository) Update(product *models.Product) error {
@@ -175,6 +189,7 @@ func (r *productRepository) FindMaxSequenceByCodeBase(codeBase string) (int, err
 var (
 	ErrProductEntityNotFound   = errors.New("product not found")
 	ErrProductEntityCodeExists = errors.New("product_code already exists")
+	ErrProductEntityNameExists = errors.New("product_name already exists")
 )
 
 func isUniqueViolation(err error) bool {

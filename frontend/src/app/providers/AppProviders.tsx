@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material'
+import { CssBaseline, GlobalStyles, ThemeProvider, createTheme } from '@mui/material'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './AuthProvider'
 
@@ -8,6 +8,15 @@ const queryClient = new QueryClient()
 
 // Theme MUI cơ bản cho dự án WMS.
 const theme = createTheme({
+  breakpoints: {
+    values: {
+      xs: 0,
+      sm: 600,
+      md: 768,
+      lg: 1024,
+      xl: 1440,
+    },
+  },
   palette: {
     mode: 'light',
     primary: {
@@ -95,6 +104,25 @@ export function AppProviders({ children }: { children: ReactNode }) {
       <ThemeProvider theme={theme}>
         {/* Reset CSS base của trình duyệt theo chuẩn MUI */}
         <CssBaseline />
+        <GlobalStyles
+          styles={{
+            html: {
+              width: '100%',
+              overflowX: 'hidden',
+            },
+            body: {
+              width: '100%',
+              overflowX: 'hidden',
+            },
+            '#root': {
+              minHeight: '100vh',
+              width: '100%',
+            },
+            '*': {
+              boxSizing: 'border-box',
+            },
+          }}
+        />
         {/* AuthProvider bọc dưới để mọi màn/router guard đọc được auth state */}
         <AuthProvider>{children}</AuthProvider>
       </ThemeProvider>

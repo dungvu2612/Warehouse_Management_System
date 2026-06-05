@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Hien thi top san pham thanh pham ban nhieu nhat.
-- Dependencies: DashboardTopFinishedProductItem.
-- API contract: admin_revenue.top_finished_products.
+- Mục đích: Hien thi top san pham thanh pham ban nhieu nhat.
+- Phụ thuộc: DashboardTopFinishedProductItem.
+- Hợp đồng API: admin_revenue.top_finished_products.
 - Role access: Chi ADMIN.
-- Maintenance notes: Contract da loc product_type=FINISHED_GOOD tai backend.
+- Ghi chú bảo trì: Contract da loc product_type=FINISHED_GOOD tai backend.
 */
 
 import { Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material'

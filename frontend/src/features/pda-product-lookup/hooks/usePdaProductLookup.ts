@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: React Query hook cho PDA Product Lookup.
-- Dependencies: pdaProductLookupApi.
-- API contract: scan product by QR.
-- Warehouse business rules: read-only lookup mode.
-- Scanner workflow notes: Enter submit, loading state de tranh scan duplicate.
-- Maintenance notes: hook nay intentionally don gian de giu toc do man PDA.
+- Mục đích: React Query hook cho PDA Product Lookup.
+- Phụ thuộc: pdaProductLookupApi.
+- Hợp đồng API: scan product by QR.
+- Warehouse business rules: chỉ xem lookup mode.
+- Ghi chú luồng scanner: Enter submit, loading state de tranh scan duplicate.
+- Ghi chú bảo trì: hook nay intentionally don gian de giu toc do man PDA.
 */
 
 import { useMutation } from '@tanstack/react-query'

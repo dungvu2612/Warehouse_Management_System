@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Card item picking thay cho table row tren Staff Picking Detail.
-- Dependencies: OrderDetailPickingTask type, PickingProgressBar.
-- HT730 screen assumptions: Product code/name/remaining qty must fit 480px portrait.
-- Responsive rules: One-column card, monospace codes, 48px select button.
-- Scanner workflow: Select item before tray/product scan panel appears.
-- Maintenance notes: Desktop order print is separate from PDA picking layout.
+- Mục đích: Card item picking thay cho table row tren Staff Picking Detail.
+- Phụ thuộc: OrderDetailPickingTask type, PickingProgressBar.
+- Giả định màn hình HT730: Mã/tên sản phẩm và số lượng còn lại phải vừa màn hình dọc 480px.
+- Quy tắc responsive: One-column card, monospace codes, 48px select button.
+- Luồng scanner: Select item before tray/product scan panel appears.
+- Ghi chú bảo trì: Desktop order print is separate from PDA picking layout.
 */
 
 import { Button, Chip, Paper, Stack, Typography } from '@mui/material'
@@ -31,7 +30,7 @@ export function PickingItemCard({ task, active, onSelect }: PickingItemCardProps
         bgcolor: active ? 'rgba(25, 118, 210, 0.06)' : 'background.paper',
       }}
     >
-      {/* Senior Handover: desktop order print is separate from PDA picking layout */}
+      {/* Ghi chú: phần in đơn desktop tách riêng khỏi layout PDA picking */}
       <Stack spacing={1}>
         <Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Stack sx={{ minWidth: 0 }}>

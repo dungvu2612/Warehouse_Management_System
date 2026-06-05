@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Page orchestration cho man Trays.
-- Dependencies: CRUD hooks (`useTraysQuery` + create/update/delete), options hooks, `trayService`, `useAuth`.
-- API contract: GET/POST/PUT/DELETE /trays.
-- Role access: ADMIN thao tac ghi; WAREHOUSE/VIEWER chi xem.
-- Maintenance notes: Permission xu ly tai page de dong bo backend role policy.
+- Mục đích: Page orchestration cho man Trays.
+- Phụ thuộc: CRUD hooks (`useTraysQuery` + create/update/delete), options hooks, `trayService`, `useAuth`.
+- Hợp đồng API: GET/POST/PUT/DELETE /trays.
+- Role access: ADMIN thao tac ghi; WAREHOUSE chi xem.
+- Ghi chú bảo trì: Permission xu ly tai trang de dong bo backend role policy.
 */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -36,7 +35,7 @@ const defaultTrayForm: TrayPayload = {
 
 export function TraysPage() {
   const { user } = useAuth()
-  // Senior Handover: Permission block - chi ADMIN duoc thao tac tao tray.
+  // Ghi chú: Permission block - chi ADMIN duoc thao tac tao tray.
   const isAdmin = user?.role === 'ADMIN'
 
   const [search, setSearch] = useState('')
@@ -86,7 +85,7 @@ export function TraysPage() {
   })
 
   const traysForDisplay = useMemo(() => {
-    // Senior Handover: Join danh sach trays voi locations de hien thi location_code + mo ta.
+    // Ghi chú: Join danh sach trays voi locations de hien thi location_code + mo ta.
     return trayService.mapTraysForDisplay(
       traysQuery.data || [],
       locationOptionsQuery.data || [],
@@ -99,7 +98,7 @@ export function TraysPage() {
   }, [traysForDisplay, search])
 
   useEffect(() => {
-    // Senior Handover: Reset page to 1 whenever search/filter changes.
+    // Ghi chú: Reset trang to 1 whenever search/filter changes.
     setCurrentPage(1)
   }, [search])
 
@@ -108,7 +107,7 @@ export function TraysPage() {
   }, [filteredTrays, currentPage])
 
   const openCreateDialog = () => {
-    // Senior Handover: Permission block - chi ADMIN duoc mo form tao.
+    // Ghi chú: Permission block - chi ADMIN duoc mo form tao.
     if (!isAdmin) return
     setFormMode('create')
     setEditingTray(null)
@@ -118,7 +117,7 @@ export function TraysPage() {
   }
 
   const openEditDialog = (tray: TrayDisplay) => {
-    // Senior Handover: Permission block - chi ADMIN duoc mo form edit.
+    // Ghi chú: Permission block - chi ADMIN duoc mo form edit.
     if (!isAdmin) return
     setFormMode('edit')
     setEditingTray(tray)
@@ -135,7 +134,7 @@ export function TraysPage() {
     if (!isAdmin) return
     setFormError('')
 
-    // Senior Handover: Submit block - validate va normalize payload truoc khi goi POST/PUT /trays.
+    // Ghi chú: Submit block - validate va normalize payload truoc khi goi POST/PUT /trays.
     const validationError = validateTrayForm(form)
     if (validationError) {
       setFormError(validationError)
@@ -153,7 +152,7 @@ export function TraysPage() {
   }
 
   const handleDeleteTray = (tray: TrayDisplay) => {
-    // Senior Handover: Permission block - chi ADMIN duoc xoa mem tray.
+    // Ghi chú: Permission block - chi ADMIN duoc xoa mem tray.
     if (!isAdmin) return
     if (!window.confirm(`Xóa mềm khay ${tray.tray_code}?`)) return
     deleteMutation.mutate(tray.id)
@@ -210,7 +209,7 @@ export function TraysPage() {
           />
         </Stack>
 
-        {/* Senior Handover: Fetch/render block - table xu ly loading/error/empty state. */}
+        {/* Ghi chú: Fetch/render block - table xu ly loading/error/empty state. */}
         <TrayTable
           trays={paginatedTrays}
           isLoading={traysQuery.isLoading}
@@ -222,7 +221,7 @@ export function TraysPage() {
         <ListPagination
           currentPage={currentPage}
           totalItems={filteredTrays.length}
-          pageSize={DEFAULT_PAGE_SIZE}
+          trangSize={DEFAULT_PAGE_SIZE}
           onPageChange={setCurrentPage}
         />
       </Paper>

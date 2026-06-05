@@ -1,5 +1,4 @@
 /*
-Senior Handover Note:
 - File nay la API layer thuan HTTP cho module Stock Transactions.
 - Phu thuoc vao shared `http` client de tai su dung token/interceptor auth hien co.
 - Chi chua request/response typed; khong dat business logic filter/search UI tai day.
@@ -13,7 +12,7 @@ import type {
 } from '../types/stockTransactionTypes'
 
 export const stockTransactionsApi = {
-  // Senior Handover: Fetch block - goi GET /stock-transactions voi params filter transaction_type neu co.
+  // Ghi chú: Khối tải dữ liệu - goi GET /stock-transactions voi params filter transaction_type neu co.
   getStockTransactions: async (params?: {
     transaction_type?: StockTransactionType
     limit?: number

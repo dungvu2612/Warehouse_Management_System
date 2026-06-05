@@ -1,8 +1,8 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay chua validate/normalize form phieu nhap truoc khi submit API.
 - Phu thuoc vao `CreateImportReceiptPayload` de giu strict typing va tranh dung any.
-- Khi doi rule nghiep vu nhap kho, cap nhat tai day de page/components khong bi roi logic.
+- Khi doi rule nghiep vu nhap kho, cap nhat tai day de trang/components khong bi roi logic.
 */
 
 import type {
@@ -11,7 +11,7 @@ import type {
 } from '../types/importReceiptTypes'
 
 export function validateImportReceiptForm(form: CreateImportReceiptPayload): string | null {
-  // Senior Handover: Dynamic item form block - moi item bat buoc product/tray/quantity > 0 theo contract backend.
+  // Ghi chú: Dynamic item form block - moi item bat buoc product/tray/quantity > 0 theo contract backend.
   if (!form.items.length) return 'Phiếu nhập phải có ít nhất 1 dòng sản phẩm.'
 
   for (let index = 0; index < form.items.length; index += 1) {
@@ -20,7 +20,7 @@ export function validateImportReceiptForm(form: CreateImportReceiptPayload): str
       return `Dòng ${index + 1}: Vui lòng chọn sản phẩm.`
     }
     if (!item.tray_id || item.tray_id <= 0) {
-      return `Dòng ${index + 1}: Vui lòng chọn khay.`
+      return `Dòng ${index + 1}: Vui lòng quét QR khay.`
     }
     if (!item.quantity || item.quantity <= 0) {
       return `Dòng ${index + 1}: Số lượng phải lớn hơn 0.`

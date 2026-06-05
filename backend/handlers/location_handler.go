@@ -1,7 +1,7 @@
 package handlers
 
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay la HTTP transport cho module location, da mo rong them endpoint update/delete.
 - Phu thuoc vao LocationService va domain errors tu services/repositories de map dung status code.
 - Khong dua nghiep vu DB vao handler; chi bind/validate request va map response.
@@ -98,6 +98,22 @@ func (h *LocationHandler) GetLocations(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, locations)
+}
+
+// GetLocationTrays lay danh sach khay dang thuoc location, kem tong ton va so san pham.
+func (h *LocationHandler) GetLocationTrays(c *gin.Context) {
+	id, ok := parseLocationID(c)
+	if !ok {
+		return
+	}
+
+	result, err := h.service.GetTraysByLocationID(id)
+	if err != nil {
+		mapLocationServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }
 
 // UpdateLocation cap nhat location (ADMIN).

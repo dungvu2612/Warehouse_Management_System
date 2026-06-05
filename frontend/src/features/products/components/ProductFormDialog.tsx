@@ -52,18 +52,7 @@ export function ProductFormDialog({
             label="Mã sản phẩm (tự sinh)"
             value={form.product_code}
             slotProps={{ input: { readOnly: true } }}
-            helperText={
-              isEditing
-                ? 'Mã đã phát hành, không thay đổi khi cập nhật.'
-                : 'Mã dự kiến theo tên + loại. Mã cuối cùng do backend cấp khi lưu.'
-            }
-            fullWidth
-          />
-          <TextField
-            label="QR sản phẩm"
-            value={form.qr_code}
-            onChange={(e) => onChange({ ...form, qr_code: e.target.value })}
-            helperText="Để trống sẽ tự dùng product_code."
+            helperText={isEditing ? 'Mã đã phát hành, không thay đổi khi cập nhật.' : 'Mã do hệ thống tự cấp khi lưu.'}
             fullWidth
           />
           <TextField

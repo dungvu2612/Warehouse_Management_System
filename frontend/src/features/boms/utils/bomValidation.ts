@@ -1,7 +1,7 @@
 /*
 Mo ta file:
 - Chua validation/normalization cho form BOM truoc khi goi API.
-- Tach rieng de page/components gon va de unit test sau nay.
+- Tach rieng de trang/components gon va de unit test sau nay.
 
 Luong xu ly:
 1) Validate payload o muc frontend (required fields, duplicate component, qty > 0).
@@ -20,14 +20,14 @@ export function validateBOMForm(payload: BOMPayload): string | null {
 
   // Can it nhat 1 component.
   if (!payload.items.length) {
-    return 'BOM phải có ít nhất 1 linh kiện thành phần.'
+    return 'BOM phải có ít nhất 1 linh kiện component.'
   }
 
   // Kiem tra duplicate component va qty hop le.
   const seen = new Set<number>()
   for (const item of payload.items) {
     if (!item.component_product_id || item.component_product_id <= 0) {
-      return 'Vui lòng chọn đầy đủ linh kiện thành phần.'
+      return 'Vui lòng chọn đầy đủ linh kiện component.'
     }
     if (!item.quantity || item.quantity <= 0) {
       return 'Số lượng linh kiện phải lớn hơn 0.'

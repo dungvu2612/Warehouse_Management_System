@@ -3,13 +3,12 @@ package models
 import "time"
 
 /*
-Senior Handover Note:
-- Purpose: Domain model Product bo sung truong qr_code de ho tro scan workflow trong kho.
-- Dependencies: Duoc su dung boi product/inventory/import/order/pda flows qua GORM mapping.
-- API contract: Backend tra json field `qr_code` trong cac endpoint products.
+- Mục đích: Domain model Product bo sung truong qr_code de ho tro scan workflow trong kho.
+- Phụ thuộc: Duoc su dung boi product/inventory/import/order/pda flows qua GORM mapping.
+- Hợp đồng API: Backend tra json field `qr_code` trong cac endpoint products.
 - Warehouse business rules: Mac dinh qr_code = product_code neu khong cung cap gia tri rieng.
-- Scanner workflow notes: HT730 keyboard wedge scan product QR vao cac mode lookup/putaway/stocktaking.
-- Maintenance notes: Neu doi ten cot/format QR, cap nhat dong bo migration + service + frontend types.
+- Ghi chú luồng scanner: HT730 quét QR sản phẩm bằng keyboard wedge cho các chế độ tra cứu/nhập kho/kiểm kê.
+- Ghi chú bảo trì: Neu doi ten cot/format QR, cap nhat dong bo migration + service + frontend types.
 */
 type Product struct {
 	ID          uint      `gorm:"primaryKey" json:"id"`

@@ -1,13 +1,6 @@
 package routes
 
-/*
-Senior Handover Note:
-- Purpose: Dang ky route dashboard va policy role-based.
-- Dependencies: dashboard repository/service/handler + auth/role middleware.
-- API contract: GET /dashboard/stats.
-- Role access: ADMIN/WAREHOUSE/VIEWER duoc phep truy cap.
-- Maintenance notes: Khong re-use role STAFF moi; neu can tuong thich du lieu cu da normalize o JWT.
-*/
+/* Route dashboard cho ADMIN và WAREHOUSE. */
 
 import (
 	"quan_ly_kho/config"
@@ -27,6 +20,6 @@ func DashboardRoutes(r *gin.Engine) {
 	dashboard := r.Group("/dashboard")
 	dashboard.Use(middleware.AuthRequired())
 	{
-		dashboard.GET("/stats", middleware.RequireRoles("ADMIN", "WAREHOUSE", "VIEWER"), handler.GetDashboardStats)
+		dashboard.GET("/stats", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetDashboardStats)
 	}
 }

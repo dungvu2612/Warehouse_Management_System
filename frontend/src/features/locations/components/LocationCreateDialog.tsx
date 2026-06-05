@@ -1,7 +1,7 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File này là dialog form tạo/cập nhật location, chỉ xử lý UI/form input.
-- Phụ thuộc vào type `CreateLocationPayload`; submit/permission được page điều phối.
+- Phụ thuộc vào type `CreateLocationPayload`; submit/permission được trang điều phối.
 - Không tích hợp API trực tiếp trong dialog để đảm bảo clean architecture.
 */
 

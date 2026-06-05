@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Single focusable hidden input for HT730 keyboard-wedge scanners.
-- Dependencies: React refs/events only.
-- HT730 scanner behavior: QR text is typed into the focused input and submitted by Enter suffix.
-- API callback contract: Parent passes handlers from useScannerInput.
-- Maintenance notes: Do not replace this with display:none; HT730 needs a focusable input.
+- Mục đích: Input ẩn duy nhất có thể focus cho máy quét HT730 dạng keyboard wedge.
+- Phụ thuộc: Chỉ dùng ref/event của React.
+- Hành vi máy quét HT730: Chuỗi QR được nhập vào input đang focus và gửi bằng hậu tố Enter.
+- Hợp đồng callback API: Component cha truyền handler từ useScannerInput.
+- Ghi chú bảo trì: Không thay bằng display:none; HT730 cần input có thể focus.
 */
 
 import type { ChangeEvent, KeyboardEvent, RefObject } from 'react'
@@ -19,8 +18,8 @@ interface ScannerHiddenInputProps {
 
 export function ScannerHiddenInput({ inputRef, value, onChange, onKeyDown, disabled = false }: ScannerHiddenInputProps) {
   return (
-    // Senior Handover: Hidden input receives scan data without showing a text field.
-    // Senior Handover: Do not use display:none because scanner input must be focusable.
+    // Ghi chú: Input ẩn nhận dữ liệu quét mà không hiển thị ô nhập.
+    // Ghi chú: Không dùng display:none vì input quét vẫn phải focus được.
     <input
       ref={inputRef}
       value={value}

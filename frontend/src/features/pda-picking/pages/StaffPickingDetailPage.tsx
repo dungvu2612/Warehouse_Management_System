@@ -1,17 +1,16 @@
 /*
-Senior Handover Note:
-- Purpose: Staff picking detail mobile layout cho HT730.
-- Dependencies: Order detail query, PDA scan mutations, centralized scanner, PdaLayout, PickingItemCard, scan panels.
-- API contract: GET /orders/:id, POST /orders/picking-tasks/:id/verify-tray, POST /orders/picking-tasks/:id/scan-product.
-- HT730 scanner behavior: TagAccess Keyboard types QR into one focused hidden input and sends Enter.
-- API callback contract: TRAY verifies selected task tray; PRODUCT scans one product unit.
-- Maintenance notes: Desktop order print is separate from PDA picking layout.
+- Mục đích: Staff picking detail mobile layout cho HT730.
+- Phụ thuộc: Order detail query, PDA scan mutations, centralized scanner, PdaLayout, PickingItemCard, scan panels.
+- Hợp đồng API: GET /orders/:id, POST /orders/picking-tasks/:id/verify-tray, POST /orders/picking-tasks/:id/scan-product.
+- Hành vi máy quét HT730: TagAccess Keyboard nhập QR vào một input ẩn đang focus và gửi Enter.
+- Hợp đồng callback API: TRAY xác minh khay của task đã chọn; PRODUCT quét một đơn vị sản phẩm.
+- Ghi chú bảo trì: Desktop order print is separate from PDA picking layout.
 */
 
 import { useEffect, useMemo, useState } from 'react'
-import { QrCode2 } from '@mui/icons-material'
+import { ArrowBack, QrCode2 } from '@mui/icons-material'
 import { Alert, Box, Button, Chip, Paper, Stack, Typography } from '@mui/material'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { PdaLayout } from '../../pda/layout/PdaLayout'
 import { useScannerInput } from '../../scanner/hooks/useScannerInput'
 import { ScannerHiddenInput } from '../../scanner/components/ScannerHiddenInput'
@@ -23,9 +22,11 @@ import { usePDAScanProductMutation, usePDAVerifyTrayMutation } from '../hooks/us
 import { PickingItemCard } from '../components/PickingItemCard'
 import { ListPagination } from '../../../shared/components/ListPagination'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination'
+import { formatDateTimeVN } from '../../../shared/lib/datetime'
 
 export function StaffPickingDetailPage() {
   const { orderId } = useParams()
+  const navigate = useNavigate()
   const numericOrderId = Number(orderId)
   const detailQuery = useOrderByIdQuery(Number.isFinite(numericOrderId) ? numericOrderId : null)
   const verifyTrayMutation = usePDAVerifyTrayMutation()
@@ -51,7 +52,7 @@ export function StaffPickingDetailPage() {
   }, [selectedTaskId, tasks])
 
   useEffect(() => {
-    // Senior Handover: Reset page to 1 whenever search/filter changes.
+    // Ghi chú: Reset trang to 1 whenever search/filter changes.
     setTaskPage(1)
   }, [numericOrderId])
 
@@ -59,6 +60,17 @@ export function StaffPickingDetailPage() {
     if (!detail) return '0/0'
     return `${detail.progress.done_tasks}/${detail.progress.total_tasks}`
   }, [detail])
+
+  const statusLabel = useMemo(() => {
+    const status = detail?.order.status || ''
+    const labels: Record<string, string> = {
+      PENDING: 'Chờ xử lý',
+      PICKING: 'Đang nhặt',
+      COMPLETED: 'Hoàn thành',
+      CANCELLED: 'Đã hủy',
+    }
+    return labels[status] || status || '-'
+  }, [detail?.order.status])
 
   const selectTask = (task: OrderDetailPickingTask) => {
     setSelectedTaskId(task.id)
@@ -131,10 +143,10 @@ export function StaffPickingDetailPage() {
   const scanner = useScannerInput({
     autoStart: true,
     initialMode: 'TRAY',
-    // Senior Handover: HT730 scanner works as keyboard wedge, so this page keeps a hidden input focused.
-    // Senior Handover: Auto scan mode removes the need to press Scan QR before every scan.
-    // Senior Handover: Scan type is inferred from the current picking state, not from a manual button.
-    // Senior Handover: Scanner logic is centralized here to avoid duplicate handlers.
+    // Ghi chú: Máy quét HT730 hoạt động như keyboard wedge, nên trang này luôn focus input ẩn.
+    // Ghi chú: Chế độ quét tự động bỏ nhu cầu bấm Scan QR trước mỗi lần quét.
+    // Ghi chú: Loại mã quét được suy ra từ trạng thái picking hiện tại, không phụ thuộc nút thủ công.
+    // Ghi chú: Tập trung logic quét tại đây để tránh lặp handler.
     onScanComplete: async ({ code }) => {
       if (!selectedTask) return
       if (!verifiedTrayCode) {
@@ -173,8 +185,8 @@ export function StaffPickingDetailPage() {
 
   return (
     <PdaLayout
-      title={detail?.order.order_code || 'Nhặt hàng'}
-      subtitle={`Tiến độ ${progressLabel}`}
+      title="Chi tiết đơn"
+      subtitle={detail?.order.order_code || `Tiến độ ${progressLabel}`}
     >
       {detailQuery.isLoading && <Alert severity="info">Đang tải đơn...</Alert>}
       {detailQuery.isError && <Alert severity="error">Không tải được chi tiết đơn.</Alert>}
@@ -183,19 +195,33 @@ export function StaffPickingDetailPage() {
         <>
           <Paper sx={{ p: 1.5, borderRadius: 2 }}>
             <Stack spacing={1}>
+              <Button
+                type="button"
+                variant="text"
+                startIcon={<ArrowBack />}
+                onClick={() => navigate('/staff/tasks')}
+                sx={{ alignSelf: 'flex-start', px: 0, fontWeight: 800 }}
+              >
+                Quay lại tác vụ
+              </Button>
               <Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box sx={{ minWidth: 0 }}>
                   <Typography sx={{ fontFamily: 'monospace', fontSize: 19, fontWeight: 900 }} noWrap>
                     {detail.order.order_code}
                   </Typography>
                   <Typography sx={{ fontSize: 15, color: 'text.secondary' }}>
-                    {new Date(detail.order.created_at).toLocaleString('vi-VN')}
+                    {formatDateTimeVN(detail.order.created_at)}
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={0.5}>
                   <QrCode2 sx={{ color: 'text.secondary' }} />
-                  <Chip label={detail.order.status} color="secondary" sx={{ fontWeight: 900 }} />
+                  <Chip label={statusLabel} color="secondary" sx={{ fontWeight: 900 }} />
                 </Stack>
+              </Stack>
+              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 0.75 }}>
+                <Chip size="small" label={`Tiến độ ${progressLabel}`} sx={{ fontWeight: 800 }} />
+                <Chip size="small" label={`${detail.progress.percent.toFixed(0)}%`} sx={{ fontWeight: 800 }} />
+                <Chip size="small" label={`Còn ${openTasks.length} task`} sx={{ fontWeight: 800 }} />
               </Stack>
             </Stack>
           </Paper>
@@ -203,9 +229,11 @@ export function StaffPickingDetailPage() {
           <Paper sx={{ p: 1.5, borderRadius: 2 }}>
             <Stack spacing={0.75}>
               <Typography sx={{ fontSize: 16, fontWeight: 900 }}>Khách hàng</Typography>
-              <Typography sx={{ fontSize: 15 }}>{detail.order.customer_name || '-'}</Typography>
-              <Typography sx={{ fontSize: 15 }}>{detail.order.customer_phone || '-'}</Typography>
-              <Typography sx={{ fontSize: 15 }}>{detail.order.customer_address || '-'}</Typography>
+              <Typography sx={{ fontSize: 15, fontWeight: 800 }}>{detail.order.customer_name || '-'}</Typography>
+              <Typography sx={{ fontSize: 15 }}>SĐT: {detail.order.customer_phone || '-'}</Typography>
+              <Typography sx={{ fontSize: 15, overflowWrap: 'anywhere' }}>
+                Địa chỉ: {detail.order.customer_address || '-'}
+              </Typography>
             </Stack>
           </Paper>
 
@@ -219,7 +247,7 @@ export function StaffPickingDetailPage() {
               </Typography>
               {selectedTask && (
                 <Typography sx={{ color: 'text.secondary' }}>
-                  Task hiện tại: {selectedTask.product_code || '-'} · Khay cần: {selectedTask.tray_code || '-'}
+                  Task hiện tại: {selectedTask.product_code || '-'} · Khay cần: {selectedTask.tray_code || '-'} · Phụ trách: {selectedTask.assignee_name || selectedTask.assignee_username || 'Chưa có người thực hiện'}
                 </Typography>
               )}
               <Stack direction="row" spacing={1}>
@@ -254,9 +282,9 @@ export function StaffPickingDetailPage() {
             <ListPagination
               currentPage={taskPage}
               totalItems={tasks.length}
-              pageSize={DEFAULT_PAGE_SIZE}
-              onPageChange={(page) => {
-                setTaskPage(page)
+              trangSize={DEFAULT_PAGE_SIZE}
+              onPageChange={(trang) => {
+                setTaskPage(trang)
                 setSelectedTaskId(null)
                 setVerifiedTrayCode('')
                 setProductFeedback(null)

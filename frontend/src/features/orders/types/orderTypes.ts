@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Data contracts TypeScript cho module Orders (list/detail/read-only).
-- Dependencies: Dung boi orders api/service/hooks/pages va module audit/pda.
-- API contract: Shape mapping theo GET /orders va GET /orders/:id.
-- Business rules: Orders module khong chua payload mutation picking sau replacement refactor.
-- Replacement refactor notes: Loai bo types mutation create/scan/confirm/finish cu trong module orders.
-- Maintenance notes: Khi backend doi contract detail/list, cap nhat file nay truoc de compiler canh bao diem anh huong.
+- Mục đích: Hợp đồng dữ liệu TypeScript cho module Orders (list/detail/chỉ xem).
+- Phụ thuộc: Dung boi orders api/service/hooks/pages va module audit/pda.
+- Hợp đồng API: Shape mapping theo GET /orders va GET /orders/:id.
+- Quy tắc nghiệp vụ: Orders module khong chua payload mutation picking sau replacement refactor.
+- Ghi chú refactor thay thế: Loai bo types mutation create/scan/confirm/finish cu trong module orders.
+- Ghi chú bảo trì: Khi backend doi contract detail/list, cap nhat file nay truoc de compiler canh bao diem anh huong.
 */
 
 export type OrderStatus = 'PENDING' | 'PICKING' | 'COMPLETED' | 'CANCELLED'
@@ -66,6 +65,9 @@ export interface OrderDetailPickingTask {
   inventory_qty: number
   status: PickingStatus
   verified: boolean
+  assigned_to?: number | null
+  assignee_name?: string
+  assignee_username?: string
 }
 
 export interface OrderDetailShortageItem {

@@ -1,15 +1,17 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay la dialog tao phieu nhap nhieu item, chi xu ly UI/form controls.
-- Phu thuoc vao `CreateImportReceiptPayload` va option lists (`ProductOption`, `TrayOption`, `LocationOption`) tu page.
+- Phu thuoc vao `CreateImportReceiptPayload` va option lists (`ProductOption`, `TrayOption`, `LocationOption`) tu trang.
 - Khong tich hop API truc tiep trong component de giu phan tang ro rang.
 */
 
-import { Add, DeleteOutlined } from '@mui/icons-material'
+import { useEffect, useState } from 'react'
+import { Add, DeleteOutlined, QrCodeScanner } from '@mui/icons-material'
 import {
   Alert,
   Autocomplete,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -22,7 +24,10 @@ import {
   Typography,
 } from '@mui/material'
 import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
+import { ScannerHiddenInput } from '../../scanner/components/ScannerHiddenInput'
+import { useScannerInput } from '../../scanner/hooks/useScannerInput'
 import type {
+  CreateImportReceiptItemPayload,
   CreateImportReceiptPayload,
   LocationOption,
   ProductOption,
@@ -54,9 +59,7 @@ export function ImportReceiptCreateDialog({
   onSubmit,
   onChange,
 }: ImportReceiptCreateDialogProps) {
-  const productLabelById = Object.fromEntries(
-    productOptions.map((product) => [product.id, `${product.product_code} - ${product.product_name}`]),
-  ) as Record<number, string>
+  const [scanTargetIndex, setScanTargetIndex] = useState<number | null>(null)
 
   const locationLabelById = Object.fromEntries(
     locationOptions.map((location) => [
@@ -65,8 +68,8 @@ export function ImportReceiptCreateDialog({
     ]),
   ) as Record<number, string>
 
-  const updateItem = (index: number, patch: { product_id?: number; tray_id?: number; quantity?: number }) => {
-    // Senior Handover: Dynamic item form block - cap nhat dung index item de tranh mutate state truc tiep.
+  const updateItem = (index: number, patch: Partial<CreateImportReceiptItemPayload>) => {
+    // Ghi chú: Dynamic item form block - cap nhat dung index item de tranh mutate state truc tiep.
     const nextItems = form.items.map((item, itemIndex) => {
       if (itemIndex !== index) return item
       return {
@@ -78,16 +81,56 @@ export function ImportReceiptCreateDialog({
     onChange({ ...form, items: nextItems })
   }
 
+  const scanner = useScannerInput({
+    onScanComplete: async ({ mode, code }) => {
+      if (mode !== 'TRAY') return
+      if (scanTargetIndex === null) throw new Error('Vui lòng chọn dòng cần quét khay.')
+
+      const item = form.items[scanTargetIndex]
+      if (!item || item.product_id <= 0) throw new Error('Vui lòng chọn sản phẩm trước khi quét khay.')
+
+      const normalizedCode = code.trim().toLowerCase()
+      const scannedTray = trayOptions.find((tray) => {
+        return tray.qr_code?.toLowerCase() === normalizedCode || tray.tray_code.toLowerCase() === normalizedCode
+      })
+
+      if (!scannedTray) throw new Error('Không tìm thấy khay từ QR vừa quét.')
+      if (scannedTray.product_id !== item.product_id) {
+        throw new Error('Khay vừa quét không thuộc sản phẩm đã chọn.')
+      }
+
+      updateItem(scanTargetIndex, {
+        tray_id: scannedTray.id,
+        tray_qr_code: scannedTray.qr_code || scannedTray.tray_code,
+      })
+      setScanTargetIndex(null)
+    },
+  })
+  const { startScan, stopScan } = scanner
+
+  useEffect(() => {
+    if (!open) {
+      setScanTargetIndex(null)
+      stopScan()
+    }
+  }, [open, stopScan])
+
+  useEffect(() => {
+    if (scanTargetIndex === null) {
+      stopScan()
+    }
+  }, [scanTargetIndex, stopScan])
+
   const addItem = () => {
-    // Senior Handover: Dynamic item form block - them dong item moi voi gia tri mac dinh an toan.
+    // Ghi chú: Dynamic item form block - them dong item moi voi gia tri mac dinh an toan.
     onChange({
       ...form,
-      items: [...form.items, { product_id: 0, tray_id: 0, quantity: 1 }],
+      items: [...form.items, { product_id: 0, tray_id: 0, tray_qr_code: '', quantity: 1 }],
     })
   }
 
   const removeItem = (index: number) => {
-    // Senior Handover: Dynamic item form block - luon giu it nhat 1 dong item de dung contract backend min=1.
+    // Ghi chú: Dynamic item form block - luon giu it nhat 1 dong item de dung contract backend min=1.
     if (form.items.length <= 1) return
     onChange({
       ...form,
@@ -128,11 +171,6 @@ export function ImportReceiptCreateDialog({
           </Stack>
 
           {form.items.map((item, index) => {
-            const traysByProduct =
-              item.product_id > 0
-                ? trayOptions.filter((tray) => tray.product_id === item.product_id)
-                : []
-
             return (
               <Paper key={`import-item-${index}`} variant="outlined" sx={{ p: 1.25 }}>
                 <Stack spacing={1.2}>
@@ -155,7 +193,7 @@ export function ImportReceiptCreateDialog({
                       options={productOptions}
                       value={productOptions.find((product) => product.id === item.product_id) || null}
                       onChange={(_, product) =>
-                        updateItem(index, { product_id: product?.id || 0, tray_id: 0 })
+                        updateItem(index, { product_id: product?.id || 0, tray_id: 0, tray_qr_code: '' })
                       }
                       getOptionLabel={(option) => `${option.product_code} - ${option.product_name}`}
                       isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -173,29 +211,38 @@ export function ImportReceiptCreateDialog({
                       fullWidth
                     />
 
-                    <Autocomplete
-                      options={traysByProduct}
-                      value={traysByProduct.find((tray) => tray.id === item.tray_id) || null}
-                      onChange={(_, tray) => updateItem(index, { tray_id: tray?.id || 0 })}
-                      getOptionLabel={(option) =>
-                        `${option.tray_code} - ${locationLabelById[option.location_id] || '-'}${productLabelById[option.product_id] ? ` (${productLabelById[option.product_id]})` : ''}`
-                      }
-                      isOptionEqualToValue={(option, value) => option.id === value.id}
-                      disabled={item.product_id <= 0}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Khay"
-                          helperText={
-                            item.product_id > 0
-                              ? 'Chỉ hiển thị khay thuộc sản phẩm đã chọn.'
-                              : 'Chọn sản phẩm trước để lọc khay.'
-                          }
-                          fullWidth
-                        />
+                    <Stack spacing={0.75} sx={{ width: '100%' }}>
+                      <Button
+                        type="button"
+                        variant={item.tray_id > 0 ? 'outlined' : 'contained'}
+                        startIcon={<QrCodeScanner />}
+                        disabled={item.product_id <= 0}
+                        onClick={() => {
+                          setScanTargetIndex(index)
+                          startScan('TRAY')
+                        }}
+                        sx={{ minHeight: 56, fontWeight: 900 }}
+                      >
+                        {scanTargetIndex === index && scanner.isScanning ? 'Đang chờ QR khay...' : 'Quét QR khay'}
+                      </Button>
+                      {item.product_id <= 0 && (
+                        <Typography variant="caption" color="text.secondary">
+                          Chọn sản phẩm trước khi quét khay.
+                        </Typography>
                       )}
-                      fullWidth
-                    />
+                      {item.tray_id > 0 && (() => {
+                        const selectedTray = trayOptions.find((tray) => tray.id === item.tray_id)
+                        if (!selectedTray) return null
+                        return (
+                          <Chip
+                            color="success"
+                            variant="outlined"
+                            label={`Đã quét: ${selectedTray.tray_code} - ${locationLabelById[selectedTray.location_id] || '-'}`}
+                            sx={{ justifyContent: 'flex-start', fontWeight: 800 }}
+                          />
+                        )
+                      })()}
+                    </Stack>
 
                     <TextField
                       label="Số lượng"
@@ -211,6 +258,18 @@ export function ImportReceiptCreateDialog({
           })}
 
           {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
+          {scanner.scanStatus === 'ERROR' && scanner.scanMessage && (
+            <Alert severity="error">{scanner.scanMessage}</Alert>
+          )}
+          {scanner.scanStatus === 'SUCCESS' && scanner.scanMessage && (
+            <Alert severity="success">{scanner.scanMessage}</Alert>
+          )}
+          <ScannerHiddenInput
+            inputRef={scanner.scannerInputRef}
+            value={scanner.scanValue}
+            onChange={scanner.handleScannerChange}
+            onKeyDown={(event) => void scanner.handleScannerKeyDown(event)}
+          />
         </Stack>
       </DialogContent>
       <DialogActions sx={{ p: 2 }}>

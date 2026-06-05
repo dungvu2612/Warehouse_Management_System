@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: React Query hooks read-only cho module Orders sau replacement refactor.
-- Dependencies: orderService.
-- API contract: Hien tai module nay chi query GET /orders va GET /orders/:id.
-- Business rules: Orders module khong thao tac picking.
-- Replacement refactor notes: hooks mutation picking/create/finish cu da bi xoa.
-- Maintenance notes: Neu can mutation moi cho orders, them o module rieng va tranh tai tao flow picking o day.
+- Mục đích: React Query hooks chỉ xem cho module Orders sau replacement refactor.
+- Phụ thuộc: orderService.
+- Hợp đồng API: Hien tai module nay chi query GET /orders va GET /orders/:id.
+- Quy tắc nghiệp vụ: Orders module khong thao tac picking.
+- Ghi chú refactor thay thế: hooks mutation picking/create/finish cu da bi xoa.
+- Ghi chú bảo trì: Neu can mutation moi cho orders, them o module rieng va tranh tai tao flow picking o day.
 */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'

@@ -1,12 +1,11 @@
 package repositories
 
 /*
-Senior Handover Note:
-- Purpose: Data-access layer cho Dashboard role-based (admin revenue + warehouse operations).
-- Dependencies: Phu thuoc DBTX/GORM va schema orders/order_items/products/inventory/trays/picking_tasks/stock_transactions.
-- API contract: Tra ve read-model tong hop, service layer khong query SQL truc tiep.
+- Mục đích: Lớp truy cập dữ liệu cho Dashboard role-based (admin revenue + warehouse operations).
+- Phụ thuộc: Phu thuoc DBTX/GORM va schema orders/order_items/products/inventory/trays/picking_tasks/stock_transactions.
+- Hợp đồng API: Tra ve read-model tong hop, service layer khong query SQL truc tiep.
 - Role access: Khong enforce role tai repository; role duoc enforce o middleware/service.
-- Maintenance notes: Neu schema thay doi, cap nhat SQL alias theo field tags ben duoi.
+- Ghi chú bảo trì: Neu schema thay doi, cap nhat SQL alias theo field tags ben duoi.
 */
 
 type DashboardRepository interface {
@@ -30,11 +29,18 @@ type dashboardRepository struct {
 }
 
 type AdminRevenueMetricsRow struct {
-	TotalRevenue      float64 `json:"total_revenue"`
-	RevenueToday      float64 `json:"revenue_today"`
-	RevenueThisMonth  float64 `json:"revenue_this_month"`
-	CompletedOrders   int64   `json:"completed_orders"`
-	AverageOrderValue float64 `json:"average_order_value"`
+	TotalRevenue               float64 `json:"total_revenue"`
+	RevenueToday               float64 `json:"revenue_today"`
+	RevenueThisMonth           float64 `json:"revenue_this_month"`
+	CompletedOrders            int64   `json:"completed_orders"`
+	AverageOrderValue          float64 `json:"average_order_value"`
+	PreviousTotalRevenue       float64 `json:"previous_total_revenue"`
+	PreviousRevenueToday       float64 `json:"previous_revenue_today"`
+	PreviousRevenueThisMonth   float64 `json:"previous_revenue_this_month"`
+	CompletedOrdersThisMonth   int64   `json:"completed_orders_this_month"`
+	PreviousCompletedOrders    int64   `json:"previous_completed_orders"`
+	AverageOrderValueThisMonth float64 `json:"average_order_value_this_month"`
+	PreviousAverageOrderValue  float64 `json:"previous_average_order_value"`
 }
 
 type RevenueSeriesRow struct {
@@ -140,13 +146,28 @@ func NewDashboardRepository(db DBTX) DashboardRepository {
 func (r *dashboardRepository) GetAdminRevenueMetrics() (*AdminRevenueMetricsRow, error) {
 	var row AdminRevenueMetricsRow
 	query := `
+		WITH periods AS (
+			SELECT
+				CURRENT_DATE::date AS today,
+				(CURRENT_DATE - INTERVAL '1 day')::date AS yesterday,
+				DATE_TRUNC('month', CURRENT_DATE)::date AS current_month_start,
+				DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')::date AS previous_month_start
+		)
 		SELECT
-			COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN total_amount END), 0) AS total_revenue,
-			COALESCE(SUM(CASE WHEN status = 'COMPLETED' AND DATE(updated_at) = CURRENT_DATE THEN total_amount END), 0) AS revenue_today,
-			COALESCE(SUM(CASE WHEN status = 'COMPLETED' AND DATE_TRUNC('month', updated_at) = DATE_TRUNC('month', CURRENT_DATE) THEN total_amount END), 0) AS revenue_this_month,
-			COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END), 0) AS completed_orders,
-			COALESCE(AVG(CASE WHEN status = 'COMPLETED' THEN total_amount END), 0) AS average_order_value
-		FROM orders
+			COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' THEN o.total_amount END), 0) AS total_revenue,
+			COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' AND DATE(o.updated_at) = p.today THEN o.total_amount END), 0) AS revenue_today,
+			COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' AND o.updated_at >= p.current_month_start AND o.updated_at < (p.current_month_start + INTERVAL '1 month') THEN o.total_amount END), 0) AS revenue_this_month,
+			COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' THEN 1 ELSE 0 END), 0) AS completed_orders,
+			COALESCE(AVG(CASE WHEN o.status = 'COMPLETED' THEN o.total_amount END), 0) AS average_order_value,
+			COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' AND o.updated_at >= p.previous_month_start AND o.updated_at < p.current_month_start THEN o.total_amount END), 0) AS previous_total_revenue,
+			COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' AND DATE(o.updated_at) = p.yesterday THEN o.total_amount END), 0) AS previous_revenue_today,
+			COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' AND o.updated_at >= p.previous_month_start AND o.updated_at < p.current_month_start THEN o.total_amount END), 0) AS previous_revenue_this_month,
+			COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' AND o.updated_at >= p.current_month_start AND o.updated_at < (p.current_month_start + INTERVAL '1 month') THEN 1 ELSE 0 END), 0) AS completed_orders_this_month,
+			COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' AND o.updated_at >= p.previous_month_start AND o.updated_at < p.current_month_start THEN 1 ELSE 0 END), 0) AS previous_completed_orders,
+			COALESCE(AVG(CASE WHEN o.status = 'COMPLETED' AND o.updated_at >= p.current_month_start AND o.updated_at < (p.current_month_start + INTERVAL '1 month') THEN o.total_amount END), 0) AS average_order_value_this_month,
+			COALESCE(AVG(CASE WHEN o.status = 'COMPLETED' AND o.updated_at >= p.previous_month_start AND o.updated_at < p.current_month_start THEN o.total_amount END), 0) AS previous_average_order_value
+		FROM periods p
+		LEFT JOIN orders o ON TRUE
 	`
 	if err := r.db.Raw(query).Scan(&row).Error; err != nil {
 		return nil, err
@@ -158,13 +179,18 @@ func (r *dashboardRepository) GetRevenueSeries() ([]RevenueSeriesRow, error) {
 	var rows []RevenueSeriesRow
 	query := `
 		SELECT
-			TO_CHAR(DATE(updated_at), 'YYYY-MM-DD') AS date,
-			COALESCE(SUM(total_amount), 0) AS revenue
-		FROM orders
-		WHERE status = 'COMPLETED'
-		  AND DATE(updated_at) >= CURRENT_DATE - INTERVAL '13 day'
-		GROUP BY DATE(updated_at)
-		ORDER BY DATE(updated_at)
+			TO_CHAR(day_series.day::date, 'YYYY-MM-DD') AS date,
+			COALESCE(SUM(o.total_amount), 0) AS revenue
+		FROM generate_series(
+			(CURRENT_DATE - INTERVAL '6 day')::date,
+			CURRENT_DATE::date,
+			INTERVAL '1 day'
+		) AS day_series(day)
+		LEFT JOIN orders o
+			ON o.status = 'COMPLETED'
+			AND DATE(o.updated_at) = day_series.day::date
+		GROUP BY day_series.day
+		ORDER BY day_series.day
 	`
 	if err := r.db.Raw(query).Scan(&rows).Error; err != nil {
 		return nil, err

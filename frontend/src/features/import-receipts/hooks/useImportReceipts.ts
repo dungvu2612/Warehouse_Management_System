@@ -1,7 +1,7 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay tap trung React Query hooks cho module Import Receipts.
-- Phu thuoc vao `importReceiptsService` de giu page sach khoi logic fetch/cache/invalidate.
+- Phu thuoc vao `importReceiptsService` de giu trang sach khoi logic fetch/cache/invalidate.
 - Query key va invalidate strategy tai day da bao phu list/detail/create.
 */
 
@@ -19,7 +19,7 @@ const PUTAWAY_REQUESTS_QUERY_KEY = ['putaway-requests'] as const
 export function useImportReceiptsQuery() {
   return useQuery({
     queryKey: IMPORT_RECEIPTS_QUERY_KEY,
-    // Senior Handover: Block fetch danh sach phieu nhap.
+    // Ghi chú: Block fetch danh sach phieu nhap.
     queryFn: importReceiptsService.getImportReceipts,
   })
 }
@@ -27,7 +27,7 @@ export function useImportReceiptsQuery() {
 export function useImportReceiptDetailQuery(receiptId: number | null) {
   return useQuery({
     queryKey: [...IMPORT_RECEIPT_DETAIL_QUERY_KEY, receiptId],
-    // Senior Handover: Block fetch chi tiet phieu nhap, chi goi khi da co id hop le.
+    // Ghi chú: Block fetch chi tiet phieu nhap, chi goi khi da co id hop le.
     queryFn: () => importReceiptsService.getImportReceiptById(Number(receiptId)),
     enabled: Boolean(receiptId && receiptId > 0),
   })
@@ -79,10 +79,10 @@ export function useCreateImportReceiptMutation(options?: {
   const queryClient = useQueryClient()
 
   return useMutation({
-    // Senior Handover: Block submit tao phieu nhap.
+    // Ghi chú: Block submit tao phieu nhap.
     mutationFn: (payload: CreateImportReceiptPayload) => importReceiptsService.createImportReceipt(payload),
     onSuccess: async () => {
-      // Senior Handover: Refresh data block - invalidates list/detail/options sau khi tao thanh cong.
+      // Ghi chú: Khối làm mới dữ liệu - invalidate list/detail/options sau khi tạo thành công.
       await invalidateImportReceiptQueries(queryClient)
       options?.onSuccess?.()
     },

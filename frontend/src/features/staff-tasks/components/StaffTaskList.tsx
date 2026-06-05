@@ -1,15 +1,14 @@
 /*
-Senior Handover Note:
-- Purpose: List wrapper cho staff tasks cards.
-- Dependencies: StaffOrderCard.
-- API contract: Render du lieu staff task da fetch.
-- Business rules: Danh sach don can nhat la entry point thao tac kho.
-- Replacement refactor notes: replacement refactor, no duplicate picking flow.
-- Scanner workflow notes: moi card dan staff vao picking detail scan-based.
-- Permission notes: Dung cho ADMIN/WAREHOUSE.
-- HT730 screen assumptions: 480x800 portrait, list must stay one-column with large touch targets.
-- Responsive rules: Card list on PDA, desktop may widen but still avoids table for staff tasks.
-- Maintenance notes: Neu can pagination sau nay, bo sung tai component nay.
+- Mục đích: List wrapper cho staff tasks cards.
+- Phụ thuộc: StaffOrderCard.
+- Hợp đồng API: Render du lieu staff task da fetch.
+- Quy tắc nghiệp vụ: Danh sách đơn cần nhặt là điểm vào thao tác kho.
+- Ghi chú refactor thay thế: replacement refactor, no duplicate picking flow.
+- Ghi chú luồng scanner: moi card dan staff vao picking detail scan-based.
+- Ghi chú phân quyền: Dung cho ADMIN/WAREHOUSE.
+- Giả định màn hình HT730: 480x800 portrait, list must stay one-column with large touch targets.
+- Quy tắc responsive: Card list on PDA, desktop may widen but still avoids table for staff tasks.
+- Ghi chú bảo trì: Neu can pagination sau nay, bo sung tai component nay.
 */
 
 import { Alert, Box, Skeleton, Stack } from '@mui/material'
@@ -45,7 +44,7 @@ export function StaffTaskList({ items, isLoading, isError, onStart }: StaffTaskL
         overflowX: 'hidden',
       }}
     >
-      {/* Senior Handover: staff task list is the entry point for warehouse workers */}
+      {/* Ghi chú: danh sách tác vụ staff là điểm vào cho nhân viên kho */}
       {items.map((item) => (
         <StaffOrderCard key={item.id} item={item} onStart={onStart} />
       ))}

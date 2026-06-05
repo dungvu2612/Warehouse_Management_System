@@ -1,5 +1,5 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File dinh nghia toan bo TypeScript contracts cua feature BOM.
 - Duoc su dung boi cac layer api/service/hook/component de dong bo shape du lieu.
 - Luu y bao tri: khi backend products thay doi contract (vi du image_url), can cap nhat tai day truoc de tranh sai type day chuyen.

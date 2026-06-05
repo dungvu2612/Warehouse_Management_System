@@ -1,12 +1,12 @@
 /*
 Mo ta file:
 - Dialog tao/cap nhat BOM.
-- Component nay thuoc presentation layer: nhan state/handlers tu page va render form da tach module.
+- Component nay thuoc presentation layer: nhan state/handlers tu trang va render form da tach module.
 
 Luong xu ly:
 1) Render form header BOM (parent product, ten, mo ta).
 2) Render danh sach component dong va cho phep them/xoa/sua dong.
-3) Tra su kien submit/close ve page de page goi mutation create/update.
+3) Tra su kien submit/close ve trang de trang goi mutation create/update.
 */
 
 import {
@@ -119,7 +119,7 @@ export function BOMCreateDialog({
           <Box sx={{ pt: 0.5 }}>
             <Stack direction="row" sx={{ justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                Danh sách linh kiện thành phần
+                Danh sách linh kiện component
               </Typography>
               <Button
                 variant="outlined"

@@ -40,15 +40,15 @@ const (
 
 // ProductInput là DTO nghiệp vụ cho create/update.
 type ProductInput struct {
-	ProductCode     string
-	QRCode          string
-	ProductName     string
-	ProductType     string
-	ImageURL        string
-	Description     string
-	Unit            string
-	MinStock        int
-	Price           float64
+	ProductCode string
+	QRCode      string
+	ProductName string
+	ProductType string
+	ImageURL    string
+	Description string
+	Unit        string
+	MinStock    int
+	Price       float64
 }
 
 // ProductScanTrayResult la dong inventory enrich theo tray/location khi scan product QR.
@@ -92,6 +92,13 @@ func (s *productService) Create(input ProductInput) (*models.Product, error) {
 	normalized, err := normalizeAndValidateInput(input)
 	if err != nil {
 		return nil, err
+	}
+	nameExists, err := s.repo.ExistsByName(normalized.ProductName, nil)
+	if err != nil {
+		return nil, err
+	}
+	if nameExists {
+		return nil, repositories.ErrProductEntityNameExists
 	}
 
 	// Retry de tranh race condition khi tao cung luc va trung product_code.
@@ -153,7 +160,7 @@ func (s *productService) ScanByQRCode(qrCode string) (*ProductScanResult, error)
 		return nil, err
 	}
 
-	// Senior Handover: Product QR workflow - map inventory + trays de HT730 lookup/putaway/stocktaking.
+	// Ghi chú: Product QR workflow - map inventory + trays de HT730 lookup/putaway/stocktaking.
 	rows, err := s.repo.FindScanRowsByProductID(product.ID)
 	if err != nil {
 		return nil, err
@@ -189,6 +196,13 @@ func (s *productService) Update(id uint, input ProductInput) (*models.Product, e
 	normalized, err := normalizeAndValidateInput(input)
 	if err != nil {
 		return nil, err
+	}
+	nameExists, err := s.repo.ExistsByName(normalized.ProductName, &id)
+	if err != nil {
+		return nil, err
+	}
+	if nameExists {
+		return nil, repositories.ErrProductEntityNameExists
 	}
 
 	product, err := s.repo.FindActiveByID(id)

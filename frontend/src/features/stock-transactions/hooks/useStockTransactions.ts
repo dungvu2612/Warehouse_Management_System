@@ -1,7 +1,6 @@
 /*
-Senior Handover Note:
 - File nay tap trung React Query hooks cho module Stock Transactions.
-- Phu thuoc vao `stockTransactionsService` de giu page sach khoi logic fetch/cache.
+- Phu thuoc vao `stockTransactionsService` de giu trang sach khoi logic fetch/cache.
 - Query key tach rieng theo transaction type de cache linh hoat theo bo loc loai giao dich.
 */
 
@@ -15,7 +14,7 @@ const STOCK_TRANSACTIONS_PRODUCTS_QUERY_KEY = ['stock-transactions-products'] as
 export function useStockTransactionsQuery(transactionType: StockTransactionType | 'ALL') {
   return useQuery({
     queryKey: [...STOCK_TRANSACTIONS_QUERY_KEY, transactionType],
-    // Senior Handover: Fetch block - load danh sach giao dich kho theo transaction type filter.
+    // Ghi chú: Khối tải dữ liệu - load danh sach giao dich kho theo transaction type filter.
     queryFn: () => stockTransactionsService.getStockTransactions(transactionType),
   })
 }

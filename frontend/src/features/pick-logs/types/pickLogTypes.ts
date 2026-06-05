@@ -1,11 +1,10 @@
-/*
-Senior Handover Note:
-- Purpose: Dinh nghia contracts TypeScript cho module Pick Logs va read-model phuc vu audit trong frontend.
-- Dependencies: Dung boi api/service/hooks/components cua `features/pick-logs` va nhung vao Order Detail.
-- Maintenance notes: Khi backend doi field pick log hoac doi shape response, cap nhat type tai day truoc de trigger compile warning.
-- API contract: GET /pick-logs (query: order_id, picked_by, date_from, date_to, limit) tra danh sach phang.
-- Audit usage: Loai type nay danh cho truy vet thao tac picking, khong dung cho create/edit/delete.
-*/
+/* Type cho dữ liệu pick logs trả về từ backend. */
+
+export interface PickLogUser {
+  id: number
+  username: string
+  full_name?: string
+}
 
 export interface PickLog {
   id: number
@@ -15,11 +14,11 @@ export interface PickLog {
   tray_id: number | null
   picked_quantity: number
   picked_by: number | null
+  picker?: PickLogUser | null
   picked_at: string
   note: string
 }
 
-// Senior Handover: PickLogItem de du phong neu backend doi sang nested response trong tuong lai.
 export interface PickLogItem extends PickLog {}
 
 export interface PickLogDisplayItem extends PickLog {

@@ -1,5 +1,5 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay dinh nghia contracts TypeScript cho module Inventory o frontend.
 - Phu thuoc truc tiep vao API backend da xac minh: GET /inventory, POST /inventory, PATCH /inventory/:id/adjust.
 - Khi backend doi shape response (dac biet endpoint adjust tra object boc data), cap nhat tai day truoc de tranh vo cac layer con.
@@ -14,23 +14,11 @@ export interface InventoryItem {
   updated_at: string
 }
 
-export interface InventoryCreatePayload {
-  product_id: number
-  tray_id: number
-  quantity: number
-}
-
 export interface InventoryAdjustPayload {
   delta: number
   note: string
 }
 
-export interface InventoryAdjustByTrayPayload {
-  tray_qr_code: string
-  delta: number
-  note?: string
-  reference_code?: string
-}
 
 export interface InventoryPutawayPayload {
   product_qr_code: string
@@ -53,27 +41,6 @@ export interface InventoryStocktakingResponse {
   delta: number
 }
 
-export interface InventoryTrayScanItem {
-  inventory_id: number
-  product_id: number
-  product_code: string
-  product_name: string
-  quantity: number
-  last_updated_at: string
-}
-
-export interface InventoryTrayScanResponse {
-  tray: {
-    id: number
-    tray_code: string
-    qr_code: string
-    product_id: number
-    location_id: number
-  }
-  location_code: string
-  inventory_items: InventoryTrayScanItem[]
-  inventory_total: number
-}
 
 export type InventoryAdjustOperation = 'IMPORT' | 'EXPORT'
 

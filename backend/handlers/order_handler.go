@@ -296,7 +296,7 @@ func (h *OrderHandler) ScanOrderForPicking(c *gin.Context) {
 	})
 }
 
-// ScanOrderForPickingByQRCode ho tro flow scan GET /orders/scan/:qr_code cho HT730 keyboard wedge.
+// ScanOrderForPickingByQRCode hỗ trợ luồng quét GET /orders/scan/:qr_code cho HT730 keyboard wedge.
 func (h *OrderHandler) ScanOrderForPickingByQRCode(c *gin.Context) {
 	qrCode := c.Param("qr_code")
 

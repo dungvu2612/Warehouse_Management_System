@@ -3,15 +3,14 @@ package models
 import "time"
 
 /*
-Senior Handover Note:
-- Purpose: Domain model cho orders, bo sung customer_phone/customer_address phuc vu giao hang va in phieu.
-- Dependencies: Duoc preload/serialize boi order repository/service/handler va dashboard revenue.
-- API contract: JSON order response phai tra day du customer_name/customer_phone/customer_address.
-- Business rules: Revenue chi derive tu orders.status = COMPLETED; customer info chi la metadata don hang.
-- Replacement refactor notes: staff picking flow moi van dung cung order entity, khong tao entity don hang song song.
-- Scanner workflow notes: Order QR scan load order cung customer info de staff xac nhan truoc khi picking.
-- Permission notes: ADMIN/WAREHOUSE duoc xem va van hanh picking tren order.
-- Maintenance notes: Neu them customer_id table rieng sau nay, giu backward compatibility cho 3 field text.
+- Mục đích: Domain model cho orders, bo sung customer_phone/customer_address phuc vu giao hang va in phieu.
+- Phụ thuộc: Duoc preload/serialize boi order repository/service/handler va dashboard revenue.
+- Hợp đồng API: JSON order response phai tra day du customer_name/customer_phone/customer_address.
+- Quy tắc nghiệp vụ: Revenue chi derive tu orders.status = COMPLETED; customer info chi la metadata don hang.
+- Ghi chú refactor thay thế: staff picking flow moi van dung cung order entity, khong tao entity don hang song song.
+- Ghi chú luồng scanner: Order QR scan load order cung customer info de staff xac nhan truoc khi picking.
+- Ghi chú phân quyền: ADMIN/WAREHOUSE duoc xem va van hanh picking tren order.
+- Ghi chú bảo trì: Neu them customer_id table rieng sau nay, giu backward compatibility cho 3 field text.
 */
 type Order struct {
 	ID              uint      `gorm:"primaryKey" json:"id"`

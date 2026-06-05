@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Route guards cho auth va role-level page access.
-- Dependencies: React Router Navigate + AuthProvider user/session state.
-- HT730 scanner behavior: Staff/PDA routes are WAREHOUSE-only entry points for scanner workflows.
-- API callback contract: Khong goi API; chi bao ve route frontend truoc khi page scan mount.
-- Maintenance notes: Keep role policy centralized here so menu visibility and route access do not drift.
+- Mục đích: Route guards cho auth va role-level trang access.
+- Phụ thuộc: React Router Navigate + AuthProvider user/session state.
+- Hành vi máy quét HT730: Route Staff/PDA là điểm vào chỉ dành cho WAREHOUSE trong các luồng quét.
+- Hợp đồng callback API: Không gọi API; chỉ bảo vệ route frontend trước khi trang quét mount.
+- Ghi chú bảo trì: Keep role policy centralized here so menu visibility and route access do not drift.
 */
 
 import type { ReactNode } from 'react'

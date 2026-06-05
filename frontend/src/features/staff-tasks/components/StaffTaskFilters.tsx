@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Search/filter compact cho danh sach task PDA.
-- Dependencies: MUI TextField/Chip.
-- HT730 screen assumptions: Controls must fit 480px width without horizontal scrolling.
-- Responsive rules: Mobile-first vertical stack, chips wrap, no multi-column table filters.
-- Scanner workflow: Filtering is separate from scan order action to keep scan button primary.
-- Maintenance notes: Add only high-value filters; detail fields belong in picking detail.
+- Mục đích: Search/filter compact cho danh sach task PDA.
+- Phụ thuộc: MUI TextField/Chip.
+- Giả định màn hình HT730: Control phải vừa chiều rộng 480px và không tạo cuộn ngang.
+- Quy tắc responsive: Mobile-first vertical stack, chips wrap, no multi-column table filters.
+- Luồng scanner: Filtering is separate from scan order action to keep scan button primary.
+- Ghi chú bảo trì: Add only high-value filters; detail fields belong in picking detail.
 */
 
 import { Chip, Stack, TextField } from '@mui/material'

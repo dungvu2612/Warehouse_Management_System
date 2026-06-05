@@ -1,15 +1,15 @@
 /*
-Senior Handover Note:
 - File nay la bang presentation cho man Stock Transactions.
-- Phu thuoc vao type `StockTransactionDisplayItem`; page truyen states de render loading/error/empty.
-- Component nay chi render UI read-only, khong goi API truc tiep.
+- Phu thuoc vao type `StockTransactionDisplayItem`; trang truyen states de render loading/error/empty.
+- Component nay chi render UI chỉ xem, khong goi API truc tiep.
 */
 
-import { Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material'
+import { Chip, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, useMediaQuery, useTheme } from '@mui/material'
 import type {
   StockTransactionDisplayItem,
   StockTransactionType,
 } from '../types/stockTransactionTypes'
+import { formatDateTimeVN } from '../../../shared/lib/datetime'
 
 interface StockTransactionsTableProps {
   rows: StockTransactionDisplayItem[]
@@ -25,6 +25,51 @@ const badgeConfig: Record<StockTransactionType, { label: string; color: 'success
 }
 
 export function StockTransactionsTable({ rows, isLoading, isError }: StockTransactionsTableProps) {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+
+  if (isMobile) {
+    if (isLoading || isError || rows.length === 0) {
+      return (
+        <Paper variant="outlined" sx={{ p: 1.5 }}>
+          <Typography variant="body2">
+            {isLoading
+              ? 'Đang tải lịch sử giao dịch kho...'
+              : isError
+                ? 'Không tải được lịch sử giao dịch kho.'
+                : 'Chưa có giao dịch kho.'}
+          </Typography>
+        </Paper>
+      )
+    }
+
+    return (
+      <Stack spacing={1.25}>
+        {rows.map((row) => {
+          const config = badgeConfig[row.transaction_type]
+          return (
+            <Paper key={row.id} variant="outlined" sx={{ p: 1.25 }}>
+              <Stack spacing={0.75}>
+                <Typography variant="caption" color="text.secondary">
+                  {formatDateTimeVN(row.created_at)}
+                </Typography>
+                <Chip size="small" color={config.color} label={config.label} sx={{ fontWeight: 800, alignSelf: 'flex-start' }} />
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                  {row.product_code} - {row.product_name}
+                </Typography>
+                <Typography variant="body2">
+                  Số lượng: <strong>{row.quantity >= 0 ? `+${row.quantity}` : row.quantity}</strong>
+                </Typography>
+                <Typography variant="body2">Trước/Sau: {row.before_quantity} → {row.after_quantity}</Typography>
+                <Typography variant="body2">Mã tham chiếu: {row.reference_code || '-'}</Typography>
+              </Stack>
+            </Paper>
+          )
+        })}
+      </Stack>
+    )
+  }
+
   return (
     <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: 2 }}>
       <Table>
@@ -64,9 +109,9 @@ export function StockTransactionsTable({ rows, isLoading, isError }: StockTransa
 
             return (
               <TableRow key={row.id} hover>
-                <TableCell>{new Date(row.created_at).toLocaleString('vi-VN')}</TableCell>
+                <TableCell>{formatDateTimeVN(row.created_at)}</TableCell>
                 <TableCell>
-                  {/* Senior Handover: Render transaction type badge block cho IMPORT / EXPORT / ADJUST. */}
+                  {/* Ghi chú: Render transaction type badge block cho IMPORT / EXPORT / ADJUST. */}
                   <Chip size="small" color={config.color} label={config.label} sx={{ fontWeight: 800 }} />
                 </TableCell>
                 <TableCell>

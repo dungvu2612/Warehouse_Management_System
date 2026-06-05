@@ -22,6 +22,7 @@ Luu y khi sua:
 import (
 	"errors"
 	"quan_ly_kho/models"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -30,8 +31,20 @@ type LocationRepository interface {
 	Create(location *models.Location) error
 	FindAllActive() ([]models.Location, error)
 	FindActiveByID(id uint) (*models.Location, error)
+	FindTraysByLocationID(locationID uint) ([]LocationTrayRow, error)
+	ExistsActiveByCode(locationCode string, excludeID *uint) (bool, error)
 	Update(location *models.Location) error
 	SoftDeleteByID(id uint) error
+}
+
+type LocationTrayRow struct {
+	ID            uint   `json:"id"`
+	TrayCode      string `json:"tray_code"`
+	QRCode        string `json:"qr_code"`
+	Description   string `json:"description"`
+	IsActive      bool   `json:"is_active"`
+	TotalQuantity int64  `json:"total_quantity"`
+	ProductsCount int64  `json:"products_count"`
 }
 
 type locationRepository struct {
@@ -69,6 +82,42 @@ func (r *locationRepository) FindActiveByID(id uint) (*models.Location, error) {
 		return nil, err
 	}
 	return &location, nil
+}
+
+func (r *locationRepository) FindTraysByLocationID(locationID uint) ([]LocationTrayRow, error) {
+	rows := make([]LocationTrayRow, 0)
+	if err := r.db.Raw(`
+		SELECT
+			t.id,
+			t.tray_code,
+			COALESCE(t.qr_code, '') AS qr_code,
+			COALESCE(t.description, '') AS description,
+			t.is_active,
+			COALESCE(SUM(i.quantity), 0)::bigint AS total_quantity,
+			COALESCE(COUNT(DISTINCT i.product_id), 0)::bigint AS products_count
+		FROM trays t
+		LEFT JOIN inventory i ON i.tray_id = t.id
+		WHERE t.location_id = ?
+		GROUP BY t.id, t.tray_code, t.qr_code, t.description, t.is_active
+		ORDER BY t.is_active DESC, t.tray_code ASC
+	`, locationID).Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (r *locationRepository) ExistsActiveByCode(locationCode string, excludeID *uint) (bool, error) {
+	var count int64
+	query := r.db.Model(&models.Location{}).
+		Where("is_active = ?", true).
+		Where("LOWER(TRIM(location_code)) = ?", strings.ToLower(strings.TrimSpace(locationCode)))
+	if excludeID != nil && *excludeID > 0 {
+		query = query.Where("id <> ?", *excludeID)
+	}
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func (r *locationRepository) Update(location *models.Location) error {

@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Trang BOM chinh theo clean architecture o FE.
-- Dependencies: BOM hooks/service/components + auth context.
-- API contract: GET/POST/PUT/DELETE /boms va GET /boms/:id/items.
-- Role access: ADMIN va WAREHOUSE duoc quan ly BOM; VIEWER chi xem neu backend cho phep.
-- Maintenance notes: Giu page o vai tro coordinator, khong chen HTTP/business logic truc tiep.
+- Mục đích: Trang BOM chinh theo clean architecture o FE.
+- Phụ thuộc: BOM hooks/service/components + auth context.
+- Hợp đồng API: GET/POST/PUT/DELETE /boms va GET /boms/:id/items.
+- Role access: ADMIN va WAREHOUSE duoc quan ly BOM.
+- Ghi chú bảo trì: Giu trang o vai tro coordinator, khong chen HTTP/business logic truc tiep.
 */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -33,7 +32,7 @@ import type { Order } from '../../orders/types/orderTypes'
 import { ListPagination } from '../../../shared/components/ListPagination'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination'
 
-// BOMs page.
+// BOMs trang.
 export function BOMsPage() {
   // Lay user de xu ly role UI.
   const { user } = useAuth()
@@ -52,7 +51,7 @@ export function BOMsPage() {
   const [selectedBOM, setSelectedBOM] = useState<BOM | null>(null)
   // State mo dong dialog xem items.
   const [itemsOpen, setItemsOpen] = useState(false)
-  // Senior Handover: State mo dong dialog tao order tu BOM.
+  // Ghi chú: State mo dong dialog tao order tu BOM.
   const [orderCreateOpen, setOrderCreateOpen] = useState(false)
 
   // Form create/update BOM state.
@@ -116,7 +115,7 @@ export function BOMsPage() {
   }, [bomsQuery.data, search])
 
   useEffect(() => {
-    // Senior Handover: Reset page to 1 whenever search/filter changes.
+    // Ghi chú: Reset trang to 1 whenever search/filter changes.
     setCurrentPage(1)
   }, [search])
 
@@ -269,7 +268,7 @@ export function BOMsPage() {
         <ListPagination
           currentPage={currentPage}
           totalItems={filteredBOMs.length}
-          pageSize={DEFAULT_PAGE_SIZE}
+          trangSize={DEFAULT_PAGE_SIZE}
           onPageChange={setCurrentPage}
         />
       </Paper>

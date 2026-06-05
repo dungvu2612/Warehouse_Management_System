@@ -1,14 +1,14 @@
 /*
-Senior Handover Note:
-- Purpose: Bang danh sach san pham va thao tac QR (View/Copy/Print label).
-- Dependencies: ProductImageThumb + qrCode helper + Product types.
-- API contract: Nhan data products da fetch tu page/hooks, component khong goi API truc tiep.
-- Business rules: QR su dung operational identifier product.qr_code (fallback product_code).
-- Permission notes: Edit/Delete chi mo cho role co quyen (isAdmin do page truyen vao).
-- Maintenance notes: Neu doi layout label in, cap nhat ham printLabel tai file nay.
+- Mục đích: Bang danh sach san pham va thao tac QR (View/Copy/Print label).
+- Phụ thuộc: ProductImageThumb + qrCode helper + Product types.
+- Hợp đồng API: Nhan data products da fetch tu trang/hooks, component khong goi API truc tiep.
+- Quy tắc nghiệp vụ: QR su dung operational identifier product.qr_code (fallback product_code).
+- Ghi chú phân quyền: Edit/Delete chi mo cho role co quyen (isAdmin do trang truyen vao).
+- Ghi chú bảo trì: Neu doi layout label in, cap nhat ham printLabel tai file nay.
 */
 
 import {
+  Checkbox,
   Chip,
   Dialog,
   DialogContent,
@@ -37,6 +37,9 @@ interface ProductTableProps {
   isAdmin: boolean
   onEdit: (product: Product) => void
   onDelete: (product: Product) => void
+  selectedIds: number[]
+  onToggleSelect: (productId: number) => void
+  onToggleSelectAll: (productIds: number[]) => void
 }
 
 // Bảng hiển thị danh sách sản phẩm.
@@ -47,6 +50,9 @@ export function ProductTable({
   isAdmin,
   onEdit,
   onDelete,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
 }: ProductTableProps) {
   const [selectedQR, setSelectedQR] = useState<Product | null>(null)
   const [selectedQRImage, setSelectedQRImage] = useState('')
@@ -88,12 +94,22 @@ export function ProductTable({
     void toQrDataUrl(qrValue).then(setSelectedQRImage).catch(() => setSelectedQRImage(''))
   }, [selectedQR])
 
+  const selectedCountInPage = products.filter((product) => selectedIds.includes(product.id)).length
+  const allSelectedInPage = products.length > 0 && selectedCountInPage === products.length
+
   return (
     <>
       <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: 2 }}>
         <Table>
         <TableHead sx={{ bgcolor: 'grey.50' }}>
           <TableRow>
+            <TableCell padding="checkbox">
+              <Checkbox
+                checked={allSelectedInPage}
+                indeterminate={selectedCountInPage > 0 && !allSelectedInPage}
+                onChange={() => onToggleSelectAll(products.map((product) => product.id))}
+              />
+            </TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Ảnh</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Mã SP</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>QR</TableCell>
@@ -110,24 +126,27 @@ export function ProductTable({
         <TableBody>
           {isLoading && (
             <TableRow>
-              <TableCell colSpan={10}>Đang tải dữ liệu...</TableCell>
+              <TableCell colSpan={11}>Đang tải dữ liệu...</TableCell>
             </TableRow>
           )}
 
           {isError && (
             <TableRow>
-              <TableCell colSpan={10}>Không tải được dữ liệu sản phẩm.</TableCell>
+              <TableCell colSpan={11}>Không tải được dữ liệu sản phẩm.</TableCell>
             </TableRow>
           )}
 
           {!isLoading && !isError && products.length === 0 && (
             <TableRow>
-              <TableCell colSpan={10}>Không có sản phẩm phù hợp.</TableCell>
+              <TableCell colSpan={11}>Không có sản phẩm phù hợp.</TableCell>
             </TableRow>
           )}
 
           {products.map((product) => (
             <TableRow key={product.id} hover>
+              <TableCell padding="checkbox">
+                <Checkbox checked={selectedIds.includes(product.id)} onChange={() => onToggleSelect(product.id)} />
+              </TableCell>
               <TableCell>
                 <ProductImageThumb src={product.image_url} alt={product.product_name} size={56} />
               </TableCell>

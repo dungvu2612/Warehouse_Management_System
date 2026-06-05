@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Dinh nghia contracts TypeScript cho man Audit Consistency va cac section hien thi ket qua doi soat workflow kho.
-- Dependencies: Dung boi api/service/hooks/components/pages trong `features/audit-consistency` va component Pick Logs reusable.
-- Audit logic: Type bao phu order, picking, inventory, stock transactions, pick logs va danh sach issues.
-- API assumptions: Endpoint chinh GET /audit/consistency/:order_id co the toi gian; frontend adapter se bo sung truong thong tin thieu.
-- Maintenance notes: Khi backend bo sung/doi contract audit, cap nhat type tai day de compile canh bao cac diem anh huong.
+- Mục đích: Dinh nghia contracts TypeScript cho man Audit Consistency va cac section hien thi ket qua doi soat workflow kho.
+- Phụ thuộc: Dung boi api/service/hooks/components/pages trong `features/audit-consistency` va component Pick Logs reusable.
+- Logic audit: Type bao phu order, picking, inventory, stock transactions, pick logs va danh sach issues.
+- Giả định API: Endpoint chinh GET /audit/consistency/:order_id co the toi gian; frontend adapter se bo sung truong thong tin thieu.
+- Ghi chú bảo trì: Khi backend bo sung/doi contract audit, cap nhat type tai day de compile canh bao cac diem anh huong.
 */
 
 export type AuditSeverity = 'WARNING' | 'ERROR' | 'CRITICAL'

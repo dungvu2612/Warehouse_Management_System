@@ -1,12 +1,8 @@
 package routes
 
 /*
-Senior Handover Note:
-- Purpose: Dang ky endpoint module order va policy role cho flow picking.
-- Dependencies: order repository/service/handler + auth/role middleware.
-- API contract: /orders CRUD scan/confirm/finish/progress.
-- Role access: ADMIN + WAREHOUSE duoc van hanh picking flow; VIEWER khong duoc truy cap endpoint nay.
-- Maintenance notes: Neu doi role contract, cap nhat RequireRoles dong bo voi frontend guard.
+Dang ky endpoint module order va policy role cho flow picking.
+Chi ADMIN va WAREHOUSE duoc truy cap.
 */
 
 import (
@@ -41,8 +37,8 @@ func OrderRoutes(r *gin.Engine) {
 		orders.POST("/:id/finish", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.FinishOrder)
 		orders.GET("/:id/picking-tasks", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetOrderPickingTasks)
 		orders.GET("/:id/progress", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetOrderProgress)
-		// Xem order cho ADMIN và WAREHOUSE.
-		orders.GET("", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetOrders)
-		orders.GET("/:id", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetOrderByID)
+		// Xem danh sách/chi tiết order chỉ dành cho ADMIN.
+		orders.GET("", middleware.RequireRoles("ADMIN"), handler.GetOrders)
+		orders.GET("/:id", middleware.RequireRoles("ADMIN"), handler.GetOrderByID)
 	}
 }

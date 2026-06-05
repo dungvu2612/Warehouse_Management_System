@@ -1,9 +1,6 @@
 /*
-Senior Handover Note:
-- File này cấu hình router toàn app và giữ nguyên flow auth/private route hiện có.
-- Phụ thuộc vào guards (`PrivateRoute`, `PublicRoute`) và các page-level feature modules.
-- Khi thêm route mới, chỉ khai báo path + page component; không nhúng logic nghiệp vụ trực tiếp trong router.
-- Role policy: Staff/PDA scanner routes are WAREHOUSE-only and are not admin routes.
+Router chính của ứng dụng.
+Khai báo route theo module, không đặt logic nghiệp vụ ở đây.
 */
 
 import { Navigate, createBrowserRouter } from 'react-router-dom'
@@ -27,6 +24,8 @@ import { PDAPutawayPage } from '../features/pda-putaway/pages/PDAPutawayPage'
 import { DashboardPage } from '../features/dashboard/pages/DashboardPage'
 import { StaffTasksPage } from '../features/staff-tasks/pages/StaffTasksPage'
 import { StaffPickingDetailPage } from '../features/pda-picking/pages/StaffPickingDetailPage'
+import { UserManagementPage } from '../features/users/pages/UserManagementPage'
+import { UserDetailPage } from '../features/users/pages/UserDetailPage'
 
 // Cấu hình toàn bộ route của app.
 export const router = createBrowserRouter([
@@ -60,9 +59,46 @@ export const router = createBrowserRouter([
       { path: 'warehouse-overview', element: <WarehouseOverviewPage /> },
       { path: 'import-receipts', element: <ImportReceiptsPage /> },
       { path: 'boms', element: <BOMsPage /> },
-      { path: 'orders', element: <OrdersPage /> },
-      { path: 'orders/:id', element: <OrderDetail /> },
-      { path: 'orders/:id/edit', element: <OrderEditPage /> },
+      {
+        path: 'orders',
+        element: (
+          <RoleRoute allowedRoles={['ADMIN']}>
+            <OrdersPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'users',
+        element: (
+          <RoleRoute allowedRoles={['ADMIN']}>
+            <UserManagementPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'users/:id',
+        element: (
+          <RoleRoute allowedRoles={['ADMIN']}>
+            <UserDetailPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'orders/:id',
+        element: (
+          <RoleRoute allowedRoles={['ADMIN']}>
+            <OrderDetail />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'orders/:id/edit',
+        element: (
+          <RoleRoute allowedRoles={['ADMIN']}>
+            <OrderEditPage />
+          </RoleRoute>
+        ),
+      },
       {
         path: 'staff/tasks',
         element: (

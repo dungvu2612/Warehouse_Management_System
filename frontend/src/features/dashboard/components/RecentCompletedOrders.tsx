@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Danh sach don hoan tat gan day cho admin.
-- Dependencies: DashboardRecentCompletedOrderItem.
-- API contract: admin_revenue.recent_completed_orders.
+- Mục đích: Danh sach don hoan tat gan day cho admin.
+- Phụ thuộc: DashboardRecentCompletedOrderItem.
+- Hợp đồng API: admin_revenue.recent_completed_orders.
 - Role access: Chi ADMIN.
-- Maintenance notes: completed_at fallback tu updated_at neu backend chua co completed_at rieng.
+- Ghi chú bảo trì: completed_at fallback tu updated_at neu backend chua co completed_at rieng.
 */
 
 import { Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material'

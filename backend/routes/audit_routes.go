@@ -1,12 +1,11 @@
 package routes
 
 /*
-Senior Handover Note:
-- Purpose: Dang ky endpoint audit consistency.
-- Dependencies: audit repository/service/handler + role middleware.
-- API contract: GET /audit/consistency/:order_id.
+- Mục đích: Dang ky endpoint audit consistency.
+- Phụ thuộc: audit repository/service/handler + role middleware.
+- Hợp đồng API: GET /audit/consistency/:order_id.
 - Role access: ADMIN + WAREHOUSE.
-- Maintenance notes: Permission can phu hop module dashboard va order detail audit tab.
+- Ghi chú bảo trì: Permission can phu hop module dashboard va order detail audit tab.
 */
 
 import (

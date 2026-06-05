@@ -1,7 +1,7 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay la bang hien thi danh sach trays, thuoc presentation layer.
-- Phu thuoc vao type `TrayDisplay`; page truyen san loading/error/empty states va actions de render.
+- Phu thuoc vao type `TrayDisplay`; trang truyen san loading/error/empty states va actions de render.
 - Component nay khong goi API truc tiep de dam bao clean architecture.
 */
 
@@ -100,21 +100,21 @@ export function TrayTable({ trays, isLoading, isError, isAdmin, onEdit, onDelete
         <TableBody>
           {isLoading && (
             <TableRow>
-              {/* Senior Handover: Loading state khi query GET /trays chua hoan tat. */}
+              {/* Ghi chú: Trạng thái đang tải khi query GET /trays chua hoan tat. */}
               <TableCell colSpan={11}>Đang tải danh sách khay...</TableCell>
             </TableRow>
           )}
 
           {isError && (
             <TableRow>
-              {/* Senior Handover: Error state khi fetch danh sach trays that bai. */}
+              {/* Ghi chú: Trạng thái lỗi khi fetch danh sach trays that bai. */}
               <TableCell colSpan={11}>Không tải được danh sách khay.</TableCell>
             </TableRow>
           )}
 
           {!isLoading && !isError && trays.length === 0 && (
             <TableRow>
-              {/* Senior Handover: Empty state khi API tra danh sach rong. */}
+              {/* Ghi chú: Trạng thái rỗng khi API tra danh sach rong. */}
               <TableCell colSpan={11}>Chưa có khay nào.</TableCell>
             </TableRow>
           )}

@@ -1,49 +1,33 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay la service layer cua module Inventory, nam giua hooks va API layer.
 - Phu thuoc vao `inventoryApi` de thao tac du lieu va cung cap helper enrich/filter/canh bao ton thap.
-- Khong dua React state vao service; giu use-case dung chung de page/components gon va de bao tri.
+- Khong dua React state vao service; giu use-case dung chung de trang/components gon va de bao tri.
 */
 
 import { inventoryApi } from '../api/inventoryApi'
 import type {
   InventoryAdjustPayload,
-  InventoryAdjustByTrayPayload,
   InventoryAdjustResponse,
-  InventoryCreatePayload,
   InventoryDisplayItem,
   InventoryItem,
-  InventoryTrayScanResponse,
   LocationOption,
   ProductOption,
   TrayOption,
 } from '../types/inventoryTypes'
 
 export const inventoryService = {
-  // Senior Handover: Lay danh sach inventory tho tu backend.
+  // Ghi chú: Lay danh sach inventory tho tu backend.
   getInventory: async (): Promise<InventoryItem[]> => {
     return inventoryApi.getInventory()
   },
 
-  // Senior Handover: Tao ton kho ban dau.
-  createInventory: async (payload: InventoryCreatePayload): Promise<InventoryItem> => {
-    return inventoryApi.createInventory(payload)
-  },
-
-  // Senior Handover: Dieu chinh ton kho (+/-) theo inventory id.
+  // Ghi chú: Dieu chinh ton kho (+/-) theo inventory id.
   adjustInventory: async (
     id: number,
     payload: InventoryAdjustPayload,
   ): Promise<InventoryAdjustResponse> => {
     return inventoryApi.adjustInventory(id, payload)
-  },
-
-  adjustInventoryByTray: async (payload: InventoryAdjustByTrayPayload): Promise<InventoryAdjustResponse> => {
-    return inventoryApi.adjustByTray(payload)
-  },
-
-  scanTrayByQRCode: async (trayQRCode: string): Promise<InventoryTrayScanResponse> => {
-    return inventoryApi.scanTrayByQRCode(trayQRCode)
   },
 
   getProductOptions: async (): Promise<ProductOption[]> => {
@@ -61,7 +45,7 @@ export const inventoryService = {
     return locations.filter((location) => location.is_active)
   },
 
-  // Senior Handover: Enrich inventory list bang product/tray/location de phuc vu filter + low-stock warning UI.
+  // Ghi chú: Enrich inventory list bang product/tray/location de phuc vu filter + low-stock warning UI.
   mapInventoryForDisplay: (
     inventory: InventoryItem[],
     products: ProductOption[],
@@ -94,7 +78,7 @@ export const inventoryService = {
       }
     })
 
-    // Senior Handover: Bo sung dong inventory ao cho cac product active chua co ban ghi ton de UI hien thi day du danh muc san pham.
+    // Ghi chú: Bo sung dong inventory ao cho cac product active chua co ban ghi ton de UI hien thi day du danh muc san pham.
     const existingProductIds = new Set(realRows.map((row) => row.product_id))
     const maxId = realRows.reduce((acc, row) => Math.max(acc, row.id), 0)
     let syntheticIdSeed = maxId + 1

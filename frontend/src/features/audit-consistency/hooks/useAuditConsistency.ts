@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: React Query hook cho Order Audit panel embedded trong Order Detail.
-- Dependencies: auditConsistencyApi.
-- API contract: GET /audit/consistency/:order_id va endpoint enrich trong adapter.
-- Business rules: Hook chi query read-only audit.
-- Replacement refactor notes: bo hook order options cua standalone audit page.
-- Maintenance notes: Neu can cache strategy khac, cap nhat query key tai day.
+- Mục đích: React Query hook cho panel Audit được nhúng trong Chi tiết đơn.
+- Phụ thuộc: auditConsistencyApi.
+- Hợp đồng API: GET /audit/consistency/:order_id va endpoint enrich trong adapter.
+- Quy tắc nghiệp vụ: Hook chi query chỉ xem audit.
+- Ghi chú refactor thay thế: bo hook order options cua standalone audit trang.
+- Ghi chú bảo trì: Neu can cache strategy khac, cap nhat query key tai day.
 */
 
 import { useQuery } from '@tanstack/react-query'
@@ -16,7 +15,7 @@ const AUDIT_CONSISTENCY_QUERY_KEY = ['audit-consistency'] as const
 export function useAuditConsistencyQuery(orderId: number | null) {
   return useQuery({
     queryKey: [...AUDIT_CONSISTENCY_QUERY_KEY, orderId],
-    // Senior Handover: Audit fetch block - lay ket qua doi soat tong hop theo order id.
+    // Ghi chú: Audit fetch block - lay ket qua doi soat tong hop theo order id.
     queryFn: () => auditConsistencyApi.getAuditConsistency(orderId as number),
     enabled: typeof orderId === 'number' && orderId > 0,
   })

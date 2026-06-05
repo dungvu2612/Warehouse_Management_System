@@ -1,10 +1,10 @@
 import type { ProductPayload } from '../types/productTypes'
 
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay chua validate/normalize form Product truoc khi submit API.
 - Phu thuoc vao type `ProductPayload`.
-- Luu y bao tri: khi doi rule nghiep vu product, cap nhat tai day de tranh ro logic validate o page/component.
+- Luu y bao tri: khi doi rule nghiep vu product, cap nhat tai day de tranh ro logic validate o trang/component.
 */
 
 // Validate form product phía frontend trước khi gọi API.

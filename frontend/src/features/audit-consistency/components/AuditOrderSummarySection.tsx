@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Section A - hien thi thong tin tong quan order de doi soat.
-- Dependencies: Nhan `order_summary` tu `AuditConsistencyResult`.
-- Audit logic: Chi render thong tin order source, khong xu ly normalize.
-- API assumptions: Truong co the fallback "Data not provided by backend" neu thieu.
-- Maintenance notes: Giu section nhe de supervisor doc nhanh.
+- Mục đích: Section A - hien thi thong tin tong quan order de doi soat.
+- Phụ thuộc: Nhan `order_summary` tu `AuditConsistencyResult`.
+- Logic audit: Chi render thong tin order source, khong xu ly normalize.
+- Giả định API: Truong co the fallback "Data not provided by backend" neu thieu.
+- Ghi chú bảo trì: Giu section nhe de supervisor doc nhanh.
 */
 
 import { ContentCopy } from '@mui/icons-material'

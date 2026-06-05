@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Page orchestration cho man Import Receipts.
-- Dependencies: hooks Import Receipts + `importReceiptsService` + `useAuth`.
-- API contract: GET/POST /import-receipts.
-- Role access: ADMIN duoc tao; WAREHOUSE/VIEWER chi xem theo policy backend/frontend.
-- Maintenance notes: Giu permission tai page de dong bo voi route policy.
+- Mục đích: Page orchestration cho man Import Receipts.
+- Phụ thuộc: hooks Import Receipts + `importReceiptsService` + `useAuth`.
+- Hợp đồng API: GET/POST /import-receipts.
+- Role access: ADMIN duoc tao; WAREHOUSE chi xem theo policy backend/frontend.
+- Ghi chú bảo trì: Giu permission tai trang de dong bo voi route policy.
 */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -38,12 +37,12 @@ import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination
 const defaultCreateForm: CreateImportReceiptPayload = {
   supplier_name: '',
   note: '',
-  items: [{ product_id: 0, tray_id: 0, quantity: 1 }],
+  items: [{ product_id: 0, tray_id: 0, tray_qr_code: '', quantity: 1 }],
 }
 
 export function ImportReceiptsPage() {
   const { user } = useAuth()
-  // Senior Handover: Permission check block - chi ADMIN duoc tao phieu nhap.
+  // Ghi chú: Permission check block - chi ADMIN duoc tao phieu nhap.
   const isAdmin = user?.role === 'ADMIN'
 
   const [search, setSearch] = useState('')
@@ -73,7 +72,7 @@ export function ImportReceiptsPage() {
     onError: () => setBanner({ type: 'error', text: 'Từ chối yêu cầu thất bại.' }),
   })
 
-  // Senior Handover: Refresh data block - map danh sach phieu nhap de render summary table.
+  // Ghi chú: Khối làm mới dữ liệu - map danh sách phiếu nhập để render bảng tổng hợp.
   const receiptDisplay = useMemo(() => {
     return importReceiptsService.mapReceiptsForDisplay(receiptsQuery.data || [])
   }, [receiptsQuery.data])
@@ -83,7 +82,7 @@ export function ImportReceiptsPage() {
   }, [receiptDisplay, search])
 
   useEffect(() => {
-    // Senior Handover: Reset page to 1 whenever search/filter changes.
+    // Ghi chú: Reset trang to 1 whenever search/filter changes.
     setCurrentPage(1)
   }, [search])
 
@@ -112,7 +111,7 @@ export function ImportReceiptsPage() {
     if (!isAdmin) return
     setCreateError('')
 
-    // Senior Handover: Submit receipt block - validate va normalize payload truoc khi POST /import-receipts.
+    // Ghi chú: Submit receipt block - validate va normalize payload truoc khi POST /import-receipts.
     const validationError = validateImportReceiptForm(createForm)
     if (validationError) {
       setCreateError(validationError)
@@ -205,7 +204,7 @@ export function ImportReceiptsPage() {
         <ListPagination
           currentPage={currentPage}
           totalItems={filteredReceipts.length}
-          pageSize={DEFAULT_PAGE_SIZE}
+          trangSize={DEFAULT_PAGE_SIZE}
           onPageChange={setCurrentPage}
         />
       </Paper>

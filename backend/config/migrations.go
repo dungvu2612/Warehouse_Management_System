@@ -9,7 +9,7 @@ Thông tin handover:
 - Lưu ý bảo trì: chỉ thêm migration tăng tiến, tránh sửa logic migration cũ đã chạy production.
 */
 
-// Senior Handover: RunDatabaseMigrations chạy các migration thủ công, idempotent cho schema hiện tại.
+// Ghi chú: RunDatabaseMigrations chạy các migration thủ công, idempotent cho schema hiện tại.
 func RunDatabaseMigrations() {
 	// 0) Tao bang putaway_requests de staff gui yeu cau cho admin duyet.
 	if err := DB.Exec(`
@@ -134,7 +134,7 @@ func RunDatabaseMigrations() {
 		log.Fatalf("failed to add products.product_type check constraint: %v", err)
 	}
 
-	// Senior Handover: Thêm cột image_url để lưu ảnh sản phẩm đã chuẩn hóa kích thước từ frontend.
+	// Ghi chú: Thêm cột image_url để lưu ảnh sản phẩm đã chuẩn hóa kích thước từ frontend.
 	if err := DB.Exec(`
 		ALTER TABLE products
 		ADD COLUMN IF NOT EXISTS image_url TEXT
@@ -142,7 +142,7 @@ func RunDatabaseMigrations() {
 		log.Fatalf("failed to add products.image_url: %v", err)
 	}
 
-	// Senior Handover: Them cot qr_code cho products phuc vu scan workflow warehouse.
+	// Ghi chú: Them cot qr_code cho products phuc vu scan workflow warehouse.
 	if err := DB.Exec(`
 		ALTER TABLE products
 		ADD COLUMN IF NOT EXISTS qr_code VARCHAR(100)
@@ -150,7 +150,7 @@ func RunDatabaseMigrations() {
 		log.Fatalf("failed to add products.qr_code: %v", err)
 	}
 
-	// Senior Handover: Backfill qr_code = product_code cho du lieu cu.
+	// Ghi chú: Backfill qr_code = product_code cho du lieu cu.
 	if err := DB.Exec(`
 		UPDATE products
 		SET qr_code = product_code
@@ -166,7 +166,7 @@ func RunDatabaseMigrations() {
 		log.Fatalf("failed to set not null for products.qr_code: %v", err)
 	}
 
-	// Senior Handover: Dam bao qr_code unique de scan nhanh theo gia tri QR.
+	// Ghi chú: Dam bao qr_code unique de scan nhanh theo gia tri QR.
 	if err := DB.Exec(`
 		CREATE UNIQUE INDEX IF NOT EXISTS uq_products_qr_code
 		ON products (qr_code)
@@ -182,7 +182,7 @@ func RunDatabaseMigrations() {
 		log.Fatalf("failed to add boms.created_by: %v", err)
 	}
 
-	// Senior Handover: Bo sung customer_phone va customer_address cho orders phuc vu giao hang/in phieu/doi soat.
+	// Ghi chú: Bo sung customer_phone va customer_address cho orders phuc vu giao hang/in phieu/doi soat.
 	if err := DB.Exec(`
 		ALTER TABLE orders
 		ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(50)

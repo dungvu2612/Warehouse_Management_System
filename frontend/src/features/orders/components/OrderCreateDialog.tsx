@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Dialog tao don hang theo items[] da chon, khong con flow BOM single-select.
-- Dependencies: Products query + OrderItemsEditor + orders API POST /orders.
-- API contract: POST /orders { customer_name, customer_phone, customer_address, items[] }.
+- Mục đích: Dialog tao don hang theo items[] da chon, khong con flow BOM single-select.
+- Phụ thuộc: Products query + OrderItemsEditor + orders API POST /orders.
+- Hợp đồng API: POST /orders { customer_name, customer_phone, customer_address, items[] }.
 - Multi-item order behavior: Cho phep them/sua/xoa nhieu dong item truoc khi tao don.
-- Permission rule: Gia san pham cho phep sua khi canEditPrice=true (ADMIN).
-- Maintenance notes: Validate items o FE de feedback nhanh, backend van la nguon su that cuoi.
+- Quy tắc phân quyền: Gia san pham cho phep sua khi canEditPrice=true (ADMIN).
+- Ghi chú bảo trì: Validate items o FE de feedback nhanh, backend van la nguon su that cuoi.
 */
 
 import { useMemo, useState } from 'react'

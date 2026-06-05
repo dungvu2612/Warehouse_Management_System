@@ -1,7 +1,7 @@
 package handlers
 
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay la transport layer HTTP cho module Tray, da mo rong CRUD va payload create/update khong nhap tray_code/qr_code.
 - Phu thuoc vao TrayService va domain errors de map dung HTTP status code.
 - Luu y bao tri: tray_code/qr_code duoc service sinh tu dong theo location_code, handler khong nhan 2 field nay tu client.
@@ -71,6 +71,8 @@ func mapTrayServiceError(c *gin.Context, err error) {
 	case errors.Is(err, repositories.ErrLocationNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	case errors.Is(err, repositories.ErrTrayCodeExists):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	case errors.Is(err, repositories.ErrTrayPairExists):
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

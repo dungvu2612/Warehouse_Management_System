@@ -19,6 +19,7 @@ import { ProductTable } from '../components/ProductTable'
 import { isSupportedProductImageType, resizeProductImageToDataUrl } from '../../../shared/lib/productImage'
 import { ListPagination } from '../../../shared/components/ListPagination'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination'
+import { toQrDataUrl } from '../../../shared/lib/qrCode'
 
 // Trang Products chỉ giữ orchestration: state màn hình + gọi hooks + ghép components.
 export function ProductsPage() {
@@ -37,6 +38,7 @@ export function ProductsPage() {
   const [formError, setFormError] = useState('')
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [selectedProductIds, setSelectedProductIds] = useState<number[]>([])
 
   // Debounce 300ms để giảm số lượng request preview code khi user gõ nhanh.
   useEffect(() => {
@@ -91,13 +93,18 @@ export function ProductsPage() {
   }, [productsQuery.data, search, activeType])
 
   useEffect(() => {
-    // Senior Handover: Reset page to 1 whenever search/filter changes.
+    // Ghi chú: Reset trang to 1 whenever search/filter changes.
     setCurrentPage(1)
   }, [search, activeType])
 
   const paginatedProducts = useMemo(() => {
     return paginateItems(filteredProducts, currentPage, DEFAULT_PAGE_SIZE)
   }, [filteredProducts, currentPage])
+
+  const selectedProducts = useMemo(() => {
+    const selectedSet = new Set(selectedProductIds)
+    return filteredProducts.filter((product) => selectedSet.has(product.id))
+  }, [filteredProducts, selectedProductIds])
 
   // Preview product_code realtime tu backend khi tao moi.
   useEffect(() => {
@@ -146,6 +153,21 @@ export function ProductsPage() {
       return
     }
 
+    const normalizeName = (value: string) =>
+      value
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toLocaleLowerCase('vi-VN')
+    const targetName = normalizeName(form.product_name)
+    const duplicate = (productsQuery.data || []).find((product) => {
+      if (editingProduct && product.id === editingProduct.id) return false
+      return normalizeName(product.product_name) === targetName
+    })
+    if (duplicate) {
+      setFormError(`Tên sản phẩm đã tồn tại: ${duplicate.product_name}`)
+      return
+    }
+
     const payload = normalizeProductPayload(form)
 
     if (editingProduct) {
@@ -169,7 +191,7 @@ export function ProductsPage() {
     }
 
     try {
-      // Senior Handover: Chuẩn hóa ảnh về cùng kích thước trước khi lưu để đảm bảo UI đồng nhất toàn hệ thống.
+      // Ghi chú: Chuẩn hóa ảnh về cùng kích thước trước khi lưu để đảm bảo UI đồng nhất toàn hệ thống.
       const resizedDataUrl = await resizeProductImageToDataUrl(file)
       setForm((prev) => ({ ...prev, image_url: resizedDataUrl }))
       setFormError('')
@@ -177,6 +199,62 @@ export function ProductsPage() {
       const message = error instanceof Error ? error.message : 'Không xử lý được ảnh sản phẩm.'
       setFormError(message)
     }
+  }
+
+  const handleToggleSelectProduct = (productId: number) => {
+    setSelectedProductIds((prev) =>
+      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId],
+    )
+  }
+
+  const handleToggleSelectAllInPage = (productIds: number[]) => {
+    setSelectedProductIds((prev) => {
+      const allSelected = productIds.every((id) => prev.includes(id))
+      if (allSelected) return prev.filter((id) => !productIds.includes(id))
+      return Array.from(new Set([...prev, ...productIds]))
+    })
+  }
+
+  const handlePrintSelectedProductQrs = async () => {
+    if (selectedProducts.length === 0) return
+    const rows = await Promise.all(
+      selectedProducts.map(async (product) => {
+        const qrValue = product.qr_code || product.product_code
+        const qrImage = await toQrDataUrl(qrValue)
+        return { product, qrValue, qrImage }
+      }),
+    )
+
+    const printWindow = window.open('', '_blank', 'width=900,height=700')
+    if (!printWindow) return
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>In QR sản phẩm</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; padding: 16px;">
+          <h2>Danh sách QR sản phẩm</h2>
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">
+            ${rows
+              .map(
+                ({ product, qrValue, qrImage }) => `
+                  <div style="border:1px solid #dbe2ea;border-radius:8px;padding:12px;">
+                    <div style="font-weight:700;font-family:monospace;">${product.product_code}</div>
+                    <div style="margin-top:4px;">${product.product_name}</div>
+                    <img src="${qrImage}" alt="QR" style="width:170px;height:170px;display:block;margin:8px 0;" />
+                    <div style="font-family:monospace;">${qrValue}</div>
+                  </div>
+                `,
+              )
+              .join('')}
+          </div>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+    printWindow.focus()
+    printWindow.print()
   }
 
   return (
@@ -203,6 +281,13 @@ export function ProductsPage() {
           <Stack direction="row" spacing={1}>
             <Button variant="outlined" startIcon={<Refresh />} onClick={() => productsQuery.refetch()}>
               Làm mới
+            </Button>
+            <Button
+              variant="outlined"
+              disabled={selectedProducts.length === 0}
+              onClick={() => void handlePrintSelectedProductQrs()}
+            >
+              In QR đã chọn ({selectedProducts.length})
             </Button>
             <Button variant="contained" startIcon={<Add />} disabled={!isAdmin} onClick={openCreateDialog}>
               Thêm sản phẩm
@@ -249,11 +334,14 @@ export function ProductsPage() {
           isAdmin={isAdmin}
           onEdit={openEditDialog}
           onDelete={handleDelete}
+          selectedIds={selectedProductIds}
+          onToggleSelect={handleToggleSelectProduct}
+          onToggleSelectAll={handleToggleSelectAllInPage}
         />
         <ListPagination
           currentPage={currentPage}
           totalItems={filteredProducts.length}
-          pageSize={DEFAULT_PAGE_SIZE}
+          trangSize={DEFAULT_PAGE_SIZE}
           onPageChange={setCurrentPage}
         />
       </Paper>

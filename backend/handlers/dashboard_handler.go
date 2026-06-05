@@ -1,12 +1,11 @@
 package handlers
 
 /*
-Senior Handover Note:
-- Purpose: HTTP transport layer cho Dashboard role-based.
-- Dependencies: Dashboard service + auth middleware context (`role`).
-- API contract: GET /dashboard/stats tra payload tong hop theo role.
+- Mục đích: HTTP transport layer cho Dashboard role-based.
+- Phụ thuộc: Dashboard service + auth middleware context (`role`).
+- Hợp đồng API: GET /dashboard/stats tra payload tong hop theo role.
 - Role access: Middleware da chan role; handler van fallback 403 neu role context sai.
-- Maintenance notes: Neu thay doi response shape, cap nhat service truoc roi toi handler.
+- Ghi chú bảo trì: Neu thay doi response shape, cap nhat service truoc roi toi handler.
 */
 
 import (

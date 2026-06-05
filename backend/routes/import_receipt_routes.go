@@ -1,12 +1,11 @@
 package routes
 
 /*
-Senior Handover Note:
-- Purpose: Dang ky endpoint import receipt va role policy.
-- Dependencies: import_receipt repository/service/handler + middleware.
-- API contract: /import-receipts create/list/detail.
+- Mục đích: Dang ky endpoint import receipt va role policy.
+- Phụ thuộc: import_receipt repository/service/handler + middleware.
+- Hợp đồng API: /import-receipts create/list/detail.
 - Role access: ADMIN tao phieu; ADMIN + WAREHOUSE xem lich su.
-- Maintenance notes: Permission map nay dong bo voi frontend ImportReceiptsPage.
+- Ghi chú bảo trì: Permission map nay dong bo voi frontend ImportReceiptsPage.
 */
 
 import (

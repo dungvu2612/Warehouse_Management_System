@@ -1,7 +1,7 @@
 export type ProductType = 'COMPONENT' | 'FINISHED_GOOD'
 
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay dinh nghia contracts TypeScript cho module Products o frontend.
 - Phu thuoc truc tiep vao schema backend cho endpoint products va code-preview.
 - Luu y bao tri: khi backend doi field product (nhat la image_url), cap nhat type tai day truoc de giu strict typing.

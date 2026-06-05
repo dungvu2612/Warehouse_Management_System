@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Print-only stylesheet cho phieu don hang.
-- Dependencies: Class names tu `OrderPrintTemplate` va wrapper `no-print` trong OrderDetail.
-- API contract: Khong lien quan API; chi dinh nghia layout print/PDF.
-- Business rules: Chi in noi dung phieu khach hang, an toan bo UI van hanh noi bo khi print.
-- Permission notes: CSS read-only, khong tao nghiep vu moi.
-- Maintenance notes: Co the doi A4/A5 qua @page size tuy nhu cau.
+- Mục đích: Print-only stylesheet cho phieu don hang.
+- Phụ thuộc: Class names tu `OrderPrintTemplate` va wrapper `no-print` trong OrderDetail.
+- Hợp đồng API: Khong lien quan API; chi dinh nghia layout print/PDF.
+- Quy tắc nghiệp vụ: Chi in noi dung phieu khach hang, an toan bo UI van hanh noi bo khi print.
+- Ghi chú phân quyền: CSS chỉ xem, khong tao nghiep vu moi.
+- Ghi chú bảo trì: Co the doi A4/A5 qua @page size tuy nhu cau.
 */
 
 .order-print-root {

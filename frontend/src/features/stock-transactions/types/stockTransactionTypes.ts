@@ -1,5 +1,4 @@
 /*
-Senior Handover Note:
 - File nay dinh nghia contracts TypeScript cho module Stock Transactions o frontend.
 - Phu thuoc truc tiep vao endpoint backend GET /stock-transactions va metadata san pham GET /products.
 - Khi backend doi shape transaction/product, cap nhat type tai day truoc de giu strict typing cho cac layer con.

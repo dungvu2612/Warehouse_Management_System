@@ -1,7 +1,7 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay la service layer cua module Trays, nam giua hooks va API layer.
-- Phu thuoc vao `traysApi` de thao tac du lieu va cung cap helper filter/search cho page.
+- Phu thuoc vao `traysApi` de thao tac du lieu va cung cap helper filter/search cho trang.
 - Khong dua React state vao service; giu cac use-case dung chung de de test va maintain.
 */
 
@@ -15,40 +15,40 @@ import type {
 } from '../types/trayTypes'
 
 export const trayService = {
-  // Senior Handover: Lay danh sach trays tu backend.
+  // Ghi chú: Lay danh sach trays tu backend.
   getTrays: async (): Promise<Tray[]> => {
     return traysApi.getTrays()
   },
 
-  // Senior Handover: Tao tray moi.
+  // Ghi chú: Tao tray moi.
   createTray: async (payload: TrayPayload): Promise<Tray> => {
     return traysApi.createTray(payload)
   },
 
-  // Senior Handover: Cap nhat tray.
+  // Ghi chú: Cap nhat tray.
   updateTray: async (id: number, payload: TrayPayload): Promise<Tray> => {
     return traysApi.updateTray(id, payload)
   },
 
-  // Senior Handover: Xoa mem tray.
+  // Ghi chú: Xoa mem tray.
   deleteTray: async (id: number): Promise<{ message: string }> => {
     return traysApi.deleteTray(id)
   },
 
-  // Senior Handover: Lay product options active de tao tray.
+  // Ghi chú: Lay product options active de tao tray.
   getProductOptions: async (): Promise<ProductOption[]> => {
     const products = await traysApi.getProductOptions()
     return products.filter((product) => product.is_active)
   },
 
-  // Senior Handover: Lay location options active de tao tray.
+  // Ghi chú: Lay location options active de tao tray.
   getLocationOptions: async (): Promise<LocationOption[]> => {
     const locations = await traysApi.getLocationOptions()
     return locations.filter((location) => location.is_active)
   },
 
-  // Senior Handover: Loc list tray theo ma khay / qr / mo ta / id.
-  // Senior Handover: Join trays voi locations de hien thi location_code + location_description thay vi location_id.
+  // Ghi chú: Loc list tray theo ma khay / qr / mo ta / id.
+  // Ghi chú: Join trays voi locations de hien thi location_code + location_description thay vi location_id.
   mapTraysForDisplay: (
     trays: Tray[],
     locations: LocationOption[],

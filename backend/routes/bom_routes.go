@@ -1,12 +1,11 @@
 package routes
 
 /*
-Senior Handover Note:
-- Purpose: Dang ky endpoint module BOM va role policy.
-- Dependencies: bom repository/service/handler + middleware.
-- API contract: /boms CRUD + items.
+- Mục đích: Dang ky endpoint module BOM va role policy.
+- Phụ thuộc: bom repository/service/handler + middleware.
+- Hợp đồng API: /boms CRUD + items.
 - Role access: ADMIN + WAREHOUSE duoc quan ly BOM.
-- Maintenance notes: Permission BOM phai dong bo voi Orders/Picking vi BOM la nguon sinh task.
+- Ghi chú bảo trì: Permission BOM phai dong bo voi Orders/Picking vi BOM la nguon sinh task.
 */
 
 import (

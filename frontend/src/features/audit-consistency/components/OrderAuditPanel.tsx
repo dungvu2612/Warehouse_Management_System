@@ -1,12 +1,11 @@
 /*
-Senior Handover Note:
-- Purpose: Audit panel reusable de nhung truc tiep trong Order Detail, thay the audit page standalone.
-- Dependencies: Hooks/module audit-consistency + PickLogsTable reusable.
-- API contract: GET /audit/consistency/:order_id va endpoint enrich trong adapter.
-- Business rules: Audit la read-only; khong tao mutation tai panel nay.
-- Replacement refactor notes: standalone Audit route/menu da bo, panel nay la diem truy cap audit duy nhat tu order context.
-- Scanner workflow notes: Khong tham gia scanner flow; chi audit sau thao tac PDA.
-- Maintenance notes: Neu doi structure section audit, sua tai day va giu normalize tai api layer.
+- Mục đích: Audit panel reusable de nhung truc tiep trong Order Detail, thay the audit trang standalone.
+- Phụ thuộc: Hooks/module audit-consistency + PickLogsTable reusable.
+- Hợp đồng API: GET /audit/consistency/:order_id va endpoint enrich trong adapter.
+- Quy tắc nghiệp vụ: Audit la chỉ xem; khong tao mutation tai panel nay.
+- Ghi chú refactor thay thế: standalone Audit route/menu da bo, panel nay la diem truy cap audit duy nhat tu order context.
+- Ghi chú luồng scanner: Khong tham gia scanner flow; chi audit sau thao tac PDA.
+- Ghi chú bảo trì: Neu doi structure section audit, sua tai day va giu normalize tai api layer.
 */
 
 import { useMemo, useState } from 'react'
@@ -99,7 +98,7 @@ export function OrderAuditPanel({ orderId, orderCode }: OrderAuditPanelProps) {
     <Stack spacing={2}>
       {copyMessage && <Alert severity="success">{copyMessage}</Alert>}
 
-      {/* Senior Handover: Audit is embedded in Order Detail. */}
+      {/* Ghi chú: Audit được nhúng trong Chi tiết đơn. */}
       <AuditSummaryCard summary={result.summary} />
 
       <Box

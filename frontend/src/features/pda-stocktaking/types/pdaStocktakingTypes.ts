@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Types cho PDA Stocktaking mode.
-- Dependencies: endpoint POST /inventory/stocktaking va GET /trays/scan/:qr_code.
-- API contract: stocktaking payload tray_qr_code + physical_qty.
+- Mục đích: Types cho PDA Stocktaking mode.
+- Phụ thuộc: endpoint POST /inventory/stocktaking va GET /trays/scan/:qr_code.
+- Hợp đồng API: stocktaking payload tray_qr_code + physical_qty.
 - Warehouse business rules: so sanh system qty va physical qty, ghi ADJUST transaction.
-- Scanner workflow notes: scan tray lien tuc, Enter submit nhanh.
-- Maintenance notes: keep payload small for scanner flow.
+- Ghi chú luồng scanner: scan tray lien tuc, Enter submit nhanh.
+- Ghi chú bảo trì: keep payload small for scanner flow.
 */
 
 import type { InventoryItem } from '../../inventory/types/inventoryTypes'

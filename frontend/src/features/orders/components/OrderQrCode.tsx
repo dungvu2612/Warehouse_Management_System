@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Reusable QR block cho order print template va cac man hinh order.
-- Dependencies: `toQrDataUrl` helper tu shared/lib/qrCode.
-- API contract: Khong goi backend; QR value duoc truyen tu order.qr_code/order.order_code.
-- Business rules: QR phai encode dung operational identifier de staff scan load picking list.
-- Permission notes: Read-only render component.
-- Maintenance notes: Neu doi kich thuoc QR, cap nhat prop `size` va style tai day.
+- Mục đích: Reusable QR block cho order print template va cac man hinh order.
+- Phụ thuộc: `toQrDataUrl` helper tu shared/lib/qrCode.
+- Hợp đồng API: Khong goi backend; QR value duoc truyen tu order.qr_code/order.order_code.
+- Quy tắc nghiệp vụ: QR phai encode dung operational identifier de staff scan load picking list.
+- Ghi chú phân quyền: Chỉ xem render component.
+- Ghi chú bảo trì: Neu doi kich thuoc QR, cap nhat prop `size` va style tai day.
 */
 
 import { useEffect, useState } from 'react'

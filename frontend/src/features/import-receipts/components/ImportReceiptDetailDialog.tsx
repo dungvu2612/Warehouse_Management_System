@@ -1,7 +1,7 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay la dialog hien thi chi tiet 1 phieu nhap (header + items), thuoc presentation layer.
-- Phu thuoc vao type `ImportReceipt`; page truyen state loading/error va du lieu receipt detail.
+- Phu thuoc vao type `ImportReceipt`; trang truyen state loading/error va du lieu receipt detail.
 - Component nay khong goi API truc tiep de dam bao clean architecture.
 */
 

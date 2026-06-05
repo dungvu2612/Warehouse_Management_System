@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Progress bar don gian cho item picking tren PDA.
-- Dependencies: MUI LinearProgress.
-- HT730 screen assumptions: Progress must be readable without zoom on a 4-inch screen.
-- Responsive rules: Full-width bar, text >=14px, no table cells.
-- Scanner workflow: Updates after each valid product scan.
-- Maintenance notes: Keep numeric picked/required visible; do not rely on color only.
+- Mục đích: Progress bar don gian cho item picking tren PDA.
+- Phụ thuộc: MUI LinearProgress.
+- Giả định màn hình HT730: Tiến độ phải dễ đọc trên màn hình 4 inch mà không cần zoom.
+- Quy tắc responsive: Full-width bar, text >=14px, no table cells.
+- Luồng scanner: Updates after each valid product scan.
+- Ghi chú bảo trì: Keep numeric picked/required visible; do not rely on color only.
 */
 
 import { Box, LinearProgress, Stack, Typography } from '@mui/material'

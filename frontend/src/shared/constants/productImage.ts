@@ -5,8 +5,8 @@ Thông tin handover:
 - Lưu ý bảo trì: khi đổi chuẩn hiển thị hoặc resize, cập nhật đồng bộ các giá trị tại đây.
 */
 
-// Senior Handover: Kích thước ảnh chuẩn toàn hệ thống sau khi import/resize.
+// Ghi chú: Kích thước ảnh chuẩn toàn hệ thống sau khi import/resize.
 export const PRODUCT_IMAGE_SIZE = 96
 
-// Senior Handover: Placeholder an toàn khi sản phẩm chưa có ảnh.
+// Ghi chú: Placeholder an toàn khi sản phẩm chưa có ảnh.
 export const PRODUCT_IMAGE_PLACEHOLDER = '/images/product-placeholder.svg'

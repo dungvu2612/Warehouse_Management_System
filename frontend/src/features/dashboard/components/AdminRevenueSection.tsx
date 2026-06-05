@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Section tong hop Revenue Analytics cho role ADMIN.
-- Dependencies: Cac component con RevenueSummaryCards/RevenueChart/OrderStatusChart/TopFinishedProducts/RecentCompletedOrders.
-- API contract: Nhan `admin_revenue` tu dashboard stats.
+- Mục đích: Section tong hop Revenue Analytics cho role ADMIN.
+- Phụ thuộc: Cac component con RevenueSummaryCards/RevenueChart/OrderStatusChart/TopFinishedProducts/RecentCompletedOrders.
+- Hợp đồng API: Nhan `admin_revenue` tu dashboard stats.
 - Role access: Chi ADMIN.
-- Maintenance notes: Neu bo sung bieu do, chen them vao section nay.
+- Ghi chú bảo trì: Neu bo sung bieu do, chen them vao section nay.
 */
 
 import { Stack, Typography } from '@mui/material'
@@ -18,11 +17,11 @@ import type { DashboardAdminRevenue } from '../types/dashboard.types'
 export function AdminRevenueSection({ data }: { data: DashboardAdminRevenue }) {
   return (
     <Stack spacing={1.5}>
-      <Typography variant="h6" sx={{ fontWeight: 900 }}>Revenue Analytics</Typography>
+      <Typography variant="h6" sx={{ fontWeight: 900 }}>Phân tích doanh thu</Typography>
       <RevenueSummaryCards data={data} />
       <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5}>
         <RevenueChart series={data.revenue_series} />
-        <OrderStatusChart items={data.order_status_summary} />
+        <OrderStatusChart items={data.order_status_summary} title="Trạng thái đơn hàng (admin)" />
       </Stack>
       <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5}>
         <TopFinishedProducts items={data.top_finished_products} />

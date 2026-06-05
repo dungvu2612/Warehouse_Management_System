@@ -1,12 +1,11 @@
 /*
-Senior Handover Note:
-- Purpose: Order Detail read-only sau replacement refactor; tap trung quan sat order, print, pick logs, stock transactions.
-- Dependencies: Orders hooks + Pick Logs module + Stock Transactions module.
-- API contract: GET /orders/:id, GET /pick-logs, GET /stock-transactions.
-- Business rules: Khong duoc thao tac picking tai day; picking chi duoc van hanh o PDA flow.
-- Replacement refactor notes: old picking UI/action da bo khoi Order Detail va thay bang nut Open PDA Picking.
-- Scanner workflow notes: Nut Open PDA Picking chuyen staff sang /pda/picking?order=<order_code> de scan HT730.
-- Maintenance notes: Neu can them section read-only khac, bo sung theo tab de tranh lam roi layout.
+- Mục đích: Order Detail chỉ xem sau replacement refactor; tap trung quan sat order, print, pick logs, stock transactions.
+- Phụ thuộc: Orders hooks + Pick Logs module + Stock Transactions module.
+- Hợp đồng API: GET /orders/:id, GET /pick-logs, GET /stock-transactions.
+- Quy tắc nghiệp vụ: Khong duoc thao tac picking tai day; picking chi duoc van hanh o PDA flow.
+- Ghi chú refactor thay thế: old picking UI/action da bo khoi Order Detail va thay bang nut Open PDA Picking.
+- Ghi chú luồng scanner: Nut Open PDA Picking chuyen staff sang /pda/picking?order=<order_code> de scan HT730.
+- Ghi chú bảo trì: Neu can them section chỉ xem khac, bo sung theo tab de tranh lam roi layout.
 */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -139,7 +138,7 @@ export function OrderDetail() {
   const [pickLogPage, setPickLogPage] = useState(1)
 
   const detailQuery = useOrderByIdQuery(Number.isFinite(orderId) ? orderId : null)
-  // Senior Handover: Fetch logs block - goi GET /pick-logs theo order_id de nhung vao tab Pick Logs.
+  // Ghi chú: Fetch logs block - goi GET /pick-logs theo order_id de nhung vao tab Pick Logs.
   const pickLogsQuery = usePickLogsQuery({ orderId: Number.isFinite(orderId) ? orderId : undefined, limit: 200 })
   const stockTxQuery = useStockTransactionsQuery('EXPORT')
   const stockProductQuery = useStockTransactionProductsQuery()
@@ -179,7 +178,7 @@ export function OrderDetail() {
       }
     })
 
-    // Senior Handover: print template only shows finished products.
+    // Ghi chú: template in chỉ hiển thị thành phẩm.
     return mapped.filter((item) => item.product_code.toUpperCase().startsWith('TP-'))
   }, [order?.items, detail?.picking_tasks])
 
@@ -227,13 +226,13 @@ export function OrderDetail() {
     })
   }, [pickLogsQuery.data, order?.order_code, detail?.picking_tasks])
 
-  // Senior Handover: Filter/search logic block - loc nhanh pick logs theo product/tray/picker + keyword realtime.
+  // Ghi chú: Filter/search logic block - loc nhanh pick logs theo product/tray/picker + keyword realtime.
   const filteredPickLogRows = useMemo(() => {
     return pickLogsService.filterPickLogs(pickLogRows, pickLogFilters)
   }, [pickLogRows, pickLogFilters])
 
   useEffect(() => {
-    // Senior Handover: Reset page to 1 whenever search/filter changes.
+    // Ghi chú: Reset trang to 1 whenever search/filter changes.
     setPickLogPage(1)
   }, [pickLogFilters])
 
@@ -481,7 +480,7 @@ export function OrderDetail() {
 
           {activeTab === 1 && (
             <Stack spacing={2}>
-              {/* Senior Handover: Order Detail is read-only for picking operations. */}
+              {/* Ghi chú: Order Detail is chỉ xem for picking operations. */}
               <Alert severity="info">Màn chi tiết đơn chỉ hiển thị tiến độ nhặt. Thao tác nhặt thực hiện tại màn PDA.</Alert>
 
               <Stack spacing={1.2}>
@@ -565,7 +564,7 @@ export function OrderDetail() {
               <ListPagination
                 currentPage={pickingTaskPage}
                 totalItems={detail?.picking_tasks.length || 0}
-                pageSize={DEFAULT_PAGE_SIZE}
+                trangSize={DEFAULT_PAGE_SIZE}
                 onPageChange={setPickingTaskPage}
               />
             </Stack>
@@ -639,7 +638,7 @@ export function OrderDetail() {
               <ListPagination
                 currentPage={pickLogPage}
                 totalItems={filteredPickLogRows.length}
-                pageSize={DEFAULT_PAGE_SIZE}
+                trangSize={DEFAULT_PAGE_SIZE}
                 onPageChange={setPickLogPage}
               />
             </Stack>

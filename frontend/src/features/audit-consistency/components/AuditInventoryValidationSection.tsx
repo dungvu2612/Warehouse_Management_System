@@ -1,10 +1,9 @@
 /*
-Senior Handover Note:
-- Purpose: Section C - doi soat inventory va stock transactions theo workflow xuat kho.
-- Dependencies: Nhan `inventory_validation` tu adapter normalize.
-- Audit logic: Chi render before/after + matched flags, khong map issue tai component.
-- API assumptions: Neu thieu field backend, component hien fallback text theo contract.
-- Maintenance notes: Table nay uu tien compact de supervisor soi nhanh sai lech.
+- Mục đích: Section C - doi soat inventory va stock transactions theo workflow xuat kho.
+- Phụ thuộc: Nhan `inventory_validation` tu adapter normalize.
+- Logic audit: Chi render before/after + matched flags, khong map issue tai component.
+- Giả định API: Neu thieu field backend, component hien fallback text theo contract.
+- Ghi chú bảo trì: Table nay uu tien compact de supervisor soi nhanh sai lech.
 */
 
 import { Alert, Chip, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material'

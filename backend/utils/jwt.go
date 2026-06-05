@@ -17,12 +17,8 @@ type AuthClaims struct {
 }
 
 /*
-Senior Handover Note:
-- Purpose: Chuan hoa role trong JWT de dong bo contract ADMIN/WAREHOUSE/VIEWER tren toan he thong.
-- Dependencies: Duoc goi boi auth service khi tao token va auth middleware khi doc token.
-- API contract: claim `role` tra ve duy nhat cac role duoc ho tro sau normalize.
-- Role access: STAFF cu duoc map ve WAREHOUSE de tranh vo luong cu.
-- Maintenance notes: Neu them role moi, cap nhat normalize tai day truoc.
+Chuan hoa role trong JWT de dong bo contract ADMIN/WAREHOUSE.
+STAFF cu duoc map ve WAREHOUSE de tuong thich du lieu cu.
 */
 func NormalizeRole(role string) string {
 	normalized := strings.ToUpper(strings.TrimSpace(role))

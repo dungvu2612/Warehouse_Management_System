@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: PDA Product Lookup toi uu cho Unitech HT730.
-- Dependencies: PdaLayout, centralized scanner hook, pda-product-lookup mutation.
-- API contract: GET /products/scan/:qr_code.
-- HT730 scanner behavior: TagAccess Keyboard types QR into the focused hidden input, then Enter.
-- API callback contract: LOOKUP mode calls GET /products/scan/:qr_code.
-- Maintenance notes: Read-only lookup; do not mix with picking confirmation logic.
+- Mục đích: PDA Product Lookup toi uu cho Unitech HT730.
+- Phụ thuộc: PdaLayout, centralized scanner hook, pda-product-lookup mutation.
+- Hợp đồng API: GET /products/scan/:qr_code.
+- Hành vi máy quét HT730: TagAccess Keyboard nhập QR vào input ẩn đang focus, sau đó gửi Enter.
+- Hợp đồng callback API: Mode LOOKUP gọi GET /products/scan/:qr_code.
+- Ghi chú bảo trì: Chỉ xem lookup; do not mix with picking confirmation logic.
 */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -29,7 +28,7 @@ export function PDAProductLookupPage() {
   const scanner = useScannerInput({
     autoStart: true,
     initialMode: 'LOOKUP',
-    // Senior Handover: Scanner logic is centralized here to avoid duplicate handlers.
+    // Ghi chú: Tập trung logic quét tại đây để tránh lặp handler.
     onScanComplete: async ({ mode, code }) => {
       if (mode !== 'LOOKUP') return
       setErrorText('')
@@ -93,7 +92,7 @@ export function PDAProductLookupPage() {
             <ListPagination
               currentPage={trayPage}
               totalItems={data.trays.length}
-              pageSize={DEFAULT_PAGE_SIZE}
+              trangSize={DEFAULT_PAGE_SIZE}
               onPageChange={setTrayPage}
             />
           </Stack>

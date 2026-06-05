@@ -95,12 +95,8 @@ export function LoginPage() {
         >
           <Box>
             <Chip label="WMS ENTERPRISE" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.12)', color: 'white', fontWeight: 800 }} />
-            <Typography variant="h4" sx={{ fontWeight: 900, mt: 2 }}>
-              STITCHHUB
-            </Typography>
-            <Typography variant="h6" sx={{ opacity: 0.92 }}>
-              Warehouse Control Portal
-            </Typography>
+            
+    
           </Box>
 
           <Stack spacing={1.2} sx={{ mt: 4 }}>
@@ -108,7 +104,7 @@ export function LoginPage() {
               Theo dõi tồn kho, quản lý BOM, điều phối picking và kiểm toán giao dịch trong một hệ thống tập trung.
             </Typography>
             <Typography variant="caption" sx={{ opacity: 0.8 }}>
-              Luồng đăng nhập này dành cho tài khoản do ADMIN cấp phát.
+              Đăng nhập này dành cho tài khoản do ADMIN cấp phát.
             </Typography>
           </Stack>
         </Box>

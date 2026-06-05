@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: API layer cho PDA Putaway mode.
-- Dependencies: shared http client.
-- API contract: POST /inventory/putaway.
+- Mục đích: API layer cho PDA Putaway mode.
+- Phụ thuộc: shared http client.
+- Hợp đồng API: POST /inventory/putaway.
 - Warehouse business rules: import transaction audit duoc backend ghi atomically.
-- Scanner workflow notes: keyboard wedge input chaining product/tray/qty.
-- Maintenance notes: giu payload ngan, khong gui JSON nested phuc tap.
+- Ghi chú luồng scanner: chuỗi input keyboard wedge cho product/tray/qty.
+- Ghi chú bảo trì: giu payload ngan, khong gui JSON nested phuc tap.
 */
 
 import { http } from '../../../shared/lib/http'

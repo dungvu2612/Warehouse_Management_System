@@ -1,7 +1,7 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay tap trung React Query hooks cho module Trays.
-- Phu thuoc vao `trayService` de giu page sach khoi logic fetch/cache/invalidate.
+- Phu thuoc vao `trayService` de giu trang sach khoi logic fetch/cache/invalidate.
 - Query key va invalidate strategy tai day da bao phu create/update/delete.
 */
 
@@ -16,7 +16,7 @@ const TRAY_LOCATIONS_QUERY_KEY = ['tray-locations'] as const
 export function useTraysQuery() {
   return useQuery({
     queryKey: TRAYS_QUERY_KEY,
-    // Senior Handover: Block fetch danh sach trays.
+    // Ghi chú: Block fetch danh sach trays.
     queryFn: trayService.getTrays,
   })
 }
@@ -42,7 +42,7 @@ export function useCreateTrayMutation(options?: {
   const queryClient = useQueryClient()
 
   return useMutation({
-    // Senior Handover: Block submit tao tray moi.
+    // Ghi chú: Block submit tao tray moi.
     mutationFn: (payload: TrayPayload) => trayService.createTray(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: TRAYS_QUERY_KEY })
@@ -59,7 +59,7 @@ export function useUpdateTrayMutation(options?: {
   const queryClient = useQueryClient()
 
   return useMutation({
-    // Senior Handover: Block submit cap nhat tray.
+    // Ghi chú: Block submit cap nhat tray.
     mutationFn: ({ id, payload }: { id: number; payload: TrayPayload }) =>
       trayService.updateTray(id, payload),
     onSuccess: async () => {
@@ -77,7 +77,7 @@ export function useDeleteTrayMutation(options?: {
   const queryClient = useQueryClient()
 
   return useMutation({
-    // Senior Handover: Block submit xoa mem tray.
+    // Ghi chú: Block submit xoa mem tray.
     mutationFn: (id: number) => trayService.deleteTray(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: TRAYS_QUERY_KEY })

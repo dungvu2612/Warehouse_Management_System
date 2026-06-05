@@ -61,7 +61,7 @@ func (r *pickLogRepository) FindAllByFilters(filters PickLogFilters) ([]models.P
 		query = query.Where("picked_at < ?", *filters.DateTo)
 	}
 
-	if err := query.Order("picked_at DESC").Limit(filters.Limit).Find(&logs).Error; err != nil {
+	if err := query.Preload("Picker").Order("picked_at DESC").Limit(filters.Limit).Find(&logs).Error; err != nil {
 		return nil, err
 	}
 	return logs, nil

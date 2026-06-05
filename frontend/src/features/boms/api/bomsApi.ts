@@ -1,6 +1,6 @@
 /*
 Mo ta file:
-- Data-access layer cua module BOM o frontend.
+- Lớp truy cập dữ liệu cua module BOM o frontend.
 - File nay chi chiu trach nhiem goi HTTP thuan, khong chua nghiep vu loc/transform.
 
 Luong xu ly:

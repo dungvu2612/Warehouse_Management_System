@@ -1,11 +1,4 @@
-/*
-Senior Handover Note:
-- Purpose: Type contracts cho Dashboard role-based.
-- Dependencies: Duoc dung boi dashboard api/hook/components.
-- API contract: Mirror response GET /dashboard/stats.
-- Role access: role hop le: ADMIN/WAREHOUSE/VIEWER.
-- Maintenance notes: Neu backend doi field, cap nhat type tai day truoc de compile fail som.
-*/
+/* Type contracts cho Dashboard. */
 
 import type { UserRole } from '../../../shared/types/auth'
 
@@ -19,6 +12,23 @@ export interface DashboardRevenueSeriesItem {
 export interface DashboardOrderStatusSummaryItem {
   status: 'PENDING' | 'PICKING' | 'COMPLETED' | 'CANCELLED' | string
   count: number
+}
+
+export type DashboardTrend = 'UP' | 'DOWN' | 'NEUTRAL' | string
+
+export interface DashboardTrendMetric {
+  value: number
+  previous_value: number
+  change_percent: number
+  trend: DashboardTrend
+}
+
+export interface DashboardRevenueSummary {
+  total_revenue: DashboardTrendMetric
+  today_revenue: DashboardTrendMetric
+  month_revenue: DashboardTrendMetric
+  completed_orders: DashboardTrendMetric
+  average_order_value: DashboardTrendMetric
 }
 
 export interface DashboardTopFinishedProductItem {
@@ -43,6 +53,7 @@ export interface DashboardAdminRevenue {
   revenue_this_month: number
   completed_orders: number
   average_order_value: number
+  revenue_summary?: DashboardRevenueSummary
   revenue_series: DashboardRevenueSeriesItem[]
   order_status_summary: DashboardOrderStatusSummaryItem[]
   top_finished_products: DashboardTopFinishedProductItem[]
@@ -124,6 +135,7 @@ export interface DashboardWarehouseOperations {
   recent_orders: DashboardRecentOrder[]
   inventory_health: DashboardInventoryHealth
   top_moving_products: DashboardTopMovingProduct[]
+  order_status_chart: DashboardOrderStatusSummaryItem[]
 }
 
 export interface DashboardStatsResponse {

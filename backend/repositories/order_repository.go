@@ -63,6 +63,9 @@ type OrderDetailTaskRow struct {
 	InventoryQty     int
 	Status           string
 	Verified         bool
+	AssignedTo       *uint
+	AssigneeName     string
+	AssigneeUsername string
 }
 
 // OrderShortageItem biểu diễn 1 dòng thiếu hàng khi finish thủ công.
@@ -226,8 +229,6 @@ func (r *orderRepository) CreateFromBOM(bomID uint, machineQty int, customerName
 	return &createdOrder, nil
 }
 
-// Senior Handover: FINISHED_GOOD items are expanded via BOM.
-// Senior Handover: COMPONENT items are direct-pick add-ons.
 func (r *orderRepository) CreateOrderWithItems(customerName string, customerPhone string, customerAddress string, items []OrderItemUpsertInput, createdBy uint) (*models.Order, error) {
 	var created models.Order
 
@@ -407,12 +408,16 @@ func (r *orderRepository) FindOrderDetailRows(orderID uint) (*models.Order, []Or
 			pt.picked_quantity AS picked_quantity,
 			COALESCE(i.quantity, 0) AS inventory_qty,
 			pt.status AS status,
-			pt.verified AS verified
+			pt.verified AS verified,
+			pt.assigned_to AS assigned_to,
+			COALESCE(u.full_name, '') AS assignee_name,
+			COALESCE(u.username, '') AS assignee_username
 		`).
 		Joins("LEFT JOIN products AS p ON p.id = pt.product_id").
 		Joins("LEFT JOIN trays AS t ON t.id = pt.tray_id").
 		Joins("LEFT JOIN locations AS l ON l.id = t.location_id").
 		Joins("LEFT JOIN inventory AS i ON i.product_id = pt.product_id AND i.tray_id = pt.tray_id").
+		Joins("LEFT JOIN users AS u ON u.id = pt.assigned_to").
 		Where("pt.order_id = ?", order.ID).
 		Order("pt.id ASC").
 		Scan(&rows).Error
@@ -502,7 +507,6 @@ func (r *orderRepository) ScanForPicking(orderCode string, userID uint) (*models
 			return err
 		}
 
-		// Senior Handover: PDA flow can preload order_items ngay tai scan response.
 		if err := tx.Preload("Items").First(&order, order.ID).Error; err != nil {
 			return err
 		}
@@ -603,7 +607,6 @@ func (r *orderRepository) ScanProductForTask(taskID uint, trayQRCode string, pro
 			return ErrProductQRNotFound
 		}
 
-		// Senior Handover: inventory atomic deduction happens in backend.
 		var task models.PickingTask
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&task, taskID).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -678,7 +681,6 @@ func (r *orderRepository) ScanProductForTask(taskID uint, trayQRCode string, pro
 			return err
 		}
 
-		// Senior Handover: Product QR scan increments picked quantity by exactly 1.
 		task.PickedQuantity += 1
 		task.Verified = true
 		if task.PickedQuantity >= task.RequiredQuantity {
@@ -697,7 +699,6 @@ func (r *orderRepository) ScanProductForTask(taskID uint, trayQRCode string, pro
 			pickNote = pickNote + " | " + strings.TrimSpace(note)
 		}
 
-		// Senior Handover: Pick log and stock transaction must be committed with inventory mutation.
 		pickLog := models.PickLog{
 			PickingTaskID:  &task.ID,
 			OrderID:        &task.OrderID,
@@ -720,7 +721,7 @@ func (r *orderRepository) ScanProductForTask(taskID uint, trayQRCode string, pro
 			BeforeQuantity:  beforeQty,
 			AfterQuantity:   afterQty,
 			ReferenceCode:   order.OrderCode,
-			Note:            "Product QR scan picking",
+			Note:            "Quét QR sản phẩm khi picking",
 		}
 		if userID > 0 {
 			stockTx.CreatedBy = &userID
@@ -890,9 +891,6 @@ func (r *orderRepository) UpdateOrderCustomer(orderID uint, customerName string,
 	return &updated, nil
 }
 
-// Senior Handover: Only PENDING orders can be edited safely.
-// Senior Handover: Updating order items regenerates picking tasks transactionally.
-// Senior Handover: Backend recalculates total_amount to prevent frontend tampering.
 func (r *orderRepository) UpdateOrderWithItems(orderID uint, customerName string, customerPhone string, customerAddress string, items []OrderItemUpsertInput) (*models.Order, error) {
 	var updated models.Order
 

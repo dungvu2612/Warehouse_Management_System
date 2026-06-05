@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Panel scan product tung don vi sau khi tray dung.
-- Dependencies: ScanWaitingPanel/ScanResultPanel, MUI Button.
-- HT730 screen assumptions: +1 product feedback and wrong product errors must be readable on 4-inch screen.
-- Responsive rules: Product scan button is full-width and >=48px; no manual quantity field for WAREHOUSE.
-- Scanner workflow: Each successful product QR increments picked quantity by exactly 1.
-- Maintenance notes: Manual override, if required later, must be ADMIN-only and audited.
+- Mục đích: Panel scan product tung don vi sau khi tray dung.
+- Phụ thuộc: ScanWaitingPanel/ScanResultPanel, MUI Button.
+- Giả định màn hình HT730: Phản hồi +1 sản phẩm và lỗi sai sản phẩm phải dễ đọc trên màn hình 4 inch.
+- Quy tắc responsive: Product scan button is full-width and >=48px; no manual quantity field for WAREHOUSE.
+- Luồng scanner: Each successful product QR increments picked quantity by exactly 1.
+- Ghi chú bảo trì: Manual override, if required later, must be ADMIN-only and audited.
 */
 
 import { QrCodeScanner } from '@mui/icons-material'

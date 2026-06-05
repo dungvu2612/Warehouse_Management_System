@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Data-access layer read-only cho module Orders sau replacement refactor.
-- Dependencies: shared http client.
-- API contract: GET /orders, GET /orders/:id.
-- Business rules: Orders API tai module nay khong chua thao tac picking.
-- Replacement refactor notes: old endpoints scan/confirm/finish da dua sang PDA module va backend dedicated flow.
-- Maintenance notes: Neu can mutation moi cho orders, tao API rieng va tranh tron voi picking flow.
+- Mục đích: Lớp truy cập dữ liệu chỉ xem cho module Orders sau replacement refactor.
+- Phụ thuộc: shared http client.
+- Hợp đồng API: GET /orders, GET /orders/:id.
+- Quy tắc nghiệp vụ: Orders API tai module nay khong chua thao tac picking.
+- Ghi chú refactor thay thế: old endpoints scan/confirm/finish da dua sang PDA module va backend dedicated flow.
+- Ghi chú bảo trì: Neu can mutation moi cho orders, tao API rieng va tranh tron voi picking flow.
 */
 
 import { http } from '../../../shared/lib/http'

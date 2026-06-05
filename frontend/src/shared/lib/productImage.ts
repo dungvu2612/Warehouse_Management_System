@@ -9,12 +9,12 @@ import { PRODUCT_IMAGE_SIZE } from '../constants/productImage'
 
 const DATA_URL_PREFIX = 'data:image/'
 
-// Senior Handover: Chỉ cho phép định dạng ảnh thông dụng để giảm rủi ro payload bất thường.
+// Ghi chú: Chỉ cho phép định dạng ảnh thông dụng để giảm rủi ro payload bất thường.
 export function isSupportedProductImageType(file: File): boolean {
   return ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
 }
 
-// Senior Handover: Chuẩn hóa ảnh đầu vào về 1 kích thước vuông cố định bằng center-crop + canvas.
+// Ghi chú: Chuẩn hóa ảnh đầu vào về 1 kích thước vuông cố định bằng center-crop + canvas.
 export async function resizeProductImageToDataUrl(
   file: File,
   size: number = PRODUCT_IMAGE_SIZE,
@@ -43,7 +43,7 @@ export async function resizeProductImageToDataUrl(
   return canvas.toDataURL('image/jpeg', 0.9)
 }
 
-// Senior Handover: Kiem tra nhanh du lieu image_url hop le de tranh render chuoi khong phai URL/data URL.
+// Ghi chú: Kiem tra nhanh du lieu image_url hop le de tranh render chuoi khong phai URL/data URL.
 export function isValidProductImageURL(value: string | undefined | null): boolean {
   if (!value) return false
   if (value.startsWith(DATA_URL_PREFIX)) return true

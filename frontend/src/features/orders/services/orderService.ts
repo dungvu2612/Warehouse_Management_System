@@ -1,11 +1,10 @@
 /*
-Senior Handover Note:
-- Purpose: Application service read-only cho module Orders sau replacement refactor.
-- Dependencies: ordersApi.
-- API contract: GET /orders, GET /orders/:id.
-- Business rules: Orders module khong duoc goi API picking/confirm/finish.
-- Replacement refactor notes: da loai bo toan bo helper mutation picking cu.
-- Maintenance notes: giu helper filterOrdersByKeyword de phuc vu list UI.
+- Mục đích: Service ứng dụng chỉ xem cho module Orders sau replacement refactor.
+- Phụ thuộc: ordersApi.
+- Hợp đồng API: GET /orders, GET /orders/:id.
+- Quy tắc nghiệp vụ: Orders module khong duoc goi API picking/confirm/finish.
+- Ghi chú refactor thay thế: da loai bo toan bo helper mutation picking cu.
+- Ghi chú bảo trì: giu helper filterOrdersByKeyword de phuc vu list UI.
 */
 
 import { ordersApi } from '../api/ordersApi'

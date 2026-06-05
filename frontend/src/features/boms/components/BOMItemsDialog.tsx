@@ -1,7 +1,7 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - Dialog hien thi danh sach linh kien cua 1 BOM.
-- Phu thuoc vao types BOM/BOMItem va state tu BOM page (khong goi API truc tiep).
+- Phu thuoc vao types BOM/BOMItem va state tu BOM trang (khong goi API truc tiep).
 - Luu y bao tri: item component_product can render anh de dong nhat voi cac bang co san pham khac trong he thong.
 */
 
@@ -110,7 +110,7 @@ export function BOMItemsDialog({
                 <TableRow key={item.id || `${item.component_product_id}-${index}`} hover>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>
-                    {/* Senior Handover: Render thumbnail linh kien theo image_url de doi van hanh nhan dien hang hoa nhanh. */}
+                    {/* Ghi chú: Render thumbnail linh kien theo image_url de doi van hanh nhan dien hang hoa nhanh. */}
                     <ProductImageThumb
                       src={item.component_product?.image_url}
                       alt={item.component_product?.product_name || `Linh kiện ${item.component_product_id}`}

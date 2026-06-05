@@ -1,7 +1,7 @@
 /*
-Thong tin handover:
+Thông tin ghi chú:
 - File nay la bang hien thi danh sach phieu nhap, thuoc presentation layer.
-- Phu thuoc vao type `ImportReceiptDisplay`; page truyen states va callback xem chi tiet.
+- Phu thuoc vao type `ImportReceiptDisplay`; trang truyen states va callback xem chi tiet.
 - Component nay khong goi API truc tiep de dam bao clean architecture.
 */
 

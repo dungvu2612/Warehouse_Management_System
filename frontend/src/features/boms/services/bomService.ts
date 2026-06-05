@@ -1,12 +1,12 @@
 /*
 Mo ta file:
-- Application service layer cua module BOM.
+- Service ứng dụng layer cua module BOM.
 - Day la noi chua nghiep vu FE: loc product options theo product_type, loc danh sach BOM theo keyword.
 
 Luong xu ly:
 1) Hooks goi service thay vi goi API truc tiep.
 2) Service goi API layer de lay du lieu tho.
-3) Service thuc hien normalize/filter va tra ket qua typed cho hooks/page.
+3) Service thuc hien normalize/filter va tra ket qua typed cho hooks/trang.
 
 Luu y khi sua:
 - Moi rule nghiep vu FE cua BOM nen dua vao day de hooks gon.
