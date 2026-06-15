@@ -64,6 +64,9 @@ type OrderDetailTaskRow struct {
 	Status           string
 	Verified         bool
 	AssignedTo       *uint
+	AssignedAt       *time.Time
+	StartedAt        *time.Time
+	CompletedAt      *time.Time
 	AssigneeName     string
 	AssigneeUsername string
 }
@@ -79,15 +82,29 @@ type OrderShortageItem struct {
 
 // StaffTaskRow la read-model danh sach cong viec staff can xu ly.
 type StaffTaskRow struct {
-	ID              uint
-	OrderCode       string
-	CustomerName    string
-	CustomerPhone   string
-	CustomerAddress string
-	Status          string
-	TotalItems      int
-	PickedItems     int
-	CreatedAt       time.Time
+	ID               uint
+	OrderCode        string
+	CustomerName     string
+	CustomerPhone    string
+	CustomerAddress  string
+	Status           string
+	TotalItems       int
+	PickedItems      int
+	AssignedTo       *uint
+	AssigneeName     string
+	AssigneeUsername string
+	CreatedAt        time.Time
+}
+
+// StaffTaskSummaryRow la so lieu badge task tren sidebar.
+type StaffTaskSummaryRow struct {
+	WaitingCount           int64
+	PickingCount           int64
+	MyPickingCount         int64
+	PickingWaitingCount    int64
+	PickingInProgressCount int64
+	ImportWaitingCount     int64
+	ImportInProgressCount  int64
 }
 
 type OrderItemUpsertInput struct {
@@ -101,11 +118,15 @@ type OrderRepository interface {
 	CreateFromBOM(bomID uint, machineQty int, customerName string, customerPhone string, customerAddress string, createdBy uint) (*models.Order, error)
 	CreateOrderWithItems(customerName string, customerPhone string, customerAddress string, items []OrderItemUpsertInput, createdBy uint) (*models.Order, error)
 	FindAll(status *string) ([]models.Order, error)
-	FindStaffTaskRows() ([]StaffTaskRow, error)
+	FindStaffTaskRows(userID uint, role string) ([]StaffTaskRow, error)
+	GetStaffTaskSummary(userID uint, role string) (*StaffTaskSummaryRow, error)
+	ClaimOrderForPicking(orderID uint, userID uint) (*models.Order, error)
+	AssignOrderToStaff(orderID uint, staffID uint) (*models.Order, error)
+	UnassignOrder(orderID uint) (*models.Order, error)
 	FindByIDWithItems(orderID uint) (*models.Order, error)
 	FindOrderDetailRows(orderID uint) (*models.Order, []OrderDetailTaskRow, error)
 	ScanForPicking(orderCode string, userID uint) (*models.Order, []models.PickingTask, error)
-	VerifyTrayForTask(taskID uint, trayQRCode string) (*models.PickingTask, error)
+	VerifyTrayForTask(taskID uint, trayQRCode string, userID uint) (*models.PickingTask, error)
 	ScanProductForTask(taskID uint, trayQRCode string, productQRCode string, note string, userID uint) (*models.PickingTask, error)
 	FinishOrder(orderID uint) (*models.Order, []OrderShortageItem, error)
 	FindPickingTasksByOrderID(orderID uint) (*models.Order, []models.PickingTask, error)
@@ -135,6 +156,13 @@ var (
 	ErrOrderCannotDelete               = errors.New("order cannot be deleted in current status")
 	ErrOrderCannotEditNonPending       = errors.New("order is not pending, cannot edit")
 	ErrOrderHasPickingLogs             = errors.New("order already has pick logs, cannot edit")
+	ErrPickingTaskAlreadyAssigned      = errors.New("picking task already assigned")
+	ErrPickingTaskNotClaimed           = errors.New("picking task not claimed")
+	ErrPickingTaskNotAssignedToYou     = errors.New("picking task not assigned to current user")
+	ErrCannotUnassignAfterPicking      = errors.New("cannot unassign after picking started")
+	ErrCannotReassignAfterPicking      = errors.New("cannot reassign after picking started")
+	ErrStaffNotFound                   = errors.New("staff not found")
+	ErrInvalidStaffRole                = errors.New("invalid staff role")
 )
 
 // OrderWrongTrayError dùng để trả message rõ ràng khi scan sai khay.
@@ -337,38 +365,388 @@ func (r *orderRepository) FindAll(status *string) ([]models.Order, error) {
 	return orders, nil
 }
 
-// FindStaffTaskRows lay danh sach order PENDING/PICKING va tong hop tien do item de staff xu ly.
-func (r *orderRepository) FindStaffTaskRows() ([]StaffTaskRow, error) {
+// FindStaffTaskRows lay danh sach order dang cho nhan hoac dang duoc user hien tai xu ly.
+func (r *orderRepository) FindStaffTaskRows(userID uint, role string) ([]StaffTaskRow, error) {
 	rows := make([]StaffTaskRow, 0)
-	err := r.db.Raw(`
+	baseSQL := `
 		SELECT
 			o.id,
 			o.order_code,
 			COALESCE(o.customer_name, '') AS customer_name,
 			COALESCE(o.customer_phone, '') AS customer_phone,
 			COALESCE(o.customer_address, '') AS customer_address,
-			o.status,
+			CASE
+				WHEN SUM(CASE WHEN pt.assigned_to IS NOT NULL AND pt.status <> ? THEN 1 ELSE 0 END) > 0 THEN ?
+				ELSE ?
+			END AS status,
 			o.created_at,
-			COALESCE(oi.total_items, 0) AS total_items,
-			COALESCE(pt.picked_items, 0) AS picked_items
+			COALESCE(SUM(pt.required_quantity), 0) AS total_items,
+			COALESCE(SUM(pt.picked_quantity), 0) AS picked_items,
+			MIN(pt.assigned_to) AS assigned_to,
+			COALESCE(MAX(u.full_name), '') AS assignee_name,
+			COALESCE(MAX(u.username), '') AS assignee_username
 		FROM orders o
-		LEFT JOIN (
-			SELECT order_id, COALESCE(SUM(quantity), 0) AS total_items
-			FROM order_items
-			GROUP BY order_id
-		) oi ON oi.order_id = o.id
-		LEFT JOIN (
-			SELECT order_id, COALESCE(SUM(picked_quantity), 0) AS picked_items
-			FROM picking_tasks
-			GROUP BY order_id
-		) pt ON pt.order_id = o.id
-		WHERE o.status IN (?, ?)
-		ORDER BY o.created_at DESC
-	`, utils.OrderStatusPending, utils.OrderStatusPicking).Scan(&rows).Error
+		INNER JOIN picking_tasks pt ON pt.order_id = o.id
+		LEFT JOIN users u ON u.id = pt.assigned_to
+		WHERE o.status NOT IN (?, ?)
+			AND pt.status <> ?
+	`
+	args := []any{
+		utils.PickingStatusDone,
+		utils.PickingStatusPicking,
+		utils.PickingStatusWaiting,
+		utils.OrderStatusCompleted,
+		utils.OrderStatusCancelled,
+		utils.PickingStatusDone,
+	}
+
+	if strings.ToUpper(strings.TrimSpace(role)) != "ADMIN" {
+		baseSQL += `
+			AND (
+				(pt.status = ? AND pt.assigned_to IS NULL)
+				OR pt.assigned_to = ?
+			)
+		`
+		args = append(args, utils.PickingStatusWaiting, userID)
+	}
+
+	baseSQL += `
+		GROUP BY o.id, o.order_code, o.customer_name, o.customer_phone, o.customer_address, o.created_at
+		ORDER BY
+			CASE
+				WHEN SUM(CASE WHEN pt.assigned_to IS NULL AND pt.status = ? THEN 1 ELSE 0 END) > 0 THEN 0
+				ELSE 1
+			END ASC,
+			o.created_at DESC
+	`
+	args = append(args, utils.PickingStatusWaiting)
+
+	err := r.db.Raw(baseSQL, args...).Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}
 	return rows, nil
+}
+
+func (r *orderRepository) GetStaffTaskSummary(userID uint, role string) (*StaffTaskSummaryRow, error) {
+	var summary StaffTaskSummaryRow
+
+	if err := r.db.Raw(`
+		SELECT COUNT(DISTINCT pt.order_id) AS waiting_count
+		FROM picking_tasks pt
+		INNER JOIN orders o ON o.id = pt.order_id
+		WHERE pt.status = ?
+			AND pt.assigned_to IS NULL
+			AND o.status NOT IN (?, ?)
+	`, utils.PickingStatusWaiting, utils.OrderStatusCompleted, utils.OrderStatusCancelled).Scan(&summary.WaitingCount).Error; err != nil {
+		return nil, err
+	}
+
+	if err := r.db.Raw(`
+		SELECT COUNT(DISTINCT pt.order_id) AS picking_count
+		FROM picking_tasks pt
+		INNER JOIN orders o ON o.id = pt.order_id
+		WHERE pt.status = ?
+			AND pt.assigned_to IS NOT NULL
+			AND o.status NOT IN (?, ?)
+	`, utils.PickingStatusPicking, utils.OrderStatusCompleted, utils.OrderStatusCancelled).Scan(&summary.PickingCount).Error; err != nil {
+		return nil, err
+	}
+
+	if userID > 0 {
+		if err := r.db.Raw(`
+			SELECT COUNT(DISTINCT pt.order_id) AS my_picking_count
+			FROM picking_tasks pt
+			INNER JOIN orders o ON o.id = pt.order_id
+			WHERE pt.status = ?
+				AND pt.assigned_to = ?
+				AND o.status NOT IN (?, ?)
+		`, utils.PickingStatusPicking, userID, utils.OrderStatusCompleted, utils.OrderStatusCancelled).Scan(&summary.MyPickingCount).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	if strings.ToUpper(strings.TrimSpace(role)) == "ADMIN" {
+		summary.MyPickingCount = 0
+	}
+	summary.PickingWaitingCount = summary.WaitingCount
+	summary.PickingInProgressCount = summary.PickingCount
+
+	if err := r.db.Raw(`
+		SELECT COUNT(*) AS import_waiting_count
+		FROM import_receipt_items
+		WHERE (status IS NULL OR status <> 'DONE')
+			AND assigned_to IS NULL
+	`).Scan(&summary.ImportWaitingCount).Error; err != nil {
+		return nil, err
+	}
+
+	importProgressSQL := `
+		SELECT COUNT(*) AS import_in_progress_count
+		FROM import_receipt_items
+		WHERE (status IS NULL OR status <> 'DONE')
+			AND assigned_to IS NOT NULL
+	`
+	importProgressArgs := []interface{}{}
+	if strings.ToUpper(strings.TrimSpace(role)) != "ADMIN" {
+		importProgressSQL += " AND assigned_to = ?"
+		importProgressArgs = append(importProgressArgs, userID)
+	}
+	if err := r.db.Raw(importProgressSQL, importProgressArgs...).Scan(&summary.ImportInProgressCount).Error; err != nil {
+		return nil, err
+	}
+
+	summary.WaitingCount = summary.PickingWaitingCount + summary.ImportWaitingCount
+	if strings.ToUpper(strings.TrimSpace(role)) == "ADMIN" {
+		summary.PickingCount = summary.PickingInProgressCount + summary.ImportInProgressCount
+	} else {
+		summary.MyPickingCount = summary.MyPickingCount + summary.ImportInProgressCount
+	}
+
+	return &summary, nil
+}
+
+func (r *orderRepository) ensurePickingTasksForOrderTx(tx *gorm.DB, orderID uint) error {
+	var existingTaskCount int64
+	if err := tx.Model(&models.PickingTask{}).Where("order_id = ?", orderID).Count(&existingTaskCount).Error; err != nil {
+		return err
+	}
+	if existingTaskCount > 0 {
+		return nil
+	}
+
+	var orderItems []models.OrderItem
+	if err := tx.Where("order_id = ?", orderID).Find(&orderItems).Error; err != nil {
+		return err
+	}
+	if len(orderItems) == 0 {
+		return ErrOrderHasNoItems
+	}
+
+	inputs := make([]OrderItemUpsertInput, 0, len(orderItems))
+	for _, item := range orderItems {
+		inputs = append(inputs, OrderItemUpsertInput{
+			ProductID: item.ProductID,
+			Quantity:  item.Quantity,
+			UnitPrice: item.UnitPrice,
+		})
+	}
+
+	tasks, err := r.buildPickingTasksFromOrderItems(tx, orderID, inputs)
+	if err != nil {
+		return err
+	}
+	if len(tasks) == 0 {
+		return ErrOrderHasNoItems
+	}
+	return tx.Create(&tasks).Error
+}
+
+func (r *orderRepository) orderHasPickingDataTx(tx *gorm.DB, orderID uint) (bool, error) {
+	var pickedQty int64
+	if err := tx.Model(&models.PickingTask{}).
+		Where("order_id = ? AND picked_quantity > 0", orderID).
+		Count(&pickedQty).Error; err != nil {
+		return false, err
+	}
+	if pickedQty > 0 {
+		return true, nil
+	}
+
+	var pickLogCount int64
+	if err := tx.Model(&models.PickLog{}).Where("order_id = ?", orderID).Count(&pickLogCount).Error; err != nil {
+		return false, err
+	}
+	return pickLogCount > 0, nil
+}
+
+func (r *orderRepository) ClaimOrderForPicking(orderID uint, userID uint) (*models.Order, error) {
+	var updated models.Order
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		var order models.Order
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&order, orderID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrOrderEntityNotFound
+			}
+			return err
+		}
+		if order.Status == utils.OrderStatusCompleted {
+			return ErrOrderAlreadyCompleted
+		}
+		if order.Status == utils.OrderStatusCancelled {
+			return ErrOrderCancelled
+		}
+		if err := r.ensurePickingTasksForOrderTx(tx, order.ID); err != nil {
+			return err
+		}
+
+		var assignedToOther int64
+		if err := tx.Model(&models.PickingTask{}).
+			Where("order_id = ? AND status <> ? AND assigned_to IS NOT NULL AND assigned_to <> ?", order.ID, utils.PickingStatusDone, userID).
+			Count(&assignedToOther).Error; err != nil {
+			return err
+		}
+		if assignedToOther > 0 {
+			return ErrPickingTaskAlreadyAssigned
+		}
+
+		var activeTasks int64
+		if err := tx.Model(&models.PickingTask{}).
+			Where("order_id = ? AND status <> ?", order.ID, utils.PickingStatusDone).
+			Count(&activeTasks).Error; err != nil {
+			return err
+		}
+		if activeTasks == 0 {
+			return ErrPickingTaskAlreadyDone
+		}
+
+		now := time.Now()
+		result := tx.Model(&models.PickingTask{}).
+			Where("order_id = ? AND status = ? AND assigned_to IS NULL", order.ID, utils.PickingStatusWaiting).
+			Updates(map[string]any{
+				"status":      utils.PickingStatusPicking,
+				"assigned_to": userID,
+				"assigned_at": now,
+				"started_at":  gorm.Expr("COALESCE(started_at, ?)", now),
+				"updated_at":  now,
+			})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			var assignedToMe int64
+			if err := tx.Model(&models.PickingTask{}).
+				Where("order_id = ? AND status <> ? AND assigned_to = ?", order.ID, utils.PickingStatusDone, userID).
+				Count(&assignedToMe).Error; err != nil {
+				return err
+			}
+			if assignedToMe == 0 {
+				return ErrPickingTaskAlreadyAssigned
+			}
+		}
+
+		order.Status = utils.OrderStatusPicking
+		if err := tx.Save(&order).Error; err != nil {
+			return err
+		}
+		updated = order
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &updated, nil
+}
+
+func (r *orderRepository) AssignOrderToStaff(orderID uint, staffID uint) (*models.Order, error) {
+	var updated models.Order
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		var staff models.User
+		if err := tx.Where("id = ? AND is_active = ?", staffID, true).First(&staff).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrStaffNotFound
+			}
+			return err
+		}
+		if !strings.EqualFold(staff.Role, "STAFF") {
+			return ErrInvalidStaffRole
+		}
+
+		var order models.Order
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&order, orderID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrOrderEntityNotFound
+			}
+			return err
+		}
+		if order.Status == utils.OrderStatusCompleted {
+			return ErrOrderAlreadyCompleted
+		}
+		if order.Status == utils.OrderStatusCancelled {
+			return ErrOrderCancelled
+		}
+		if err := r.ensurePickingTasksForOrderTx(tx, order.ID); err != nil {
+			return err
+		}
+
+		now := time.Now()
+		if err := tx.Model(&models.PickingTask{}).
+			Where("order_id = ? AND status <> ?", order.ID, utils.PickingStatusDone).
+			Updates(map[string]any{
+				"status":       utils.PickingStatusPicking,
+				"assigned_to":  staffID,
+				"assigned_at":  now,
+				"started_at":   gorm.Expr("COALESCE(started_at, ?)", now),
+				"completed_at": nil,
+				"updated_at":   now,
+			}).Error; err != nil {
+			return err
+		}
+
+		order.Status = utils.OrderStatusPicking
+		if err := tx.Save(&order).Error; err != nil {
+			return err
+		}
+		updated = order
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &updated, nil
+}
+
+func (r *orderRepository) UnassignOrder(orderID uint) (*models.Order, error) {
+	var updated models.Order
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		var order models.Order
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&order, orderID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrOrderEntityNotFound
+			}
+			return err
+		}
+		if order.Status == utils.OrderStatusCompleted {
+			return ErrOrderAlreadyCompleted
+		}
+		if order.Status == utils.OrderStatusCancelled {
+			return ErrOrderCancelled
+		}
+
+		hasPickingData, err := r.orderHasPickingDataTx(tx, order.ID)
+		if err != nil {
+			return err
+		}
+		if hasPickingData {
+			return ErrCannotUnassignAfterPicking
+		}
+
+		now := time.Now()
+		if err := tx.Model(&models.PickingTask{}).
+			Where("order_id = ? AND status <> ?", order.ID, utils.PickingStatusDone).
+			Updates(map[string]any{
+				"status":       utils.PickingStatusWaiting,
+				"assigned_to":  nil,
+				"assigned_at":  nil,
+				"started_at":   nil,
+				"completed_at": nil,
+				"verified":     false,
+				"updated_at":   now,
+			}).Error; err != nil {
+			return err
+		}
+
+		order.Status = utils.OrderStatusPending
+		if err := tx.Save(&order).Error; err != nil {
+			return err
+		}
+		updated = order
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &updated, nil
 }
 
 // FindByIDWithItems lấy chi tiết order kèm order_items.
@@ -410,6 +788,9 @@ func (r *orderRepository) FindOrderDetailRows(orderID uint) (*models.Order, []Or
 			pt.status AS status,
 			pt.verified AS verified,
 			pt.assigned_to AS assigned_to,
+			pt.assigned_at AS assigned_at,
+			pt.started_at AS started_at,
+			pt.completed_at AS completed_at,
 			COALESCE(u.full_name, '') AS assignee_name,
 			COALESCE(u.username, '') AS assignee_username
 		`).
@@ -428,7 +809,7 @@ func (r *orderRepository) FindOrderDetailRows(orderID uint) (*models.Order, []Or
 	return &order, rows, nil
 }
 
-// ScanForPicking quét order_code: sinh tasks nếu chưa có và chuyển order sang PICKING.
+// ScanForPicking quét order_code: chỉ cho người đã nhận việc mở luồng picking.
 func (r *orderRepository) ScanForPicking(orderCode string, userID uint) (*models.Order, []models.PickingTask, error) {
 	var updatedOrder models.Order
 	var tasks []models.PickingTask
@@ -450,60 +831,31 @@ func (r *orderRepository) ScanForPicking(orderCode string, userID uint) (*models
 			return ErrOrderAlreadyClosed
 		}
 
-		// 3) Kiểm tra order đã có task chưa.
-		var existingTaskCount int64
-		if err := tx.Model(&models.PickingTask{}).Where("order_id = ?", order.ID).Count(&existingTaskCount).Error; err != nil {
+		if err := r.ensurePickingTasksForOrderTx(tx, order.ID); err != nil {
 			return err
 		}
 
-		if existingTaskCount == 0 {
-			// 4) Nếu chưa có task thì đọc order_items để sinh tasks.
-			var orderItems []models.OrderItem
-			if err := tx.Where("order_id = ?", order.ID).Find(&orderItems).Error; err != nil {
-				return err
-			}
-			if len(orderItems) == 0 {
-				return ErrOrderHasNoItems
-			}
-
-			newTasks := make([]models.PickingTask, 0, len(orderItems))
-			for _, item := range orderItems {
-				// 5) Mỗi product lấy khay active đầu tiên để assign cho picking.
-				var tray models.Tray
-				if err := tx.Where("product_id = ? AND is_active = ?", item.ProductID, true).First(&tray).Error; err != nil {
-					if errors.Is(err, gorm.ErrRecordNotFound) {
-						return ErrOrderEntityNotFound
-					}
-					return err
-				}
-
-				assignedTo := userID
-				newTasks = append(newTasks, models.PickingTask{
-					OrderID:          order.ID,
-					ProductID:        item.ProductID,
-					TrayID:           tray.ID,
-					RequiredQuantity: item.Quantity,
-					PickedQuantity:   0,
-					Verified:         false,
-					Status:           utils.PickingStatusWaiting,
-					AssignedTo:       &assignedTo,
-				})
-			}
-
-			if err := tx.Create(&newTasks).Error; err != nil {
-				return err
-			}
-			tasks = newTasks
-		} else {
-			// 6) Nếu đã có task thì load lại để trả đầy đủ.
-			if err := tx.Where("order_id = ?", order.ID).Order("id ASC").Find(&tasks).Error; err != nil {
-				return err
-			}
+		var assignedToOther int64
+		if err := tx.Model(&models.PickingTask{}).
+			Where("order_id = ? AND status <> ? AND assigned_to IS NOT NULL AND assigned_to <> ?", order.ID, utils.PickingStatusDone, userID).
+			Count(&assignedToOther).Error; err != nil {
+			return err
+		}
+		if assignedToOther > 0 {
+			return ErrPickingTaskNotAssignedToYou
 		}
 
-		// 7) Chuyển trạng thái order sang PICKING.
-		order.Status = utils.OrderStatusPicking
-		if err := tx.Save(&order).Error; err != nil {
+		var assignedToMe int64
+		if err := tx.Model(&models.PickingTask{}).
+			Where("order_id = ? AND status <> ? AND assigned_to = ?", order.ID, utils.PickingStatusDone, userID).
+			Count(&assignedToMe).Error; err != nil {
+			return err
+		}
+		if assignedToMe == 0 {
+			return ErrPickingTaskNotClaimed
+		}
+
+		if err := tx.Where("order_id = ?", order.ID).Order("id ASC").Find(&tasks).Error; err != nil {
 			return err
 		}
 
@@ -529,7 +881,7 @@ func (r *orderRepository) ScanForPicking(orderCode string, userID uint) (*models
 }
 
 // VerifyTrayForTask kiem tra tray QR cua task, danh dau verified neu hop le.
-func (r *orderRepository) VerifyTrayForTask(taskID uint, trayQRCode string) (*models.PickingTask, error) {
+func (r *orderRepository) VerifyTrayForTask(taskID uint, trayQRCode string, userID uint) (*models.PickingTask, error) {
 	var responseTask models.PickingTask
 
 	err := r.db.Transaction(func(tx *gorm.DB) error {
@@ -548,6 +900,18 @@ func (r *orderRepository) VerifyTrayForTask(taskID uint, trayQRCode string) (*mo
 
 		if task.Status == utils.PickingStatusDone {
 			return ErrPickingTaskAlreadyDone
+		}
+		if task.AssignedTo == nil {
+			return ErrPickingTaskNotClaimed
+		}
+		if *task.AssignedTo != userID {
+			return ErrPickingTaskNotAssignedToYou
+		}
+		if task.AssignedTo == nil {
+			return ErrPickingTaskNotClaimed
+		}
+		if *task.AssignedTo != userID {
+			return ErrPickingTaskNotAssignedToYou
 		}
 
 		var order models.Order
@@ -685,6 +1049,8 @@ func (r *orderRepository) ScanProductForTask(taskID uint, trayQRCode string, pro
 		task.Verified = true
 		if task.PickedQuantity >= task.RequiredQuantity {
 			task.Status = utils.PickingStatusDone
+			now := time.Now()
+			task.CompletedAt = &now
 		} else {
 			task.Status = utils.PickingStatusPicking
 		}

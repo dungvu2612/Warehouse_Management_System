@@ -24,19 +24,17 @@ import (
 	"errors"
 	"strconv"
 	"strings"
-	"time"
 
 	"quan_ly_kho/models"
 	"quan_ly_kho/repositories"
 )
 
 var (
-	ErrInvalidInventoryID     = errors.New("invalid inventory id")
-	ErrInvalidInventoryFilter = errors.New("invalid inventory filter")
-	ErrInvalidAdjustPayload   = errors.New("delta must not be 0")
-	ErrTrayProductMismatch    = errors.New("tray does not belong to the provided product")
-	ErrInsufficientStock      = errors.New("insufficient inventory quantity")
-	ErrPutawayRequestPending  = errors.New("putaway request is pending admin approval")
+	ErrInvalidInventoryID       = errors.New("invalid inventory id")
+	ErrInvalidInventoryFilter   = errors.New("invalid inventory filter")
+	ErrInvalidAdjustPayload     = errors.New("delta must not be 0")
+	ErrTrayProductMismatch      = errors.New("tray does not belong to the provided product")
+	ErrInsufficientStock        = errors.New("insufficient inventory quantity")
 	ErrPutawayRequestNotPending = errors.New("putaway request is not pending")
 )
 
@@ -59,10 +57,10 @@ type AdjustInventoryInput struct {
 }
 
 type AdjustByTrayInput struct {
-	TrayQRCode   string
-	Delta        int
-	Note         string
-	CreatedBy    uint
+	TrayQRCode    string
+	Delta         int
+	Note          string
+	CreatedBy     uint
 	ReferenceCode string
 }
 
@@ -221,23 +219,19 @@ func (s *inventoryService) Putaway(input PutawayInput) (*models.Inventory, error
 	if strings.TrimSpace(input.ProductQRCode) == "" || strings.TrimSpace(input.TrayQRCode) == "" || input.Quantity <= 0 {
 		return nil, ErrInvalidInventoryFilter
 	}
-	req := &models.PutawayRequest{
-		ProductQRCode: strings.TrimSpace(input.ProductQRCode),
-		TrayQRCode:    strings.TrimSpace(input.TrayQRCode),
-		Quantity:      input.Quantity,
-		Note:          strings.TrimSpace(input.Note),
-		ReferenceCode: strings.TrimSpace(input.ReferenceCode),
-		Status:        "PENDING",
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
-	}
-	if input.CreatedBy > 0 {
-		req.RequestedBy = &input.CreatedBy
-	}
-	if err := s.repo.CreatePutawayRequest(req); err != nil {
+
+	updated, err := s.repo.PutawayByScan(
+		input.ProductQRCode,
+		input.TrayQRCode,
+		input.Quantity,
+		strings.TrimSpace(input.Note),
+		input.CreatedBy,
+		strings.TrimSpace(input.ReferenceCode),
+	)
+	if err != nil {
 		return nil, err
 	}
-	return nil, ErrPutawayRequestPending
+	return updated, nil
 }
 
 func (s *inventoryService) GetPutawayRequests(status string) ([]models.PutawayRequest, error) {

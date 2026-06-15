@@ -21,7 +21,7 @@ export function AdminRevenueSection({ data }: { data: DashboardAdminRevenue }) {
       <RevenueSummaryCards data={data} />
       <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5}>
         <RevenueChart series={data.revenue_series} />
-        <OrderStatusChart items={data.order_status_summary} title="Trạng thái đơn hàng (admin)" />
+        <OrderStatusChart items={data.order_status_summary} />
       </Stack>
       <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5}>
         <TopFinishedProducts items={data.top_finished_products} />

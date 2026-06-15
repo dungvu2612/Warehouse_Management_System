@@ -15,10 +15,10 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
-func ImportReceiptRoutes(r *gin.Engine) {
+func ImportReceiptRoutes(r *echo.Echo) {
 	repo := repositories.NewImportReceiptRepository(config.DB)
 	service := services.NewImportReceiptService(repo)
 	handler := handlers.NewImportReceiptHandler(service)
@@ -26,8 +26,24 @@ func ImportReceiptRoutes(r *gin.Engine) {
 	importReceipts := r.Group("/import-receipts")
 	importReceipts.Use(middleware.AuthRequired())
 	{
-		importReceipts.POST("", middleware.RequireRoles("ADMIN"), handler.CreateImportReceipt)
-		importReceipts.GET("", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetImportReceipts)
-		importReceipts.GET("/:id", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetImportReceiptByID)
+		importReceipts.POST("", adapt(handler.CreateImportReceipt), middleware.RequireRoles("ADMIN"))
+		importReceipts.GET("", adapt(handler.GetImportReceipts), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
+		importReceipts.GET("/:id", adapt(handler.GetImportReceiptByID), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
+	}
+
+	staff := r.Group("/staff/import-receipt-items")
+	staff.Use(middleware.AuthRequired())
+	{
+		staff.GET("", adapt(handler.GetStaffImportTasks), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
+		staff.GET("/summary", adapt(handler.GetImportTaskSummary), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
+		staff.POST("/:item_id/claim", adapt(handler.ClaimImportReceiptItem), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
+		staff.POST("/:item_id/confirm", adapt(handler.ConfirmImportReceiptItem), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
+	}
+
+	admin := r.Group("/admin/import-receipt-items")
+	admin.Use(middleware.AuthRequired(), middleware.RequireRoles("ADMIN"))
+	{
+		admin.PATCH("/:item_id/assign", adapt(handler.AdminAssignImportReceiptItem))
+		admin.PATCH("/:item_id/unassign", adapt(handler.AdminUnassignImportReceiptItem))
 	}
 }

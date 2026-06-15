@@ -20,9 +20,12 @@ interface StaffTaskListProps {
   isLoading: boolean
   isError: boolean
   onStart: (orderId: number) => void
+  onClaim: (orderId: number) => void
+  claimingOrderId?: number | null
+  emptyText?: string
 }
 
-export function StaffTaskList({ items, isLoading, isError, onStart }: StaffTaskListProps) {
+export function StaffTaskList({ items, isLoading, isError, onStart, onClaim, claimingOrderId = null, emptyText = 'Không có đơn cần nhặt' }: StaffTaskListProps) {
   if (isLoading) {
     return (
       <Stack spacing={1}>
@@ -33,7 +36,7 @@ export function StaffTaskList({ items, isLoading, isError, onStart }: StaffTaskL
     )
   }
   if (isError) return <Alert severity="error">Không tải được danh sách công việc.</Alert>
-  if (items.length === 0) return <Alert severity="info">Không có đơn cần nhặt</Alert>
+  if (items.length === 0) return <Alert severity="info">{emptyText}</Alert>
 
   return (
     <Box
@@ -46,7 +49,13 @@ export function StaffTaskList({ items, isLoading, isError, onStart }: StaffTaskL
     >
       {/* Ghi chú: danh sách tác vụ staff là điểm vào cho nhân viên kho */}
       {items.map((item) => (
-        <StaffOrderCard key={item.id} item={item} onStart={onStart} />
+        <StaffOrderCard
+          key={item.id}
+          item={item}
+          onStart={onStart}
+          onClaim={onClaim}
+          isClaiming={claimingOrderId === item.id}
+        />
       ))}
     </Box>
   )

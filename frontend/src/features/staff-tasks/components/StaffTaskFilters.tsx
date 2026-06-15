@@ -19,7 +19,12 @@ interface StaffTaskFiltersProps {
 }
 
 export function StaffTaskFilters({ search, status, count, onSearchChange, onStatusChange }: StaffTaskFiltersProps) {
-  const statuses: Array<StaffTaskStatus | 'ALL'> = ['ALL', 'PENDING', 'PICKING']
+  const statuses: Array<StaffTaskStatus | 'ALL'> = ['ALL', 'WAITING', 'PICKING']
+  const labels: Record<StaffTaskStatus | 'ALL', string> = {
+    ALL: 'Tất cả',
+    WAITING: 'Chờ nhận',
+    PICKING: 'Việc của tôi',
+  }
 
   return (
     <Stack spacing={1}>
@@ -36,7 +41,7 @@ export function StaffTaskFilters({ search, status, count, onSearchChange, onStat
         {statuses.map((item) => (
           <Chip
             key={item}
-            label={item}
+            label={labels[item]}
             color={status === item ? 'primary' : 'default'}
             onClick={() => onStatusChange(item)}
             sx={{ minHeight: 36, fontWeight: 800 }}

@@ -1,0 +1,2121 @@
+basePath: /api
+definitions:
+  handlers.DocAdjustByTrayRequest:
+    properties:
+      delta:
+        example: 5
+        type: integer
+      note:
+        example: Điều chỉnh nhanh
+        type: string
+      reference_code:
+        example: ADJ-001
+        type: string
+      tray_qr_code:
+        example: TRAY-A0102
+        type: string
+    type: object
+  handlers.DocAdjustInventoryRequest:
+    properties:
+      delta:
+        example: 10
+        type: integer
+      note:
+        example: Điều chỉnh kiểm kê
+        type: string
+    type: object
+  handlers.DocAssignImportReceiptItemRequest:
+    properties:
+      staff_id:
+        example: 2
+        type: integer
+    type: object
+  handlers.DocAssignPickingOrderRequest:
+    properties:
+      staff_id:
+        example: 2
+        type: integer
+    type: object
+  handlers.DocAuditConsistency:
+    properties:
+      checked_at:
+        example: "2026-06-09T10:00:00Z"
+        type: string
+      is_valid:
+        example: true
+        type: boolean
+      issues:
+        items:
+          type: string
+        type: array
+      order_id:
+        example: 1
+        type: integer
+    type: object
+  handlers.DocAuthUser:
+    properties:
+      full_name:
+        example: Administrator
+        type: string
+      id:
+        example: 1
+        type: integer
+      role:
+        example: ADMIN
+        type: string
+      username:
+        example: admin
+        type: string
+    type: object
+  handlers.DocConfirmImportReceiptItemRequest:
+    properties:
+      note:
+        example: Đã nhập đủ
+        type: string
+      quantity:
+        example: 50
+        type: integer
+      tray_code:
+        example: TRAY-A0102
+        type: string
+      tray_id:
+        example: 1
+        type: integer
+    type: object
+  handlers.DocCreateImportReceiptRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handlers.DocImportReceiptItemRequest'
+        type: array
+      note:
+        example: Nhập lô tháng 6
+        type: string
+      supplier_name:
+        example: Nhà cung cấp A
+        type: string
+    type: object
+  handlers.DocCreateInventoryRequest:
+    properties:
+      product_id:
+        example: 1
+        type: integer
+      quantity:
+        example: 100
+        type: integer
+      tray_id:
+        example: 1
+        type: integer
+    type: object
+  handlers.DocCreateUserRequest:
+    properties:
+      full_name:
+        example: Nhân viên kho 01
+        type: string
+      password:
+        example: staff123
+        type: string
+      role:
+        example: WAREHOUSE
+        type: string
+      username:
+        example: staff01
+        type: string
+    type: object
+  handlers.DocDashboardStats:
+    properties:
+      role:
+        example: ADMIN
+        type: string
+    type: object
+  handlers.DocErrorResponse:
+    properties:
+      error:
+        example: invalid token
+        type: string
+      error_code:
+        example: TASK_ALREADY_ASSIGNED
+        type: string
+      message:
+        example: Không thể xử lý yêu cầu.
+        type: string
+    type: object
+  handlers.DocImportReceipt:
+    properties:
+      id:
+        example: 1
+        type: integer
+      note:
+        example: Nhập lô tháng 6
+        type: string
+      receipt_code:
+        example: IMP-123
+        type: string
+      status:
+        example: PENDING
+        type: string
+      supplier_name:
+        example: Nhà cung cấp A
+        type: string
+    type: object
+  handlers.DocImportReceiptItemRequest:
+    properties:
+      product_id:
+        example: 1
+        type: integer
+      quantity:
+        example: 50
+        type: integer
+    type: object
+  handlers.DocImportTask:
+    properties:
+      actual_quantity:
+        example: 0
+        type: integer
+      assigned_to:
+        example: 2
+        type: integer
+      expected_quantity:
+        example: 50
+        type: integer
+      id:
+        example: 1
+        type: integer
+      product_code:
+        example: PRD-0001
+        type: string
+      product_id:
+        example: 1
+        type: integer
+      product_name:
+        example: Motor A
+        type: string
+      receipt_code:
+        example: IMP-123
+        type: string
+      receipt_id:
+        example: 1
+        type: integer
+      status:
+        example: WAITING
+        type: string
+    type: object
+  handlers.DocInventory:
+    properties:
+      id:
+        example: 1
+        type: integer
+      product_id:
+        example: 1
+        type: integer
+      quantity:
+        example: 100
+        type: integer
+      tray_id:
+        example: 1
+        type: integer
+    type: object
+  handlers.DocLocation:
+    properties:
+      description:
+        example: Kệ A hàng 01
+        type: string
+      id:
+        example: 1
+        type: integer
+      is_active:
+        example: true
+        type: boolean
+      location_code:
+        example: A-01
+        type: string
+      shelf:
+        example: A
+        type: string
+    type: object
+  handlers.DocLocationRequest:
+    properties:
+      description:
+        example: Kệ A hàng 01
+        type: string
+      location_code:
+        example: A-01
+        type: string
+      shelf:
+        example: A
+        type: string
+    type: object
+  handlers.DocLoginRequest:
+    properties:
+      password:
+        example: admin123
+        type: string
+      username:
+        example: admin
+        type: string
+    type: object
+  handlers.DocLoginResponse:
+    properties:
+      access_token:
+        example: Bearer JWT token
+        type: string
+      user:
+        $ref: '#/definitions/handlers.DocAuthUser'
+    type: object
+  handlers.DocOrder:
+    properties:
+      customer_address:
+        example: Hà Nội
+        type: string
+      customer_name:
+        example: Khách hàng A
+        type: string
+      customer_phone:
+        example: "0900000000"
+        type: string
+      id:
+        example: 1
+        type: integer
+      order_code:
+        example: ORD-123
+        type: string
+      status:
+        example: PENDING
+        type: string
+      total_amount:
+        example: 300000
+        type: number
+    type: object
+  handlers.DocOrderItemRequest:
+    properties:
+      product_id:
+        example: 1
+        type: integer
+      quantity:
+        example: 2
+        type: integer
+      unit_price:
+        example: 150000
+        type: number
+    type: object
+  handlers.DocOrderRequest:
+    properties:
+      customer_address:
+        example: Hà Nội
+        type: string
+      customer_name:
+        example: Khách hàng A
+        type: string
+      customer_phone:
+        example: "0900000000"
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/handlers.DocOrderItemRequest'
+        type: array
+    type: object
+  handlers.DocPickLog:
+    properties:
+      id:
+        example: 1
+        type: integer
+      order_id:
+        example: 1
+        type: integer
+      picked_by:
+        example: 2
+        type: integer
+      product_id:
+        example: 1
+        type: integer
+      quantity:
+        example: 2
+        type: integer
+      tray_id:
+        example: 1
+        type: integer
+    type: object
+  handlers.DocProduct:
+    properties:
+      description:
+        example: Linh kiện sản xuất
+        type: string
+      id:
+        example: 1
+        type: integer
+      image_url:
+        example: https://example.com/product.png
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      min_stock:
+        example: 10
+        type: integer
+      price:
+        example: 150000
+        type: number
+      product_code:
+        example: PRD-0001
+        type: string
+      product_name:
+        example: Motor A
+        type: string
+      product_type:
+        example: COMPONENT
+        type: string
+      qr_code:
+        example: PRD-0001
+        type: string
+      unit:
+        example: pcs
+        type: string
+    type: object
+  handlers.DocProductCodePreviewResponse:
+    properties:
+      product_code:
+        example: COMP-0001
+        type: string
+      qr_code:
+        example: COMP-0001
+        type: string
+    type: object
+  handlers.DocProductRequest:
+    properties:
+      description:
+        example: Linh kiện sản xuất
+        type: string
+      image_url:
+        example: https://example.com/product.png
+        type: string
+      min_stock:
+        example: 10
+        type: integer
+      price:
+        example: 150000
+        type: number
+      product_name:
+        example: Motor A
+        type: string
+      product_type:
+        example: COMPONENT
+        type: string
+      unit:
+        example: pcs
+        type: string
+    type: object
+  handlers.DocPutawayRequest:
+    properties:
+      note:
+        example: Nhập kho bổ sung
+        type: string
+      product_qr_code:
+        example: PRD-0001
+        type: string
+      quantity:
+        example: 20
+        type: integer
+      reference_code:
+        example: IMP-001
+        type: string
+      tray_qr_code:
+        example: TRAY-A0102
+        type: string
+    type: object
+  handlers.DocRejectPutawayRequest:
+    properties:
+      reason:
+        example: Sai thông tin khay
+        type: string
+    type: object
+  handlers.DocScanOrderRequest:
+    properties:
+      order_code:
+        example: ORD-123
+        type: string
+    type: object
+  handlers.DocScanProductRequest:
+    properties:
+      note:
+        example: Scan đúng hàng
+        type: string
+      product_qr_code:
+        example: PRD-0001
+        type: string
+      tray_qr_code:
+        example: TRAY-A0102
+        type: string
+    type: object
+  handlers.DocStaffTask:
+    properties:
+      assigned_to:
+        example: 2
+        type: integer
+      customer_name:
+        example: Khách hàng A
+        type: string
+      id:
+        example: 1
+        type: integer
+      order_code:
+        example: ORD-123
+        type: string
+      picked_items:
+        example: 0
+        type: integer
+      status:
+        example: WAITING
+        type: string
+      total_items:
+        example: 3
+        type: integer
+    type: object
+  handlers.DocStaffTaskSummary:
+    properties:
+      import_in_progress_count:
+        example: 1
+        type: integer
+      import_waiting_count:
+        example: 3
+        type: integer
+      my_picking_count:
+        example: 1
+        type: integer
+      picking_count:
+        example: 2
+        type: integer
+      waiting_count:
+        example: 4
+        type: integer
+    type: object
+  handlers.DocStockTransaction:
+    properties:
+      id:
+        example: 1
+        type: integer
+      note:
+        example: Nhập kho
+        type: string
+      product_id:
+        example: 1
+        type: integer
+      quantity:
+        example: 20
+        type: integer
+      reference_code:
+        example: IMP-123
+        type: string
+      transaction_type:
+        example: IMPORT
+        type: string
+      tray_id:
+        example: 1
+        type: integer
+    type: object
+  handlers.DocStocktakingRequest:
+    properties:
+      note:
+        example: Kiểm kê định kỳ
+        type: string
+      physical_qty:
+        example: 95
+        type: integer
+      reference_code:
+        example: STK-001
+        type: string
+      tray_qr_code:
+        example: TRAY-A0102
+        type: string
+    type: object
+  handlers.DocSuccessResponse:
+    properties:
+      data: {}
+      message:
+        example: Thao tác thành công.
+        type: string
+    type: object
+  handlers.DocTray:
+    properties:
+      description:
+        example: Khay linh kiện
+        type: string
+      id:
+        example: 1
+        type: integer
+      is_active:
+        example: true
+        type: boolean
+      location_id:
+        example: 1
+        type: integer
+      product_id:
+        example: 1
+        type: integer
+      qr_code:
+        example: TRAY-A0102
+        type: string
+      tray_code:
+        example: TRAY-A0102
+        type: string
+    type: object
+  handlers.DocTrayRequest:
+    properties:
+      description:
+        example: Khay linh kiện
+        type: string
+      location_id:
+        example: 1
+        type: integer
+      product_id:
+        example: 1
+        type: integer
+      tray_code:
+        example: TRAY-A0102
+        type: string
+    type: object
+  handlers.DocUpdateUserRequest:
+    properties:
+      full_name:
+        example: Nhân viên kho 01
+        type: string
+      password:
+        example: staff123
+        type: string
+      role:
+        example: WAREHOUSE
+        type: string
+    type: object
+  handlers.DocUpdateUserStatusRequest:
+    properties:
+      is_active:
+        example: true
+        type: boolean
+    type: object
+  handlers.DocUser:
+    properties:
+      full_name:
+        example: Nhân viên kho
+        type: string
+      id:
+        example: 1
+        type: integer
+      is_active:
+        example: true
+        type: boolean
+      role:
+        example: WAREHOUSE
+        type: string
+      username:
+        example: staff
+        type: string
+    type: object
+  handlers.DocVerifyTrayRequest:
+    properties:
+      tray_qr_code:
+        example: TRAY-A0102
+        type: string
+    type: object
+info:
+  contact: {}
+  description: |-
+    Tài liệu API cho hệ thống quản lý kho WMS.
+    Hệ thống hỗ trợ quản lý sản phẩm, tồn kho, đơn hàng, nhập kho, picking, khay/kệ, người dùng và lịch sử kho.
+  title: WMS Warehouse Management API
+  version: "1.0"
+paths:
+  /admin/import-receipt-items/{item_id}/assign:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID dòng phiếu nhập
+        in: path
+        name: item_id
+        required: true
+        type: integer
+      - description: Nhân viên được gán
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocAssignImportReceiptItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: ADMIN gán task nhập kho
+      tags:
+      - Import Receipts
+  /admin/import-receipt-items/{item_id}/unassign:
+    patch:
+      parameters:
+      - description: ID dòng phiếu nhập
+        in: path
+        name: item_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: ADMIN gỡ phân công task nhập kho
+      tags:
+      - Import Receipts
+  /admin/picking/orders/{order_id}/assign:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID đơn hàng
+        in: path
+        name: order_id
+        required: true
+        type: integer
+      - description: Nhân viên được gán
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocAssignPickingOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: ADMIN gán đơn picking cho nhân viên
+      tags:
+      - Admin Picking
+  /admin/picking/orders/{order_id}/unassign:
+    patch:
+      description: Chỉ gỡ nếu chưa phát sinh dữ liệu picking theo rule backend.
+      parameters:
+      - description: ID đơn hàng
+        in: path
+        name: order_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: ADMIN gỡ phân công đơn picking
+      tags:
+      - Admin Picking
+  /audit/consistency/{order_id}:
+    get:
+      description: Kiểm tra sai lệch order/picking/stock cho một đơn hàng.
+      parameters:
+      - description: ID đơn hàng
+        in: path
+        name: order_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocAuditConsistency'
+      security:
+      - BearerAuth: []
+      summary: Kiểm tra nhất quán đơn hàng
+      tags:
+      - Audit
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Đăng nhập bằng username/password và nhận JWT token.
+      parameters:
+      - description: Thông tin đăng nhập
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocLoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.DocErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/handlers.DocErrorResponse'
+      summary: Đăng nhập
+      tags:
+      - Auth
+  /dashboard/stats:
+    get:
+      description: Thống kê dashboard theo role hiện tại.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocDashboardStats'
+      security:
+      - BearerAuth: []
+      summary: Dashboard thống kê
+      tags:
+      - Dashboard
+  /health:
+    get:
+      description: Public health check cho backend.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      summary: Kiểm tra trạng thái server
+      tags:
+      - Health
+  /import-receipts:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.DocImportReceipt'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Danh sách phiếu nhập
+      tags:
+      - Import Receipts
+    post:
+      consumes:
+      - application/json
+      description: ADMIN tạo phiếu nhập kế hoạch; các dòng item trở thành công việc
+        nhập kho cho STAFF.
+      parameters:
+      - description: Thông tin phiếu nhập
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocCreateImportReceiptRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Tạo phiếu nhập
+      tags:
+      - Import Receipts
+  /import-receipts/{id}:
+    get:
+      parameters:
+      - description: ID phiếu nhập
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocImportReceipt'
+      security:
+      - BearerAuth: []
+      summary: Chi tiết phiếu nhập
+      tags:
+      - Import Receipts
+  /inventory:
+    get:
+      description: Xem tồn kho theo sản phẩm/khay.
+      parameters:
+      - description: ID sản phẩm
+        in: query
+        name: product_id
+        type: integer
+      - description: ID khay
+        in: query
+        name: tray_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.DocInventory'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Danh sách tồn kho
+      tags:
+      - Inventory
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Thông tin tồn kho
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocCreateInventoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DocInventory'
+      security:
+      - BearerAuth: []
+      summary: Tạo tồn kho ban đầu
+      tags:
+      - Inventory
+  /inventory/{id}/adjust:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID tồn kho
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Thông tin điều chỉnh
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocAdjustInventoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Điều chỉnh tồn kho
+      tags:
+      - Inventory
+  /inventory/adjust-by-tray:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Thông tin điều chỉnh theo khay
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocAdjustByTrayRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Điều chỉnh tồn bằng QR khay
+      tags:
+      - Inventory
+  /inventory/putaway:
+    post:
+      consumes:
+      - application/json
+      description: Nhập kho theo QR sản phẩm và QR khay, cộng tồn và ghi stock transaction
+        IMPORT.
+      parameters:
+      - description: Thông tin nhập kho
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocPutawayRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Nhập kho nhanh bằng QR
+      tags:
+      - Inventory
+  /inventory/putaway-requests:
+    get:
+      parameters:
+      - description: Trạng thái yêu cầu
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items: {}
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Danh sách yêu cầu putaway legacy
+      tags:
+      - Inventory
+  /inventory/putaway-requests/{id}/approve:
+    post:
+      parameters:
+      - description: ID yêu cầu
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Duyệt yêu cầu putaway legacy
+      tags:
+      - Inventory
+  /inventory/putaway-requests/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID yêu cầu
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Lý do từ chối
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocRejectPutawayRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Từ chối yêu cầu putaway legacy
+      tags:
+      - Inventory
+  /inventory/stocktaking:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Thông tin kiểm kê
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocStocktakingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Kiểm kê nhanh bằng QR khay
+      tags:
+      - Inventory
+  /locations:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.DocLocation'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Danh sách vị trí
+      tags:
+      - Locations
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Thông tin vị trí
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocLocationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DocLocation'
+      security:
+      - BearerAuth: []
+      summary: Tạo vị trí
+      tags:
+      - Locations
+  /locations/{id}:
+    delete:
+      parameters:
+      - description: ID vị trí
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Ngừng kích hoạt vị trí
+      tags:
+      - Locations
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID vị trí
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Thông tin vị trí
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocLocationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocLocation'
+      security:
+      - BearerAuth: []
+      summary: Cập nhật vị trí
+      tags:
+      - Locations
+  /locations/{id}/trays:
+    get:
+      parameters:
+      - description: ID vị trí
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+      security:
+      - BearerAuth: []
+      summary: Danh sách khay trong vị trí
+      tags:
+      - Locations
+  /orders:
+    get:
+      parameters:
+      - description: Trạng thái PENDING/PICKING/COMPLETED/CANCELLED
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.DocOrder'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Danh sách đơn hàng
+      tags:
+      - Orders
+    post:
+      consumes:
+      - application/json
+      description: ADMIN tạo đơn hàng từ danh sách sản phẩm/BOM; backend sinh task
+        picking theo nghiệp vụ hiện tại.
+      parameters:
+      - description: Thông tin đơn hàng
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DocOrder'
+      security:
+      - BearerAuth: []
+      summary: Tạo đơn hàng
+      tags:
+      - Orders
+  /orders/{id}:
+    delete:
+      parameters:
+      - description: ID đơn hàng
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Xóa/hủy đơn hàng
+      tags:
+      - Orders
+    get:
+      parameters:
+      - description: ID đơn hàng
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocOrder'
+      security:
+      - BearerAuth: []
+      summary: Chi tiết đơn hàng
+      tags:
+      - Orders
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID đơn hàng
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Thông tin đơn hàng
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocOrder'
+      security:
+      - BearerAuth: []
+      summary: Cập nhật đơn hàng
+      tags:
+      - Orders
+  /orders/{id}/finish:
+    post:
+      parameters:
+      - description: ID đơn hàng
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Hoàn tất đơn hàng
+      tags:
+      - Picking
+  /orders/{id}/picking-tasks:
+    get:
+      parameters:
+      - description: ID đơn hàng
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Danh sách picking task của đơn
+      tags:
+      - Picking
+  /orders/{id}/progress:
+    get:
+      parameters:
+      - description: ID đơn hàng
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Tiến độ picking của đơn
+      tags:
+      - Picking
+  /orders/picking-tasks/{id}/scan-product:
+    post:
+      consumes:
+      - application/json
+      description: Khi scan đúng, backend cập nhật picked_quantity, trừ inventory,
+        ghi pick_logs và stock_transactions EXPORT.
+      parameters:
+      - description: ID picking task
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: QR khay và QR sản phẩm
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocScanProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Quét sản phẩm cho picking task
+      tags:
+      - Picking
+  /orders/picking-tasks/{id}/verify-tray:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID picking task
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: QR khay
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocVerifyTrayRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Xác nhận QR khay cho picking task
+      tags:
+      - Picking
+  /orders/scan:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Mã đơn
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocScanOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Quét đơn để picking
+      tags:
+      - Picking
+  /orders/scan/{qr_code}:
+    get:
+      parameters:
+      - description: QR/mã đơn
+        in: path
+        name: qr_code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Quét QR đơn để picking
+      tags:
+      - Picking
+  /pick-logs:
+    get:
+      parameters:
+      - description: ID đơn hàng
+        in: query
+        name: order_id
+        type: integer
+      - description: ID nhân viên
+        in: query
+        name: picked_by
+        type: integer
+      - description: Ngày bắt đầu
+        in: query
+        name: date_from
+        type: string
+      - description: Ngày kết thúc
+        in: query
+        name: date_to
+        type: string
+      - description: Số dòng tối đa
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.DocPickLog'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lịch sử nhặt hàng
+      tags:
+      - Pick Logs
+  /products:
+    get:
+      description: Lấy danh sách sản phẩm đang quản lý.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.DocProduct'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Danh sách sản phẩm
+      tags:
+      - Products
+    post:
+      consumes:
+      - application/json
+      description: ADMIN tạo sản phẩm mới.
+      parameters:
+      - description: Thông tin sản phẩm
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DocProduct'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/handlers.DocErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Tạo sản phẩm
+      tags:
+      - Products
+  /products/{id}:
+    delete:
+      description: ADMIN deactivate sản phẩm, không xóa vật lý.
+      parameters:
+      - description: ID sản phẩm
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Ngừng kích hoạt sản phẩm
+      tags:
+      - Products
+    get:
+      parameters:
+      - description: ID sản phẩm
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocProduct'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.DocErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Chi tiết sản phẩm
+      tags:
+      - Products
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID sản phẩm
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Thông tin sản phẩm
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocProduct'
+      security:
+      - BearerAuth: []
+      summary: Cập nhật sản phẩm
+      tags:
+      - Products
+  /products/code-preview:
+    get:
+      description: Sinh preview product_code/qr_code theo loại và tên sản phẩm.
+      parameters:
+      - description: Loại sản phẩm COMPONENT hoặc FINISHED_GOOD
+        in: query
+        name: product_type
+        type: string
+      - description: Tên sản phẩm
+        in: query
+        name: product_name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocProductCodePreviewResponse'
+      security:
+      - BearerAuth: []
+      summary: Xem trước mã sản phẩm
+      tags:
+      - Products
+  /products/scan/{qr_code}:
+    get:
+      description: Tra cứu sản phẩm và tồn/kệ liên quan bằng QR sản phẩm.
+      parameters:
+      - description: QR sản phẩm
+        in: path
+        name: qr_code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocProduct'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.DocErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Quét QR sản phẩm
+      tags:
+      - Products
+  /staff/import-receipt-items:
+    get:
+      description: STAFF xem các dòng phiếu nhập chờ nhận hoặc đang được phân công.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.DocImportTask'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Danh sách task nhập kho
+      tags:
+      - Import Receipts
+  /staff/import-receipt-items/{item_id}/claim:
+    post:
+      parameters:
+      - description: ID dòng phiếu nhập
+        in: path
+        name: item_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Nhận task nhập kho
+      tags:
+      - Import Receipts
+  /staff/import-receipt-items/{item_id}/confirm:
+    post:
+      consumes:
+      - application/json
+      description: STAFF quét QR khay và nhập số lượng thực nhập; backend cộng inventory
+        và ghi transaction IMPORT.
+      parameters:
+      - description: ID dòng phiếu nhập
+        in: path
+        name: item_id
+        required: true
+        type: integer
+      - description: Thông tin thực nhập
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocConfirmImportReceiptItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Xác nhận nhập kho cho task
+      tags:
+      - Import Receipts
+  /staff/import-receipt-items/summary:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocStaffTaskSummary'
+      security:
+      - BearerAuth: []
+      summary: Tổng quan task nhập kho
+      tags:
+      - Import Receipts
+  /staff/orders/{order_id}/claim:
+    post:
+      description: Một order chỉ có một nhân viên phụ trách tại một thời điểm theo
+        rule hiện tại.
+      parameters:
+      - description: ID đơn hàng
+        in: path
+        name: order_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: STAFF nhận đơn picking
+      tags:
+      - Staff Tasks
+  /staff/task-summary:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocStaffTaskSummary'
+      security:
+      - BearerAuth: []
+      summary: Tổng quan tác vụ staff
+      tags:
+      - Staff Tasks
+  /staff/tasks:
+    get:
+      description: STAFF xem đơn chờ nhận hoặc đang picking.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.DocStaffTask'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Danh sách tác vụ staff
+      tags:
+      - Staff Tasks
+  /stock-transactions:
+    get:
+      description: Xem stock_transactions IMPORT/EXPORT/ADJUST/ROLLBACK.
+      parameters:
+      - description: ID sản phẩm
+        in: query
+        name: product_id
+        type: integer
+      - description: ID khay
+        in: query
+        name: tray_id
+        type: integer
+      - description: ID người tạo
+        in: query
+        name: created_by
+        type: integer
+      - description: IMPORT/EXPORT/ADJUST/ROLLBACK
+        in: query
+        name: transaction_type
+        type: string
+      - description: Số dòng tối đa
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.DocStockTransaction'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lịch sử biến động kho
+      tags:
+      - Stock Transactions
+  /trays:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.DocTray'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Danh sách khay
+      tags:
+      - Trays
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Thông tin khay
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocTrayRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DocTray'
+      security:
+      - BearerAuth: []
+      summary: Tạo khay
+      tags:
+      - Trays
+  /trays/{id}:
+    delete:
+      parameters:
+      - description: ID khay
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Ngừng kích hoạt khay
+      tags:
+      - Trays
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID khay
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Thông tin khay
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocTrayRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocTray'
+      security:
+      - BearerAuth: []
+      summary: Cập nhật khay
+      tags:
+      - Trays
+  /trays/scan/{qr_code}:
+    get:
+      description: Tra cứu khay, vị trí và tồn kho trong khay bằng QR.
+      parameters:
+      - description: QR khay
+        in: path
+        name: qr_code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocTray'
+      security:
+      - BearerAuth: []
+      summary: Quét QR khay
+      tags:
+      - Trays
+  /users:
+    get:
+      description: ADMIN xem danh sách tài khoản, có thể lọc theo search, role, is_active.
+      parameters:
+      - description: Từ khóa tìm kiếm
+        in: query
+        name: search
+        type: string
+      - description: Vai trò ADMIN hoặc WAREHOUSE/STAFF
+        in: query
+        name: role
+        type: string
+      - description: Trạng thái hoạt động
+        in: query
+        name: is_active
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.DocUser'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.DocErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.DocErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Danh sách người dùng
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: ADMIN tạo tài khoản nhân viên hoặc admin.
+      parameters:
+      - description: Thông tin tài khoản
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocCreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DocUser'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.DocErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/handlers.DocErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Tạo tài khoản
+      tags:
+      - Users
+  /users/{id}:
+    delete:
+      description: ADMIN xóa tài khoản nếu không vi phạm rule nghiệp vụ.
+      parameters:
+      - description: ID người dùng
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.DocErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Xóa tài khoản
+      tags:
+      - Users
+    get:
+      description: ADMIN xem chi tiết một tài khoản.
+      parameters:
+      - description: ID người dùng
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocUser'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.DocErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Chi tiết người dùng
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      description: ADMIN cập nhật thông tin tài khoản.
+      parameters:
+      - description: ID người dùng
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Thông tin cập nhật
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocUpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocUser'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.DocErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cập nhật tài khoản
+      tags:
+      - Users
+  /users/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: ADMIN cập nhật trạng thái hoạt động của tài khoản.
+      parameters:
+      - description: ID người dùng
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Trạng thái mới
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocUpdateUserStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocUser'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.DocErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Khóa hoặc mở tài khoản
+      tags:
+      - Users
+securityDefinitions:
+  BearerAuth:
+    description: 'Nhập JWT token theo dạng: Bearer <token>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

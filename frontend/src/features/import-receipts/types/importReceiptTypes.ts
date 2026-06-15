@@ -9,8 +9,14 @@ export interface ImportReceiptItem {
   id: number
   receipt_id: number
   product_id: number
-  tray_id: number
+  tray_id: number | null
   quantity: number
+  actual_quantity: number
+  actual_tray_id: number | null
+  status: string
+  assigned_to: number | null
+  assigned_at: string | null
+  completed_at: string | null
   created_at: string
   updated_at: string
 }
@@ -20,6 +26,7 @@ export interface ImportReceipt {
   receipt_code: string
   supplier_name: string
   note: string
+  status: string
   created_by: number | null
   created_at: string
   updated_at: string
@@ -28,8 +35,6 @@ export interface ImportReceipt {
 
 export interface CreateImportReceiptItemPayload {
   product_id: number
-  tray_id: number
-  tray_qr_code?: string
   quantity: number
 }
 
@@ -40,8 +45,14 @@ export interface CreateImportReceiptPayload {
 }
 
 export interface CreateImportReceiptResponse {
+  message: string
   receipt: ImportReceipt
   items: ImportReceiptItem[]
+}
+
+export interface ImportReceiptItemActionResponse {
+  message: string
+  item: ImportReceiptItem
 }
 
 export interface ProductOption {
@@ -72,6 +83,7 @@ export interface LocationOption {
 export interface ImportReceiptDisplay extends ImportReceipt {
   item_count: number
   total_quantity: number
+  total_actual_quantity: number
 }
 
 export type PutawayRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED'

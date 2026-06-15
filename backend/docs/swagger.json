@@ -1,0 +1,3286 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Tài liệu API cho hệ thống quản lý kho WMS.\nHệ thống hỗ trợ quản lý sản phẩm, tồn kho, đơn hàng, nhập kho, picking, khay/kệ, người dùng và lịch sử kho.",
+        "title": "WMS Warehouse Management API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/api",
+    "paths": {
+        "/admin/import-receipt-items/{item_id}/assign": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Import Receipts"
+                ],
+                "summary": "ADMIN gán task nhập kho",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID dòng phiếu nhập",
+                        "name": "item_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Nhân viên được gán",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocAssignImportReceiptItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/import-receipt-items/{item_id}/unassign": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Import Receipts"
+                ],
+                "summary": "ADMIN gỡ phân công task nhập kho",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID dòng phiếu nhập",
+                        "name": "item_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/picking/orders/{order_id}/assign": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Picking"
+                ],
+                "summary": "ADMIN gán đơn picking cho nhân viên",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID đơn hàng",
+                        "name": "order_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Nhân viên được gán",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocAssignPickingOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/picking/orders/{order_id}/unassign": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Chỉ gỡ nếu chưa phát sinh dữ liệu picking theo rule backend.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Picking"
+                ],
+                "summary": "ADMIN gỡ phân công đơn picking",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID đơn hàng",
+                        "name": "order_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/audit/consistency/{order_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Kiểm tra sai lệch order/picking/stock cho một đơn hàng.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Audit"
+                ],
+                "summary": "Kiểm tra nhất quán đơn hàng",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID đơn hàng",
+                        "name": "order_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocAuditConsistency"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "description": "Đăng nhập bằng username/password và nhận JWT token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Đăng nhập",
+                "parameters": [
+                    {
+                        "description": "Thông tin đăng nhập",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocLoginResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Thống kê dashboard theo role hiện tại.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Dashboard thống kê",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocDashboardStats"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Public health check cho backend.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Kiểm tra trạng thái server",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/import-receipts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Import Receipts"
+                ],
+                "summary": "Danh sách phiếu nhập",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.DocImportReceipt"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "ADMIN tạo phiếu nhập kế hoạch; các dòng item trở thành công việc nhập kho cho STAFF.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Import Receipts"
+                ],
+                "summary": "Tạo phiếu nhập",
+                "parameters": [
+                    {
+                        "description": "Thông tin phiếu nhập",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocCreateImportReceiptRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/import-receipts/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Import Receipts"
+                ],
+                "summary": "Chi tiết phiếu nhập",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID phiếu nhập",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocImportReceipt"
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Xem tồn kho theo sản phẩm/khay.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Inventory"
+                ],
+                "summary": "Danh sách tồn kho",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID sản phẩm",
+                        "name": "product_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID khay",
+                        "name": "tray_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.DocInventory"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Inventory"
+                ],
+                "summary": "Tạo tồn kho ban đầu",
+                "parameters": [
+                    {
+                        "description": "Thông tin tồn kho",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocCreateInventoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocInventory"
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory/adjust-by-tray": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Inventory"
+                ],
+                "summary": "Điều chỉnh tồn bằng QR khay",
+                "parameters": [
+                    {
+                        "description": "Thông tin điều chỉnh theo khay",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocAdjustByTrayRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory/putaway": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Nhập kho theo QR sản phẩm và QR khay, cộng tồn và ghi stock transaction IMPORT.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Inventory"
+                ],
+                "summary": "Nhập kho nhanh bằng QR",
+                "parameters": [
+                    {
+                        "description": "Thông tin nhập kho",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocPutawayRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory/putaway-requests": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Inventory"
+                ],
+                "summary": "Danh sách yêu cầu putaway legacy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Trạng thái yêu cầu",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {}
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory/putaway-requests/{id}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Inventory"
+                ],
+                "summary": "Duyệt yêu cầu putaway legacy",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID yêu cầu",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory/putaway-requests/{id}/reject": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Inventory"
+                ],
+                "summary": "Từ chối yêu cầu putaway legacy",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID yêu cầu",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Lý do từ chối",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocRejectPutawayRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory/stocktaking": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Inventory"
+                ],
+                "summary": "Kiểm kê nhanh bằng QR khay",
+                "parameters": [
+                    {
+                        "description": "Thông tin kiểm kê",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocStocktakingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory/{id}/adjust": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Inventory"
+                ],
+                "summary": "Điều chỉnh tồn kho",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID tồn kho",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Thông tin điều chỉnh",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocAdjustInventoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/locations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Locations"
+                ],
+                "summary": "Danh sách vị trí",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.DocLocation"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Locations"
+                ],
+                "summary": "Tạo vị trí",
+                "parameters": [
+                    {
+                        "description": "Thông tin vị trí",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocLocationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocLocation"
+                        }
+                    }
+                }
+            }
+        },
+        "/locations/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Locations"
+                ],
+                "summary": "Cập nhật vị trí",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID vị trí",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Thông tin vị trí",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocLocationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocLocation"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Locations"
+                ],
+                "summary": "Ngừng kích hoạt vị trí",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID vị trí",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/locations/{id}/trays": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Locations"
+                ],
+                "summary": "Danh sách khay trong vị trí",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID vị trí",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/orders": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Danh sách đơn hàng",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Trạng thái PENDING/PICKING/COMPLETED/CANCELLED",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.DocOrder"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "ADMIN tạo đơn hàng từ danh sách sản phẩm/BOM; backend sinh task picking theo nghiệp vụ hiện tại.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Tạo đơn hàng",
+                "parameters": [
+                    {
+                        "description": "Thông tin đơn hàng",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocOrder"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/picking-tasks/{id}/scan-product": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Khi scan đúng, backend cập nhật picked_quantity, trừ inventory, ghi pick_logs và stock_transactions EXPORT.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Picking"
+                ],
+                "summary": "Quét sản phẩm cho picking task",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID picking task",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "QR khay và QR sản phẩm",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocScanProductRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/picking-tasks/{id}/verify-tray": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Picking"
+                ],
+                "summary": "Xác nhận QR khay cho picking task",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID picking task",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "QR khay",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocVerifyTrayRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/scan": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Picking"
+                ],
+                "summary": "Quét đơn để picking",
+                "parameters": [
+                    {
+                        "description": "Mã đơn",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocScanOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/scan/{qr_code}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Picking"
+                ],
+                "summary": "Quét QR đơn để picking",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "QR/mã đơn",
+                        "name": "qr_code",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Chi tiết đơn hàng",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID đơn hàng",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocOrder"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Cập nhật đơn hàng",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID đơn hàng",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Thông tin đơn hàng",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocOrder"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Xóa/hủy đơn hàng",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID đơn hàng",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/{id}/finish": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Picking"
+                ],
+                "summary": "Hoàn tất đơn hàng",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID đơn hàng",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/{id}/picking-tasks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Picking"
+                ],
+                "summary": "Danh sách picking task của đơn",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID đơn hàng",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/{id}/progress": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Picking"
+                ],
+                "summary": "Tiến độ picking của đơn",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID đơn hàng",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pick-logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pick Logs"
+                ],
+                "summary": "Lịch sử nhặt hàng",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID đơn hàng",
+                        "name": "order_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID nhân viên",
+                        "name": "picked_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ngày bắt đầu",
+                        "name": "date_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ngày kết thúc",
+                        "name": "date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Số dòng tối đa",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.DocPickLog"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/products": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lấy danh sách sản phẩm đang quản lý.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Danh sách sản phẩm",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.DocProduct"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "ADMIN tạo sản phẩm mới.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Tạo sản phẩm",
+                "parameters": [
+                    {
+                        "description": "Thông tin sản phẩm",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocProductRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocProduct"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/products/code-preview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Sinh preview product_code/qr_code theo loại và tên sản phẩm.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Xem trước mã sản phẩm",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Loại sản phẩm COMPONENT hoặc FINISHED_GOOD",
+                        "name": "product_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tên sản phẩm",
+                        "name": "product_name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocProductCodePreviewResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/products/scan/{qr_code}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tra cứu sản phẩm và tồn/kệ liên quan bằng QR sản phẩm.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Quét QR sản phẩm",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "QR sản phẩm",
+                        "name": "qr_code",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocProduct"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/products/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Chi tiết sản phẩm",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID sản phẩm",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocProduct"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Cập nhật sản phẩm",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID sản phẩm",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Thông tin sản phẩm",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocProductRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocProduct"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "ADMIN deactivate sản phẩm, không xóa vật lý.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Ngừng kích hoạt sản phẩm",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID sản phẩm",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/staff/import-receipt-items": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "STAFF xem các dòng phiếu nhập chờ nhận hoặc đang được phân công.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Import Receipts"
+                ],
+                "summary": "Danh sách task nhập kho",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.DocImportTask"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/staff/import-receipt-items/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Import Receipts"
+                ],
+                "summary": "Tổng quan task nhập kho",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocStaffTaskSummary"
+                        }
+                    }
+                }
+            }
+        },
+        "/staff/import-receipt-items/{item_id}/claim": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Import Receipts"
+                ],
+                "summary": "Nhận task nhập kho",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID dòng phiếu nhập",
+                        "name": "item_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/staff/import-receipt-items/{item_id}/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "STAFF quét QR khay và nhập số lượng thực nhập; backend cộng inventory và ghi transaction IMPORT.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Import Receipts"
+                ],
+                "summary": "Xác nhận nhập kho cho task",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID dòng phiếu nhập",
+                        "name": "item_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Thông tin thực nhập",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocConfirmImportReceiptItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/staff/orders/{order_id}/claim": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Một order chỉ có một nhân viên phụ trách tại một thời điểm theo rule hiện tại.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Staff Tasks"
+                ],
+                "summary": "STAFF nhận đơn picking",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID đơn hàng",
+                        "name": "order_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/staff/task-summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Staff Tasks"
+                ],
+                "summary": "Tổng quan tác vụ staff",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocStaffTaskSummary"
+                        }
+                    }
+                }
+            }
+        },
+        "/staff/tasks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "STAFF xem đơn chờ nhận hoặc đang picking.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Staff Tasks"
+                ],
+                "summary": "Danh sách tác vụ staff",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.DocStaffTask"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/stock-transactions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Xem stock_transactions IMPORT/EXPORT/ADJUST/ROLLBACK.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Stock Transactions"
+                ],
+                "summary": "Lịch sử biến động kho",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID sản phẩm",
+                        "name": "product_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID khay",
+                        "name": "tray_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID người tạo",
+                        "name": "created_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IMPORT/EXPORT/ADJUST/ROLLBACK",
+                        "name": "transaction_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Số dòng tối đa",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.DocStockTransaction"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/trays": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Trays"
+                ],
+                "summary": "Danh sách khay",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.DocTray"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Trays"
+                ],
+                "summary": "Tạo khay",
+                "parameters": [
+                    {
+                        "description": "Thông tin khay",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocTrayRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocTray"
+                        }
+                    }
+                }
+            }
+        },
+        "/trays/scan/{qr_code}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tra cứu khay, vị trí và tồn kho trong khay bằng QR.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Trays"
+                ],
+                "summary": "Quét QR khay",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "QR khay",
+                        "name": "qr_code",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocTray"
+                        }
+                    }
+                }
+            }
+        },
+        "/trays/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Trays"
+                ],
+                "summary": "Cập nhật khay",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID khay",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Thông tin khay",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocTrayRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocTray"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Trays"
+                ],
+                "summary": "Ngừng kích hoạt khay",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID khay",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "ADMIN xem danh sách tài khoản, có thể lọc theo search, role, is_active.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Danh sách người dùng",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Từ khóa tìm kiếm",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Vai trò ADMIN hoặc WAREHOUSE/STAFF",
+                        "name": "role",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Trạng thái hoạt động",
+                        "name": "is_active",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.DocUser"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "ADMIN tạo tài khoản nhân viên hoặc admin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Tạo tài khoản",
+                "parameters": [
+                    {
+                        "description": "Thông tin tài khoản",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocCreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocUser"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "ADMIN xem chi tiết một tài khoản.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Chi tiết người dùng",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID người dùng",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocUser"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "ADMIN cập nhật thông tin tài khoản.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Cập nhật tài khoản",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID người dùng",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Thông tin cập nhật",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocUpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocUser"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "ADMIN xóa tài khoản nếu không vi phạm rule nghiệp vụ.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Xóa tài khoản",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID người dùng",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{id}/status": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "ADMIN cập nhật trạng thái hoạt động của tài khoản.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Khóa hoặc mở tài khoản",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID người dùng",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Trạng thái mới",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocUpdateUserStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocUser"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "handlers.DocAdjustByTrayRequest": {
+            "type": "object",
+            "properties": {
+                "delta": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "note": {
+                    "type": "string",
+                    "example": "Điều chỉnh nhanh"
+                },
+                "reference_code": {
+                    "type": "string",
+                    "example": "ADJ-001"
+                },
+                "tray_qr_code": {
+                    "type": "string",
+                    "example": "TRAY-A0102"
+                }
+            }
+        },
+        "handlers.DocAdjustInventoryRequest": {
+            "type": "object",
+            "properties": {
+                "delta": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "note": {
+                    "type": "string",
+                    "example": "Điều chỉnh kiểm kê"
+                }
+            }
+        },
+        "handlers.DocAssignImportReceiptItemRequest": {
+            "type": "object",
+            "properties": {
+                "staff_id": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "handlers.DocAssignPickingOrderRequest": {
+            "type": "object",
+            "properties": {
+                "staff_id": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "handlers.DocAuditConsistency": {
+            "type": "object",
+            "properties": {
+                "checked_at": {
+                    "type": "string",
+                    "example": "2026-06-09T10:00:00Z"
+                },
+                "is_valid": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "issues": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "order_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "handlers.DocAuthUser": {
+            "type": "object",
+            "properties": {
+                "full_name": {
+                    "type": "string",
+                    "example": "Administrator"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "role": {
+                    "type": "string",
+                    "example": "ADMIN"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "admin"
+                }
+            }
+        },
+        "handlers.DocConfirmImportReceiptItemRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string",
+                    "example": "Đã nhập đủ"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 50
+                },
+                "tray_code": {
+                    "type": "string",
+                    "example": "TRAY-A0102"
+                },
+                "tray_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "handlers.DocCreateImportReceiptRequest": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.DocImportReceiptItemRequest"
+                    }
+                },
+                "note": {
+                    "type": "string",
+                    "example": "Nhập lô tháng 6"
+                },
+                "supplier_name": {
+                    "type": "string",
+                    "example": "Nhà cung cấp A"
+                }
+            }
+        },
+        "handlers.DocCreateInventoryRequest": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 100
+                },
+                "tray_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "handlers.DocCreateUserRequest": {
+            "type": "object",
+            "properties": {
+                "full_name": {
+                    "type": "string",
+                    "example": "Nhân viên kho 01"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "staff123"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "WAREHOUSE"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "staff01"
+                }
+            }
+        },
+        "handlers.DocDashboardStats": {
+            "type": "object",
+            "properties": {
+                "role": {
+                    "type": "string",
+                    "example": "ADMIN"
+                }
+            }
+        },
+        "handlers.DocErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "invalid token"
+                },
+                "error_code": {
+                    "type": "string",
+                    "example": "TASK_ALREADY_ASSIGNED"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Không thể xử lý yêu cầu."
+                }
+            }
+        },
+        "handlers.DocImportReceipt": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "note": {
+                    "type": "string",
+                    "example": "Nhập lô tháng 6"
+                },
+                "receipt_code": {
+                    "type": "string",
+                    "example": "IMP-123"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "PENDING"
+                },
+                "supplier_name": {
+                    "type": "string",
+                    "example": "Nhà cung cấp A"
+                }
+            }
+        },
+        "handlers.DocImportReceiptItemRequest": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 50
+                }
+            }
+        },
+        "handlers.DocImportTask": {
+            "type": "object",
+            "properties": {
+                "actual_quantity": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "assigned_to": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "expected_quantity": {
+                    "type": "integer",
+                    "example": 50
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "product_code": {
+                    "type": "string",
+                    "example": "PRD-0001"
+                },
+                "product_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "product_name": {
+                    "type": "string",
+                    "example": "Motor A"
+                },
+                "receipt_code": {
+                    "type": "string",
+                    "example": "IMP-123"
+                },
+                "receipt_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "status": {
+                    "type": "string",
+                    "example": "WAITING"
+                }
+            }
+        },
+        "handlers.DocInventory": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "product_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 100
+                },
+                "tray_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "handlers.DocLocation": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Kệ A hàng 01"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "location_code": {
+                    "type": "string",
+                    "example": "A-01"
+                },
+                "shelf": {
+                    "type": "string",
+                    "example": "A"
+                }
+            }
+        },
+        "handlers.DocLocationRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Kệ A hàng 01"
+                },
+                "location_code": {
+                    "type": "string",
+                    "example": "A-01"
+                },
+                "shelf": {
+                    "type": "string",
+                    "example": "A"
+                }
+            }
+        },
+        "handlers.DocLoginRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "admin123"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "admin"
+                }
+            }
+        },
+        "handlers.DocLoginResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string",
+                    "example": "Bearer JWT token"
+                },
+                "user": {
+                    "$ref": "#/definitions/handlers.DocAuthUser"
+                }
+            }
+        },
+        "handlers.DocOrder": {
+            "type": "object",
+            "properties": {
+                "customer_address": {
+                    "type": "string",
+                    "example": "Hà Nội"
+                },
+                "customer_name": {
+                    "type": "string",
+                    "example": "Khách hàng A"
+                },
+                "customer_phone": {
+                    "type": "string",
+                    "example": "0900000000"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "order_code": {
+                    "type": "string",
+                    "example": "ORD-123"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "PENDING"
+                },
+                "total_amount": {
+                    "type": "number",
+                    "example": 300000
+                }
+            }
+        },
+        "handlers.DocOrderItemRequest": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "unit_price": {
+                    "type": "number",
+                    "example": 150000
+                }
+            }
+        },
+        "handlers.DocOrderRequest": {
+            "type": "object",
+            "properties": {
+                "customer_address": {
+                    "type": "string",
+                    "example": "Hà Nội"
+                },
+                "customer_name": {
+                    "type": "string",
+                    "example": "Khách hàng A"
+                },
+                "customer_phone": {
+                    "type": "string",
+                    "example": "0900000000"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.DocOrderItemRequest"
+                    }
+                }
+            }
+        },
+        "handlers.DocPickLog": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "order_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "picked_by": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "product_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "tray_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "handlers.DocProduct": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Linh kiện sản xuất"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "image_url": {
+                    "type": "string",
+                    "example": "https://example.com/product.png"
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "min_stock": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "price": {
+                    "type": "number",
+                    "example": 150000
+                },
+                "product_code": {
+                    "type": "string",
+                    "example": "PRD-0001"
+                },
+                "product_name": {
+                    "type": "string",
+                    "example": "Motor A"
+                },
+                "product_type": {
+                    "type": "string",
+                    "example": "COMPONENT"
+                },
+                "qr_code": {
+                    "type": "string",
+                    "example": "PRD-0001"
+                },
+                "unit": {
+                    "type": "string",
+                    "example": "pcs"
+                }
+            }
+        },
+        "handlers.DocProductCodePreviewResponse": {
+            "type": "object",
+            "properties": {
+                "product_code": {
+                    "type": "string",
+                    "example": "COMP-0001"
+                },
+                "qr_code": {
+                    "type": "string",
+                    "example": "COMP-0001"
+                }
+            }
+        },
+        "handlers.DocProductRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Linh kiện sản xuất"
+                },
+                "image_url": {
+                    "type": "string",
+                    "example": "https://example.com/product.png"
+                },
+                "min_stock": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "price": {
+                    "type": "number",
+                    "example": 150000
+                },
+                "product_name": {
+                    "type": "string",
+                    "example": "Motor A"
+                },
+                "product_type": {
+                    "type": "string",
+                    "example": "COMPONENT"
+                },
+                "unit": {
+                    "type": "string",
+                    "example": "pcs"
+                }
+            }
+        },
+        "handlers.DocPutawayRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string",
+                    "example": "Nhập kho bổ sung"
+                },
+                "product_qr_code": {
+                    "type": "string",
+                    "example": "PRD-0001"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "reference_code": {
+                    "type": "string",
+                    "example": "IMP-001"
+                },
+                "tray_qr_code": {
+                    "type": "string",
+                    "example": "TRAY-A0102"
+                }
+            }
+        },
+        "handlers.DocRejectPutawayRequest": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "example": "Sai thông tin khay"
+                }
+            }
+        },
+        "handlers.DocScanOrderRequest": {
+            "type": "object",
+            "properties": {
+                "order_code": {
+                    "type": "string",
+                    "example": "ORD-123"
+                }
+            }
+        },
+        "handlers.DocScanProductRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string",
+                    "example": "Scan đúng hàng"
+                },
+                "product_qr_code": {
+                    "type": "string",
+                    "example": "PRD-0001"
+                },
+                "tray_qr_code": {
+                    "type": "string",
+                    "example": "TRAY-A0102"
+                }
+            }
+        },
+        "handlers.DocStaffTask": {
+            "type": "object",
+            "properties": {
+                "assigned_to": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "customer_name": {
+                    "type": "string",
+                    "example": "Khách hàng A"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "order_code": {
+                    "type": "string",
+                    "example": "ORD-123"
+                },
+                "picked_items": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "status": {
+                    "type": "string",
+                    "example": "WAITING"
+                },
+                "total_items": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "handlers.DocStaffTaskSummary": {
+            "type": "object",
+            "properties": {
+                "import_in_progress_count": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "import_waiting_count": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "my_picking_count": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "picking_count": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "waiting_count": {
+                    "type": "integer",
+                    "example": 4
+                }
+            }
+        },
+        "handlers.DocStockTransaction": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "note": {
+                    "type": "string",
+                    "example": "Nhập kho"
+                },
+                "product_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "reference_code": {
+                    "type": "string",
+                    "example": "IMP-123"
+                },
+                "transaction_type": {
+                    "type": "string",
+                    "example": "IMPORT"
+                },
+                "tray_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "handlers.DocStocktakingRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string",
+                    "example": "Kiểm kê định kỳ"
+                },
+                "physical_qty": {
+                    "type": "integer",
+                    "example": 95
+                },
+                "reference_code": {
+                    "type": "string",
+                    "example": "STK-001"
+                },
+                "tray_qr_code": {
+                    "type": "string",
+                    "example": "TRAY-A0102"
+                }
+            }
+        },
+        "handlers.DocSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string",
+                    "example": "Thao tác thành công."
+                }
+            }
+        },
+        "handlers.DocTray": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Khay linh kiện"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "location_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "product_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "qr_code": {
+                    "type": "string",
+                    "example": "TRAY-A0102"
+                },
+                "tray_code": {
+                    "type": "string",
+                    "example": "TRAY-A0102"
+                }
+            }
+        },
+        "handlers.DocTrayRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Khay linh kiện"
+                },
+                "location_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "product_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "tray_code": {
+                    "type": "string",
+                    "example": "TRAY-A0102"
+                }
+            }
+        },
+        "handlers.DocUpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "full_name": {
+                    "type": "string",
+                    "example": "Nhân viên kho 01"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "staff123"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "WAREHOUSE"
+                }
+            }
+        },
+        "handlers.DocUpdateUserStatusRequest": {
+            "type": "object",
+            "properties": {
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handlers.DocUser": {
+            "type": "object",
+            "properties": {
+                "full_name": {
+                    "type": "string",
+                    "example": "Nhân viên kho"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "role": {
+                    "type": "string",
+                    "example": "WAREHOUSE"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "staff"
+                }
+            }
+        },
+        "handlers.DocVerifyTrayRequest": {
+            "type": "object",
+            "properties": {
+                "tray_qr_code": {
+                    "type": "string",
+                    "example": "TRAY-A0102"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Nhập JWT token theo dạng: Bearer \u003ctoken\u003e",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

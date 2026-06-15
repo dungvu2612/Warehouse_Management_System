@@ -8,7 +8,7 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 type UserHandler struct {
@@ -38,41 +38,41 @@ func NewUserHandler(service services.UserService) *UserHandler {
 	return &UserHandler{service: service}
 }
 
-func parseUserID(c *gin.Context) (uint, bool) {
+func parseUserID(c echo.Context) (uint, bool) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || id == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error_code": "INVALID_USER_ID", "error": "ID người dùng không hợp lệ"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error_code": "INVALID_USER_ID", "error": "ID người dùng không hợp lệ"})
 		return 0, false
 	}
 	return uint(id), true
 }
 
-func mapUserError(c *gin.Context, err error) {
+func mapUserError(c echo.Context, err error) {
 	switch {
 	case errors.Is(err, repositories.ErrUsernameAlreadyExists):
-		c.JSON(http.StatusConflict, gin.H{"error_code": "USERNAME_ALREADY_EXISTS", "error": "Tên đăng nhập đã tồn tại"})
+		c.JSON(http.StatusConflict, echo.Map{"error_code": "USERNAME_ALREADY_EXISTS", "error": "Tên đăng nhập đã tồn tại"})
 	case errors.Is(err, repositories.ErrUserEntityNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error_code": "USER_NOT_FOUND", "error": "Không tìm thấy tài khoản"})
+		c.JSON(http.StatusNotFound, echo.Map{"error_code": "USER_NOT_FOUND", "error": "Không tìm thấy tài khoản"})
 	case errors.Is(err, services.ErrUserInvalidRole):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error_code": "INVALID_ROLE", "error": "Vai trò không hợp lệ"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error_code": "INVALID_ROLE", "error": "Vai trò không hợp lệ"})
 	case errors.Is(err, services.ErrUserPasswordTooShort):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error_code": "PASSWORD_TOO_SHORT", "error": "Mật khẩu phải có ít nhất 6 ký tự"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error_code": "PASSWORD_TOO_SHORT", "error": "Mật khẩu phải có ít nhất 6 ký tự"})
 	case errors.Is(err, services.ErrUserCannotDisableLastAdmin):
-		c.JSON(http.StatusConflict, gin.H{"error_code": "CANNOT_DISABLE_LAST_ADMIN", "error": "Không thể khóa admin cuối cùng"})
+		c.JSON(http.StatusConflict, echo.Map{"error_code": "CANNOT_DISABLE_LAST_ADMIN", "error": "Không thể khóa admin cuối cùng"})
 	case errors.Is(err, services.ErrUserCannotDeleteSelf):
-		c.JSON(http.StatusConflict, gin.H{"error_code": "CANNOT_DELETE_SELF", "error": "Không thể xóa chính tài khoản đang đăng nhập"})
+		c.JSON(http.StatusConflict, echo.Map{"error_code": "CANNOT_DELETE_SELF", "error": "Không thể xóa chính tài khoản đang đăng nhập"})
 	case errors.Is(err, services.ErrUserInvalidPayload), errors.Is(err, services.ErrUserInvalidID):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 }
 
-func (h *UserHandler) GetUsers(c *gin.Context) {
+func (h *UserHandler) GetUsers(c echo.Context) {
 	users, err := h.service.GetAll(services.UserListQuery{
-		Search:      c.Query("search"),
-		Role:        c.Query("role"),
-		IsActiveRaw: c.Query("is_active"),
+		Search:      c.QueryParam("search"),
+		Role:        c.QueryParam("role"),
+		IsActiveRaw: c.QueryParam("is_active"),
 	})
 	if err != nil {
 		mapUserError(c, err)
@@ -81,7 +81,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, users)
 }
 
-func (h *UserHandler) GetUserByID(c *gin.Context) {
+func (h *UserHandler) GetUserByID(c echo.Context) {
 	userID, ok := parseUserID(c)
 	if !ok {
 		return
@@ -94,10 +94,10 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-func (h *UserHandler) CreateUser(c *gin.Context) {
+func (h *UserHandler) CreateUser(c echo.Context) {
 	var req createUserRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
@@ -120,14 +120,14 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, user)
 }
 
-func (h *UserHandler) UpdateUser(c *gin.Context) {
+func (h *UserHandler) UpdateUser(c echo.Context) {
 	userID, ok := parseUserID(c)
 	if !ok {
 		return
 	}
 	var req updateUserRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
@@ -150,18 +150,18 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-func (h *UserHandler) UpdateUserStatus(c *gin.Context) {
+func (h *UserHandler) UpdateUserStatus(c echo.Context) {
 	userID, ok := parseUserID(c)
 	if !ok {
 		return
 	}
 	var req updateStatusRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
-	currentUserRaw, _ := c.Get("user_id")
+	currentUserRaw := c.Get("user_id")
 	currentUserID, _ := currentUserRaw.(uint)
 
 	user, err := h.service.SetStatus(userID, req.IsActive, currentUserID)
@@ -172,12 +172,12 @@ func (h *UserHandler) UpdateUserStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-func (h *UserHandler) DeleteUser(c *gin.Context) {
+func (h *UserHandler) DeleteUser(c echo.Context) {
 	userID, ok := parseUserID(c)
 	if !ok {
 		return
 	}
-	currentUserRaw, _ := c.Get("user_id")
+	currentUserRaw := c.Get("user_id")
 	currentUserID, _ := currentUserRaw.(uint)
 
 	if err := h.service.Delete(userID, currentUserID); err != nil {
@@ -185,5 +185,5 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Xóa tài khoản thành công"})
+	c.JSON(http.StatusOK, echo.Map{"message": "Xóa tài khoản thành công"})
 }

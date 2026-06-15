@@ -23,6 +23,16 @@ const typeLabel: Record<string, string> = {
   ROLLBACK: 'Hoàn tác',
 }
 
+function signedQuantity(transactionType: string, quantity: number) {
+  if (transactionType === 'EXPORT') return -Math.abs(quantity)
+  if (transactionType === 'IMPORT') return Math.abs(quantity)
+  return quantity
+}
+
+function formatSignedQuantity(value: number) {
+  return value > 0 ? `+${value}` : `${value}`
+}
+
 export function RecentWarehouseActivities({ items }: { items: DashboardRecentWarehouseActivity[] }) {
   return (
     <Paper sx={{ p: 2, flex: 1, minWidth: 0 }} variant="outlined">
@@ -51,17 +61,20 @@ export function RecentWarehouseActivities({ items }: { items: DashboardRecentWar
                 <TableCell colSpan={5}>Không có dữ liệu.</TableCell>
               </TableRow>
             )}
-            {items.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>
-                  <Chip size="small" color={colorByType[item.transaction_type] || 'default'} label={typeLabel[item.transaction_type] || item.transaction_type} />
-                </TableCell>
-                <TableCell sx={{ fontFamily: 'monospace' }}>{item.reference_code || '-'}</TableCell>
-                <TableCell>{item.product_code} - {item.product_name}</TableCell>
-                <TableCell align="right">{item.quantity}</TableCell>
-                <TableCell>{item.created_at}</TableCell>
-              </TableRow>
-            ))}
+            {items.map((item) => {
+              const displayQuantity = signedQuantity(item.transaction_type, item.quantity)
+              return (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <Chip size="small" color={colorByType[item.transaction_type] || 'default'} label={typeLabel[item.transaction_type] || item.transaction_type} />
+                  </TableCell>
+                  <TableCell sx={{ fontFamily: 'monospace' }}>{item.reference_code || '-'}</TableCell>
+                  <TableCell>{item.product_code} - {item.product_name}</TableCell>
+                  <TableCell align="right">{formatSignedQuantity(displayQuantity)}</TableCell>
+                  <TableCell>{item.created_at}</TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </Box>

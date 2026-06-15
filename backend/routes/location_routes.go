@@ -24,10 +24,10 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
-func LocationRoutes(r *gin.Engine) {
+func LocationRoutes(r *echo.Echo) {
 	repo := repositories.NewLocationRepository(config.DB)
 	service := services.NewLocationService(repo)
 	handler := handlers.NewLocationHandler(service)
@@ -35,10 +35,10 @@ func LocationRoutes(r *gin.Engine) {
 	locations := r.Group("/locations")
 	locations.Use(middleware.AuthRequired())
 	{
-		locations.GET("", handler.GetLocations)
-		locations.GET("/:id/trays", handler.GetLocationTrays)
-		locations.POST("", middleware.RequireRoles("ADMIN"), handler.CreateLocation)
-		locations.PUT("/:id", middleware.RequireRoles("ADMIN"), handler.UpdateLocation)
-		locations.DELETE("/:id", middleware.RequireRoles("ADMIN"), handler.DeleteLocation)
+		locations.GET("", adapt(handler.GetLocations))
+		locations.GET("/:id/trays", adapt(handler.GetLocationTrays))
+		locations.POST("", adapt(handler.CreateLocation), middleware.RequireRoles("ADMIN"))
+		locations.PUT("/:id", adapt(handler.UpdateLocation), middleware.RequireRoles("ADMIN"))
+		locations.DELETE("/:id", adapt(handler.DeleteLocation), middleware.RequireRoles("ADMIN"))
 	}
 }

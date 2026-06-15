@@ -33,18 +33,21 @@ import {
 import { useNavigate, useParams } from 'react-router-dom'
 import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
 import { toQrDataUrl } from '../../../shared/lib/qrCode'
+import { useAuth } from '../../../app/providers/AuthProvider'
 import { usePickLogsQuery } from '../../pick-logs/hooks/usePickLogs'
 import { PickLogsTable } from '../../pick-logs/components/PickLogsTable'
 import { pickLogsService } from '../../pick-logs/services/pickLogsService'
 import type { PickLogFilterValues } from '../../pick-logs/types/pickLogTypes'
 import { useStockTransactionsQuery, useStockTransactionProductsQuery } from '../../stock-transactions/hooks/useStockTransactions'
 import { stockTransactionsService } from '../../stock-transactions/services/stockTransactionsService'
-import { useOrderByIdQuery } from '../hooks/useOrders'
+import { useAssignPickingOrderMutation, useOrderByIdQuery, useUnassignPickingOrderMutation } from '../hooks/useOrders'
 import type { OrderDetailPickingTask, PickingStatus } from '../types/orderTypes'
+import { useUsersQuery } from '../../users/hooks/useUsers'
 import { OrderPrintTemplate } from '../components/OrderPrintTemplate'
 import { ListPagination } from '../../../shared/components/ListPagination'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination'
 import '../components/orderPrint.css'
+import { mapOrderApiError } from '../utils/orderError'
 
 function statusColor(status: PickingStatus | string): 'warning' | 'secondary' | 'success' | 'default' {
   if (status === 'WAITING') return 'warning'
@@ -100,6 +103,9 @@ function TaskCards({ tasks }: { tasks: OrderDetailPickingTask[] }) {
               <Chip label={`Vị trí ${task.location_code || '-'}`} sx={{ fontSize: 16, fontWeight: 800 }} />
               <Chip label={`Khay ${task.tray_code || '-'}`} sx={{ fontSize: 16, fontWeight: 800 }} />
             </Stack>
+            <Typography color="text.secondary">
+              Phụ trách: {task.assignee_name || task.assignee_username || 'Chưa phân công'}
+            </Typography>
 
             <Stack direction="row" spacing={1.5}>
               <Box sx={{ flex: 1 }}>
@@ -128,16 +134,20 @@ const defaultPickLogFilters: PickLogFilterValues = {
 export function OrderDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const orderId = Number(id)
 
   const [activeTab, setActiveTab] = useState(0)
   const [pickLogFilters, setPickLogFilters] = useState<PickLogFilterValues>(defaultPickLogFilters)
   const [copyMessage, setCopyMessage] = useState('')
+  const [assignmentMessage, setAssignmentMessage] = useState<{ severity: 'success' | 'error'; text: string } | null>(null)
+  const [selectedStaffId, setSelectedStaffId] = useState('')
   const [printQrDataUrl, setPrintQrDataUrl] = useState('')
   const [pickingTaskPage, setPickingTaskPage] = useState(1)
   const [pickLogPage, setPickLogPage] = useState(1)
 
   const detailQuery = useOrderByIdQuery(Number.isFinite(orderId) ? orderId : null)
+  const staffUsersQuery = useUsersQuery({ role: 'WAREHOUSE', is_active: 'true' })
   // Ghi chú: Fetch logs block - goi GET /pick-logs theo order_id de nhung vao tab Pick Logs.
   const pickLogsQuery = usePickLogsQuery({ orderId: Number.isFinite(orderId) ? orderId : undefined, limit: 200 })
   const stockTxQuery = useStockTransactionsQuery('EXPORT')
@@ -145,11 +155,53 @@ export function OrderDetail() {
 
   const detail = detailQuery.data
   const order = detail?.order
+  const isAdmin = user?.role === 'ADMIN'
   const progressValue = Math.round(detail?.progress.percent || 0)
+  const assignmentSummary = useMemo(() => {
+    const firstAssigned = (detail?.picking_tasks || []).find((task) => task.assigned_to)
+    const hasPickingData = (detail?.picking_tasks || []).some((task) => Number(task.picked_quantity || 0) > 0) || (pickLogsQuery.data || []).length > 0
+    return {
+      assignedTo: firstAssigned?.assigned_to || null,
+      assigneeLabel: firstAssigned?.assignee_name || firstAssigned?.assignee_username || '',
+      assignedAt: firstAssigned?.assigned_at || null,
+      hasPickingData,
+    }
+  }, [detail?.picking_tasks, pickLogsQuery.data])
+
+  const assignMutation = useAssignPickingOrderMutation({
+    onSuccess: () => {
+      setAssignmentMessage({ severity: 'success', text: 'Đã gán công việc cho nhân viên.' })
+      detailQuery.refetch()
+    },
+    onError: (error) => setAssignmentMessage({ severity: 'error', text: mapOrderApiError(error) }),
+  })
+
+  const unassignMutation = useUnassignPickingOrderMutation({
+    onSuccess: () => {
+      setAssignmentMessage({ severity: 'success', text: 'Đã gỡ phân công công việc.' })
+      detailQuery.refetch()
+    },
+    onError: (error) => setAssignmentMessage({ severity: 'error', text: mapOrderApiError(error) }),
+  })
 
   const handleOpenPickingMode = () => {
     if (!order) return
     navigate(`/pda/picking?order=${encodeURIComponent(order.order_code)}`)
+  }
+
+  const handleAssignStaff = () => {
+    const staffId = Number(selectedStaffId)
+    if (!order || !staffId) return
+    if (!window.confirm('Gán nhân viên\n\nCông việc sẽ được gán cho nhân viên đã chọn. Bạn có chắc chắn muốn tiếp tục?')) return
+    setAssignmentMessage(null)
+    assignMutation.mutate({ id: order.id, staffId })
+  }
+
+  const handleUnassignStaff = () => {
+    if (!order) return
+    if (!window.confirm('Gỡ phân công\n\nCông việc sẽ quay lại trạng thái chờ nhận. Bạn có chắc chắn muốn tiếp tục?')) return
+    setAssignmentMessage(null)
+    unassignMutation.mutate(order.id)
   }
 
   const printItems = useMemo(() => {
@@ -482,6 +534,61 @@ export function OrderDetail() {
             <Stack spacing={2}>
               {/* Ghi chú: Order Detail is chỉ xem for picking operations. */}
               <Alert severity="info">Màn chi tiết đơn chỉ hiển thị tiến độ nhặt. Thao tác nhặt thực hiện tại màn PDA.</Alert>
+              {assignmentMessage && <Alert severity={assignmentMessage.severity}>{assignmentMessage.text}</Alert>}
+
+              {isAdmin && (
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Stack spacing={1.5}>
+                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.2} sx={{ justifyContent: 'space-between' }}>
+                      <Box>
+                        <Typography sx={{ fontSize: 18, fontWeight: 900 }}>Phân công picking</Typography>
+                        <Typography color="text.secondary">
+                          Người phụ trách: {assignmentSummary.assigneeLabel || 'Chưa phân công'}
+                          {assignmentSummary.assignedAt ? ` · nhận lúc ${new Date(assignmentSummary.assignedAt).toLocaleString('vi-VN')}` : ''}
+                        </Typography>
+                      </Box>
+                      {assignmentSummary.hasPickingData && (
+                        <Chip color="warning" label="Đã phát sinh dữ liệu nhặt - chỉ đổi phần chưa hoàn tất" sx={{ fontWeight: 900, alignSelf: { xs: 'flex-start', md: 'center' } }} />
+                      )}
+                    </Stack>
+
+                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.2}>
+                      <TextField
+                        select
+                        label="Chọn nhân viên"
+                        value={selectedStaffId}
+                        onChange={(event) => setSelectedStaffId(event.target.value)}
+                        disabled={order?.status === 'COMPLETED' || order?.status === 'CANCELLED'}
+                        fullWidth
+                      >
+                        <MenuItem value="">Chọn nhân viên</MenuItem>
+                        {(staffUsersQuery.data || []).map((staff) => (
+                          <MenuItem key={staff.id} value={String(staff.id)}>
+                            {staff.full_name || staff.username}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                      <Button
+                        variant="contained"
+                        onClick={handleAssignStaff}
+                        disabled={!selectedStaffId || assignMutation.isPending || order?.status === 'COMPLETED' || order?.status === 'CANCELLED'}
+                        sx={{ minWidth: 150, fontWeight: 900 }}
+                      >
+                        {assignmentSummary.assignedTo ? 'Đổi người nhặt' : 'Gán nhân viên'}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={handleUnassignStaff}
+                        disabled={!assignmentSummary.assignedTo || assignmentSummary.hasPickingData || unassignMutation.isPending || order?.status === 'COMPLETED' || order?.status === 'CANCELLED'}
+                        sx={{ minWidth: 150, fontWeight: 900 }}
+                      >
+                        Gỡ phân công
+                      </Button>
+                    </Stack>
+                  </Stack>
+                </Paper>
+              )}
 
               <Stack spacing={1.2}>
                 <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
@@ -518,6 +625,7 @@ export function OrderDetail() {
                       <TableCell sx={{ fontWeight: 900, textAlign: 'right' }}>Số lần xuất</TableCell>
                       <TableCell sx={{ fontWeight: 900, textAlign: 'right' }}>Tổng SL xuất</TableCell>
                       <TableCell sx={{ fontWeight: 900 }}>Xuất gần nhất</TableCell>
+                      <TableCell sx={{ fontWeight: 900 }}>Người phụ trách</TableCell>
                       <TableCell sx={{ fontWeight: 900 }}>Trạng thái</TableCell>
                     </TableRow>
                   </TableHead>
@@ -552,6 +660,7 @@ export function OrderDetail() {
                           <TableCell sx={{ textAlign: 'right', fontWeight: 900 }}>{formatQty(txSummary.count)}</TableCell>
                           <TableCell sx={{ textAlign: 'right', fontWeight: 900 }}>{formatQty(txSummary.totalQty)}</TableCell>
                           <TableCell>{txSummary.latestAt ? new Date(txSummary.latestAt).toLocaleString('vi-VN') : '-'}</TableCell>
+                          <TableCell>{task.assignee_name || task.assignee_username || 'Chưa phân công'}</TableCell>
                           <TableCell>
                             <Chip color={statusColor(task.status)} label={statusLabel(task.status)} sx={{ fontWeight: 900 }} />
                           </TableCell>

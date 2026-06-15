@@ -27,7 +27,7 @@ import (
 	"quan_ly_kho/services"
 	"quan_ly_kho/utils"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 type AuthHandler struct {
@@ -43,10 +43,10 @@ type loginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
-func (h *AuthHandler) Login(c *gin.Context) {
+func (h *AuthHandler) Login(c echo.Context) {
 	var req loginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
@@ -54,24 +54,35 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrInvalidAuthPayload):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		case errors.Is(err, services.ErrInvalidCredentials):
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnauthorized, echo.Map{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, echo.Map{
 		"access_token": token,
 		"token_type":   "Bearer",
 		"user":         authUserResponse(user),
 	})
 }
 
-func authUserResponse(user *models.User) gin.H {
-	return gin.H{
+func (h *AuthHandler) Me(c echo.Context) {
+	role, _ := c.Get("role").(string)
+	c.JSON(http.StatusOK, echo.Map{
+		"user": echo.Map{
+			"id":       c.Get("user_id"),
+			"username": c.Get("username"),
+			"role":     utils.NormalizeRole(role),
+		},
+	})
+}
+
+func authUserResponse(user *models.User) echo.Map {
+	return echo.Map{
 		"id":        user.ID,
 		"username":  user.Username,
 		"full_name": user.FullName,

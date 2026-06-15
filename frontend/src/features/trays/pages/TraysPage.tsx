@@ -198,7 +198,7 @@ export function TraysPage() {
           <TextField
             fullWidth
             label="Tìm khay"
-            placeholder="Tìm theo mã khay, mã QR, mô tả, ID..."
+            placeholder="Tìm theo mã khay, QR, mã/tên sản phẩm, vị trí, mô tả, ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

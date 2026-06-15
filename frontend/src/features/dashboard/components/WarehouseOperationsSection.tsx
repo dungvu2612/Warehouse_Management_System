@@ -14,7 +14,6 @@ import { RecentWarehouseActivities } from './RecentWarehouseActivities'
 import { TopMovingProducts } from './TopMovingProducts'
 import { WarehouseAlerts } from './WarehouseAlerts'
 import { WarehouseSummaryCards } from './WarehouseSummaryCards'
-import { OrderStatusChart } from './OrderStatusChart'
 import type { DashboardWarehouseOperations } from '../types/dashboard.types'
 
 export function WarehouseOperationsSection({ data }: { data: DashboardWarehouseOperations }) {
@@ -22,7 +21,6 @@ export function WarehouseOperationsSection({ data }: { data: DashboardWarehouseO
     <Stack spacing={1.5}>
       <Typography variant="h6" sx={{ fontWeight: 900 }}>Vận hành kho</Typography>
       <WarehouseSummaryCards data={data} />
-      <OrderStatusChart items={data.order_status_chart || []} />
       <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5}>
         <WarehouseAlerts alerts={data.warehouse_alerts} />
         <PickingMonitor monitor={data.picking_monitor} />

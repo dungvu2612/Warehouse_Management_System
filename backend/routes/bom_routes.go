@@ -15,10 +15,10 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
-func BOMRoutes(r *gin.Engine) {
+func BOMRoutes(r *echo.Echo) {
 	repo := repositories.NewBOMRepository(config.DB)
 	service := services.NewBOMService(repo)
 	handler := handlers.NewBOMHandler(service)
@@ -27,14 +27,14 @@ func BOMRoutes(r *gin.Engine) {
 	boms.Use(middleware.AuthRequired())
 	{
 		// Cho phép cả ADMIN và WAREHOUSE tạo BOM theo yêu cầu vận hành.
-		boms.POST("", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.CreateBOM)
+		boms.POST("", adapt(handler.CreateBOM), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
 		// Cho phép cả ADMIN và WAREHOUSE cập nhật BOM.
-		boms.PUT("/:id", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.UpdateBOM)
+		boms.PUT("/:id", adapt(handler.UpdateBOM), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
 		// Cho phép cả ADMIN và WAREHOUSE xóa BOM.
-		boms.DELETE("/:id", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.DeleteBOM)
+		boms.DELETE("/:id", adapt(handler.DeleteBOM), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
 
 		// Xem BOM cho cả ADMIN và WAREHOUSE.
-		boms.GET("", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetBOMs)
-		boms.GET("/:id/items", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetBOMItems)
+		boms.GET("", adapt(handler.GetBOMs), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
+		boms.GET("/:id/items", adapt(handler.GetBOMItems), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
 	}
 }

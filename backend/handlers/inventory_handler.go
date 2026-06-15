@@ -28,7 +28,7 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 type InventoryHandler struct {
@@ -76,22 +76,22 @@ type rejectPutawayRequest struct {
 	Reason string `json:"reason"`
 }
 
-func (h *InventoryHandler) GetInventory(c *gin.Context) {
+func (h *InventoryHandler) GetInventory(c echo.Context) {
 	inventories, err := h.service.GetAll(services.InventoryListQuery{
-		ProductIDRaw: c.Query("product_id"),
-		TrayIDRaw:    c.Query("tray_id"),
+		ProductIDRaw: c.QueryParam("product_id"),
+		TrayIDRaw:    c.QueryParam("tray_id"),
 	})
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, inventories)
 }
 
-func (h *InventoryHandler) CreateInventory(c *gin.Context) {
+func (h *InventoryHandler) CreateInventory(c echo.Context) {
 	var req createInventoryRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
@@ -103,15 +103,15 @@ func (h *InventoryHandler) CreateInventory(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, repositories.ErrProductNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrTrayNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 		case errors.Is(err, services.ErrTrayProductMismatch):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrInventoryAlreadyExists):
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			c.JSON(http.StatusConflict, echo.Map{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
@@ -119,21 +119,21 @@ func (h *InventoryHandler) CreateInventory(c *gin.Context) {
 	c.JSON(http.StatusCreated, inventory)
 }
 
-func (h *InventoryHandler) AdjustInventory(c *gin.Context) {
+func (h *InventoryHandler) AdjustInventory(c echo.Context) {
 	idRaw := c.Param("id")
 	inventoryID, err := strconv.ParseUint(idRaw, 10, 64)
 	if err != nil || inventoryID == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid inventory id"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "invalid inventory id"})
 		return
 	}
 
 	var req adjustInventoryRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
-	userIDValue, _ := c.Get("user_id")
+	userIDValue := c.Get("user_id")
 	createdBy, _ := userIDValue.(uint)
 
 	updated, err := h.service.Adjust(services.AdjustInventoryInput{
@@ -145,31 +145,31 @@ func (h *InventoryHandler) AdjustInventory(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrInvalidAdjustPayload):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrInventoryNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 		case errors.Is(err, services.ErrInsufficientStock):
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			c.JSON(http.StatusConflict, echo.Map{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, echo.Map{
 		"message": "inventory adjusted successfully",
 		"data":    updated,
 	})
 }
 
-func (h *InventoryHandler) AdjustByTray(c *gin.Context) {
+func (h *InventoryHandler) AdjustByTray(c echo.Context) {
 	var req adjustByTrayRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
-	userIDValue, _ := c.Get("user_id")
+	userIDValue := c.Get("user_id")
 	createdBy, _ := userIDValue.(uint)
 
 	updated, err := h.service.AdjustByTray(services.AdjustByTrayInput{
@@ -182,36 +182,36 @@ func (h *InventoryHandler) AdjustByTray(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrInvalidAdjustPayload):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrTrayNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrInventoryNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 		case errors.Is(err, services.ErrInsufficientStock):
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			c.JSON(http.StatusConflict, echo.Map{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, echo.Map{
 		"message": "inventory adjusted by tray successfully",
 		"data":    updated,
 	})
 }
 
-func (h *InventoryHandler) Putaway(c *gin.Context) {
+func (h *InventoryHandler) Putaway(c echo.Context) {
 	var req putawayRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
-	userIDValue, _ := c.Get("user_id")
+	userIDValue := c.Get("user_id")
 	createdBy, _ := userIDValue.(uint)
 
-	_, err := h.service.Putaway(services.PutawayInput{
+	updated, err := h.service.Putaway(services.PutawayInput{
 		ProductQRCode: req.ProductQRCode,
 		TrayQRCode:    req.TrayQRCode,
 		Quantity:      req.Quantity,
@@ -221,46 +221,42 @@ func (h *InventoryHandler) Putaway(c *gin.Context) {
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, services.ErrPutawayRequestPending):
-			c.JSON(http.StatusAccepted, gin.H{
-				"message": "đã gửi yêu cầu nhập kho, chờ admin duyệt",
-			})
-			return
 		case errors.Is(err, services.ErrInvalidInventoryFilter):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrProductNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrTrayNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
-	c.JSON(http.StatusAccepted, gin.H{
-		"message": "đã gửi yêu cầu nhập kho, chờ admin duyệt",
+	c.JSON(http.StatusOK, echo.Map{
+		"message": "Nhập kho thành công. Tồn kho đã được cập nhật và lịch sử nhập kho đã được ghi nhận.",
+		"data":    updated,
 	})
 }
 
-func (h *InventoryHandler) GetPutawayRequests(c *gin.Context) {
-	status := c.Query("status")
+func (h *InventoryHandler) GetPutawayRequests(c echo.Context) {
+	status := c.QueryParam("status")
 	rows, err := h.service.GetPutawayRequests(status)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, rows)
 }
 
-func (h *InventoryHandler) ApprovePutawayRequest(c *gin.Context) {
+func (h *InventoryHandler) ApprovePutawayRequest(c echo.Context) {
 	idRaw := c.Param("id")
 	requestID, err := strconv.ParseUint(idRaw, 10, 64)
 	if err != nil || requestID == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid putaway request id"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "invalid putaway request id"})
 		return
 	}
 
-	userIDValue, _ := c.Get("user_id")
+	userIDValue := c.Get("user_id")
 	approvedBy, _ := userIDValue.(uint)
 
 	req, inv, err := h.service.ApprovePutawayRequest(services.PutawayApprovalActionInput{
@@ -270,39 +266,39 @@ func (h *InventoryHandler) ApprovePutawayRequest(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrInvalidInventoryID):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		case errors.Is(err, services.ErrPutawayRequestNotPending):
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			c.JSON(http.StatusConflict, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrPutawayRequestNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrProductNotFound), errors.Is(err, repositories.ErrTrayNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, echo.Map{
 		"message": "đã duyệt yêu cầu nhập kho",
 		"request": req,
 		"data":    inv,
 	})
 }
 
-func (h *InventoryHandler) RejectPutawayRequest(c *gin.Context) {
+func (h *InventoryHandler) RejectPutawayRequest(c echo.Context) {
 	idRaw := c.Param("id")
 	requestID, err := strconv.ParseUint(idRaw, 10, 64)
 	if err != nil || requestID == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid putaway request id"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "invalid putaway request id"})
 		return
 	}
 	var body rejectPutawayRequest
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&body); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
-	userIDValue, _ := c.Get("user_id")
+	userIDValue := c.Get("user_id")
 	approvedBy, _ := userIDValue.(uint)
 
 	req, err := h.service.RejectPutawayRequest(services.PutawayApprovalActionInput{
@@ -313,30 +309,30 @@ func (h *InventoryHandler) RejectPutawayRequest(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrInvalidInventoryID):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		case errors.Is(err, services.ErrPutawayRequestNotPending):
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			c.JSON(http.StatusConflict, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrPutawayRequestNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, echo.Map{
 		"message": "đã từ chối yêu cầu nhập kho",
 		"request": req,
 	})
 }
 
-func (h *InventoryHandler) Stocktaking(c *gin.Context) {
+func (h *InventoryHandler) Stocktaking(c echo.Context) {
 	var req stocktakingRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
-	userIDValue, _ := c.Get("user_id")
+	userIDValue := c.Get("user_id")
 	createdBy, _ := userIDValue.(uint)
 
 	result, err := h.service.Stocktake(services.StocktakeInput{
@@ -349,18 +345,18 @@ func (h *InventoryHandler) Stocktaking(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrInvalidInventoryFilter):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrTrayNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrInventoryNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, echo.Map{
 		"message": "stocktaking adjustment successful",
 		"data":    result.Inventory,
 		"delta":   result.Delta,

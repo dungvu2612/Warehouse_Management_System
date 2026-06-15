@@ -8,60 +8,95 @@ import (
 	"time"
 
 	"quan_ly_kho/config"
+	_ "quan_ly_kho/docs"
+	"quan_ly_kho/realtime"
 	"quan_ly_kho/routes"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
+	"github.com/labstack/echo/v4"
+	echomiddleware "github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
-func main() {
+type validatingBinder struct {
+	binder   echo.DefaultBinder
+	validate *validator.Validate
+}
 
+func newValidatingBinder() *validatingBinder {
+	validate := validator.New()
+	validate.SetTagName("binding")
+	return &validatingBinder{validate: validate}
+}
+
+func (b *validatingBinder) Bind(i interface{}, c echo.Context) error {
+	if err := b.binder.Bind(i, c); err != nil {
+		return err
+	}
+	return b.validate.Struct(i)
+}
+
+// @title WMS Warehouse Management API
+// @version 1.0
+// @description Tài liệu API cho hệ thống quản lý kho WMS.
+// @description Hệ thống hỗ trợ quản lý sản phẩm, tồn kho, đơn hàng, nhập kho, picking, khay/kệ, người dùng và lịch sử kho.
+// @BasePath /api
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Nhập JWT token theo dạng: Bearer <token>
+func main() {
 	_ = godotenv.Load()
 	config.ConnectDatabase()
 	config.RunDatabaseMigrations()
 	config.SeedDefaultUsers()
 
-	r := gin.Default()
-	// Cấu hình CORS để frontend (vite :5173) gọi được API backend (:8080) trên browser.
-	r.Use(cors.New(cors.Config{
+	e := echo.New()
+	e.Binder = newValidatingBinder()
+	e.Use(echomiddleware.Logger())
+	e.Use(echomiddleware.Recover())
+	e.Use(echomiddleware.CORSWithConfig(echomiddleware.CORSConfig{
 		AllowOrigins:     envList("CORS_ALLOWED_ORIGINS", []string{"http://localhost:5173"}),
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
+		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
+		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+		ExposeHeaders:    []string{echo.HeaderContentLength},
 		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
+		MaxAge:           int((12 * time.Hour).Seconds()),
 	}))
+	e.Use(realtime.DataChangeMiddleware())
 
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
+	e.GET("/health", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, echo.Map{
 			"message": "Server running",
 		})
 	})
+	e.GET("/docs/*", echoSwagger.WrapHandler)
+	e.GET("/ws", realtime.HandleWebSocket)
 
-	routes.AuthRoutes(r)
-	routes.AuditRoutes(r)
-	routes.BOMRoutes(r)
-	routes.DashboardRoutes(r)
-	routes.ImportReceiptRoutes(r)
-	routes.InventoryRoutes(r)
-	routes.OrderRoutes(r)
-	routes.StaffRoutes(r)
-	routes.PickLogRoutes(r)
-	routes.StockTransactionRoutes(r)
-	routes.LocationRoutes(r)
-	routes.TrayRoutes(r)
-	routes.ProductRoutes(r)
-	routes.UserRoutes(r)
+	routes.AuthRoutes(e)
+	routes.AuditRoutes(e)
+	routes.BOMRoutes(e)
+	routes.DashboardRoutes(e)
+	routes.ImportReceiptRoutes(e)
+	routes.InventoryRoutes(e)
+	routes.OrderRoutes(e)
+	routes.StaffRoutes(e)
+	routes.PickLogRoutes(e)
+	routes.StockTransactionRoutes(e)
+	routes.LocationRoutes(e)
+	routes.TrayRoutes(e)
+	routes.ProductRoutes(e)
+	routes.UserRoutes(e)
 
-	serveFrontend(r)
+	serveFrontend(e)
 
 	host := envValue("APP_HOST", "0.0.0.0")
 	port := envValue("APP_PORT", "8080")
-	r.Run(host + ":" + port)
+	e.Logger.Fatal(e.Start(host + ":" + port))
 }
 
-func serveFrontend(r *gin.Engine) {
+func serveFrontend(e *echo.Echo) {
 	distDir := envValue("FRONTEND_DIST_DIR", "")
 	if distDir == "" {
 		distDir = firstExistingDir([]string{
@@ -76,21 +111,21 @@ func serveFrontend(r *gin.Engine) {
 
 	assetsDir := filepath.Join(distDir, "assets")
 	if _, err := os.Stat(assetsDir); err == nil {
-		r.Static("/assets", assetsDir)
+		e.Static("/assets", assetsDir)
 	}
-	r.StaticFile("/favicon.ico", filepath.Join(distDir, "favicon.ico"))
+	if _, err := os.Stat(filepath.Join(distDir, "favicon.ico")); err == nil {
+		e.File("/favicon.ico", filepath.Join(distDir, "favicon.ico"))
+	}
+	if _, err := os.Stat(filepath.Join(distDir, "favicon.svg")); err == nil {
+		e.File("/favicon.svg", filepath.Join(distDir, "favicon.svg"))
+	}
 
 	indexFile := filepath.Join(distDir, "index.html")
-	r.NoRoute(func(c *gin.Context) {
-		if c.Request.Method != http.MethodGet {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-			return
+	e.GET("/*", func(c echo.Context) error {
+		if isAPIRoute(c.Request().URL.Path) {
+			return c.JSON(http.StatusNotFound, echo.Map{"error": "not found"})
 		}
-		if isAPIRoute(c.Request.URL.Path) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-			return
-		}
-		c.File(indexFile)
+		return c.File(indexFile)
 	})
 }
 
@@ -120,6 +155,7 @@ func isAPIRoute(path string) bool {
 		"/stock-transactions",
 		"/trays",
 		"/users",
+		"/ws",
 	}
 	for _, prefix := range apiPrefixes {
 		if path == prefix || strings.HasPrefix(path, prefix+"/") {

@@ -68,6 +68,7 @@ type OrderItemInput struct {
 type OrderVerifyTrayInput struct {
 	TaskID      uint
 	TrayQRCode  string
+	UserID      uint
 	CurrentRole string
 }
 
@@ -92,35 +93,66 @@ type OrderProgressResult struct {
 
 // StaffTaskResult la read-model danh sach cong viec staff can picking.
 type StaffTaskResult struct {
-	ID              uint      `json:"id"`
-	OrderCode       string    `json:"order_code"`
-	CustomerName    string    `json:"customer_name"`
-	CustomerPhone   string    `json:"customer_phone"`
-	CustomerAddress string    `json:"customer_address"`
-	Status          string    `json:"status"`
-	TotalItems      int       `json:"total_items"`
-	PickedItems     int       `json:"picked_items"`
-	CreatedAt       time.Time `json:"created_at"`
+	ID               uint      `json:"id"`
+	OrderCode        string    `json:"order_code"`
+	CustomerName     string    `json:"customer_name"`
+	CustomerPhone    string    `json:"customer_phone"`
+	CustomerAddress  string    `json:"customer_address"`
+	Status           string    `json:"status"`
+	TotalItems       int       `json:"total_items"`
+	PickedItems      int       `json:"picked_items"`
+	AssignedTo       *uint     `json:"assigned_to"`
+	AssigneeName     string    `json:"assignee_name"`
+	AssigneeUsername string    `json:"assignee_username"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
+type StaffTaskSummaryResult struct {
+	WaitingCount           int64 `json:"waiting_count"`
+	PickingCount           int64 `json:"picking_count"`
+	MyPickingCount         int64 `json:"my_picking_count"`
+	PickingWaitingCount    int64 `json:"picking_waiting_count"`
+	PickingInProgressCount int64 `json:"picking_in_progress_count"`
+	ImportWaitingCount     int64 `json:"import_waiting_count"`
+	ImportInProgressCount  int64 `json:"import_in_progress_count"`
+}
+
+type StaffTaskQueryInput struct {
+	UserID      uint
+	CurrentRole string
+}
+
+type ClaimOrderInput struct {
+	OrderID uint
+	UserID  uint
+}
+
+type AdminAssignOrderInput struct {
+	OrderID uint
+	StaffID uint
 }
 
 // OrderDetailTaskResult la DTO task da enrich du lieu san pham/vi tri/ton kho cho UI.
 type OrderDetailTaskResult struct {
-	ID               uint   `json:"id"`
-	OrderID          uint   `json:"order_id"`
-	ProductID        uint   `json:"product_id"`
-	ProductCode      string `json:"product_code"`
-	ProductName      string `json:"product_name"`
-	TrayID           uint   `json:"tray_id"`
-	TrayCode         string `json:"tray_code"`
-	LocationCode     string `json:"location_code"`
-	RequiredQuantity int    `json:"required_quantity"`
-	PickedQuantity   int    `json:"picked_quantity"`
-	InventoryQty     int    `json:"inventory_qty"`
-	Status           string `json:"status"`
-	Verified         bool   `json:"verified"`
-	AssignedTo       *uint  `json:"assigned_to"`
-	AssigneeName     string `json:"assignee_name"`
-	AssigneeUsername string `json:"assignee_username"`
+	ID               uint       `json:"id"`
+	OrderID          uint       `json:"order_id"`
+	ProductID        uint       `json:"product_id"`
+	ProductCode      string     `json:"product_code"`
+	ProductName      string     `json:"product_name"`
+	TrayID           uint       `json:"tray_id"`
+	TrayCode         string     `json:"tray_code"`
+	LocationCode     string     `json:"location_code"`
+	RequiredQuantity int        `json:"required_quantity"`
+	PickedQuantity   int        `json:"picked_quantity"`
+	InventoryQty     int        `json:"inventory_qty"`
+	Status           string     `json:"status"`
+	Verified         bool       `json:"verified"`
+	AssignedTo       *uint      `json:"assigned_to"`
+	AssignedAt       *time.Time `json:"assigned_at"`
+	StartedAt        *time.Time `json:"started_at"`
+	CompletedAt      *time.Time `json:"completed_at"`
+	AssigneeName     string     `json:"assignee_name"`
+	AssigneeUsername string     `json:"assignee_username"`
 }
 
 // OrderDetailProgressResult la DTO progress trong chi tiet order.
@@ -172,7 +204,11 @@ type OrderService interface {
 	Update(input OrderUpdateInput) (*models.Order, error)
 	Delete(orderID uint) error
 	GetAll(statusRaw string) ([]models.Order, error)
-	GetStaffTasks() ([]StaffTaskResult, error)
+	GetStaffTasks(input StaffTaskQueryInput) ([]StaffTaskResult, error)
+	GetStaffTaskSummary(input StaffTaskQueryInput) (*StaffTaskSummaryResult, error)
+	ClaimOrder(input ClaimOrderInput) (*models.Order, error)
+	AssignOrderToStaff(input AdminAssignOrderInput) (*models.Order, error)
+	UnassignOrder(orderID uint) (*models.Order, error)
 	GetByID(orderID uint) (*OrderDetailResult, error)
 	ScanForPicking(input OrderScanInput) (*models.Order, []models.PickingTask, error)
 	VerifyTray(input OrderVerifyTrayInput) (*models.PickingTask, error)
@@ -292,9 +328,9 @@ func (s *orderService) GetAll(statusRaw string) ([]models.Order, error) {
 	return s.repo.FindAll(&status)
 }
 
-// GetStaffTasks tra ve danh sach order PENDING/PICKING de staff vao viec.
-func (s *orderService) GetStaffTasks() ([]StaffTaskResult, error) {
-	rows, err := s.repo.FindStaffTaskRows()
+// GetStaffTasks tra ve danh sach order cho nhan viec hoac dang duoc user hien tai xu ly.
+func (s *orderService) GetStaffTasks(input StaffTaskQueryInput) ([]StaffTaskResult, error) {
+	rows, err := s.repo.FindStaffTaskRows(input.UserID, input.CurrentRole)
 	if err != nil {
 		return nil, err
 	}
@@ -302,19 +338,62 @@ func (s *orderService) GetStaffTasks() ([]StaffTaskResult, error) {
 	results := make([]StaffTaskResult, 0, len(rows))
 	for _, row := range rows {
 		results = append(results, StaffTaskResult{
-			ID:              row.ID,
-			OrderCode:       row.OrderCode,
-			CustomerName:    row.CustomerName,
-			CustomerPhone:   row.CustomerPhone,
-			CustomerAddress: row.CustomerAddress,
-			Status:          row.Status,
-			TotalItems:      row.TotalItems,
-			PickedItems:     row.PickedItems,
-			CreatedAt:       row.CreatedAt,
+			ID:               row.ID,
+			OrderCode:        row.OrderCode,
+			CustomerName:     row.CustomerName,
+			CustomerPhone:    row.CustomerPhone,
+			CustomerAddress:  row.CustomerAddress,
+			Status:           row.Status,
+			TotalItems:       row.TotalItems,
+			PickedItems:      row.PickedItems,
+			AssignedTo:       row.AssignedTo,
+			AssigneeName:     row.AssigneeName,
+			AssigneeUsername: row.AssigneeUsername,
+			CreatedAt:        row.CreatedAt,
 		})
 	}
 
 	return results, nil
+}
+
+func (s *orderService) GetStaffTaskSummary(input StaffTaskQueryInput) (*StaffTaskSummaryResult, error) {
+	row, err := s.repo.GetStaffTaskSummary(input.UserID, input.CurrentRole)
+	if err != nil {
+		return nil, err
+	}
+	return &StaffTaskSummaryResult{
+		WaitingCount:           row.WaitingCount,
+		PickingCount:           row.PickingCount,
+		MyPickingCount:         row.MyPickingCount,
+		PickingWaitingCount:    row.PickingWaitingCount,
+		PickingInProgressCount: row.PickingInProgressCount,
+		ImportWaitingCount:     row.ImportWaitingCount,
+		ImportInProgressCount:  row.ImportInProgressCount,
+	}, nil
+}
+
+func (s *orderService) ClaimOrder(input ClaimOrderInput) (*models.Order, error) {
+	if input.OrderID == 0 {
+		return nil, ErrOrderInvalidID
+	}
+	if input.UserID == 0 {
+		return nil, ErrOrderUnauthorizedRole
+	}
+	return s.repo.ClaimOrderForPicking(input.OrderID, input.UserID)
+}
+
+func (s *orderService) AssignOrderToStaff(input AdminAssignOrderInput) (*models.Order, error) {
+	if input.OrderID == 0 || input.StaffID == 0 {
+		return nil, ErrOrderInvalidPayload
+	}
+	return s.repo.AssignOrderToStaff(input.OrderID, input.StaffID)
+}
+
+func (s *orderService) UnassignOrder(orderID uint) (*models.Order, error) {
+	if orderID == 0 {
+		return nil, ErrOrderInvalidID
+	}
+	return s.repo.UnassignOrder(orderID)
 }
 
 // GetByID lấy chi tiet order + picking tasks + progress + shortage realtime.
@@ -348,6 +427,9 @@ func (s *orderService) GetByID(orderID uint) (*OrderDetailResult, error) {
 			Status:           row.Status,
 			Verified:         row.Verified,
 			AssignedTo:       row.AssignedTo,
+			AssignedAt:       row.AssignedAt,
+			StartedAt:        row.StartedAt,
+			CompletedAt:      row.CompletedAt,
 			AssigneeName:     row.AssigneeName,
 			AssigneeUsername: row.AssigneeUsername,
 		}
@@ -421,7 +503,7 @@ func (s *orderService) VerifyTray(input OrderVerifyTrayInput) (*models.PickingTa
 		return nil, ErrOrderTrayCodeRequired
 	}
 
-	return s.repo.VerifyTrayForTask(input.TaskID, trayCode)
+	return s.repo.VerifyTrayForTask(input.TaskID, trayCode, input.UserID)
 }
 
 // ScanProduct validate va scan product QR 1 lan cho task.

@@ -15,10 +15,10 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
-func AuditRoutes(r *gin.Engine) {
+func AuditRoutes(r *echo.Echo) {
 	repo := repositories.NewAuditRepository(config.DB)
 	service := services.NewAuditService(repo)
 	handler := handlers.NewAuditHandler(service)
@@ -27,6 +27,6 @@ func AuditRoutes(r *gin.Engine) {
 	audit.Use(middleware.AuthRequired())
 	{
 		// Admin/staff đều cần quyền xem báo cáo đối soát để kiểm tra nghiệp vụ.
-		audit.GET("/consistency/:order_id", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetOrderAuditConsistency)
+		audit.GET("/consistency/:order_id", adapt(handler.GetOrderAuditConsistency), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
 	}
 }

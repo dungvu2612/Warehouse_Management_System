@@ -12,10 +12,10 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
-func StaffRoutes(r *gin.Engine) {
+func StaffRoutes(r *echo.Echo) {
 	repo := repositories.NewOrderRepository(config.DB)
 	service := services.NewOrderService(repo)
 	handler := handlers.NewOrderHandler(service)
@@ -23,6 +23,8 @@ func StaffRoutes(r *gin.Engine) {
 	staff := r.Group("/staff")
 	staff.Use(middleware.AuthRequired())
 	{
-		staff.GET("/tasks", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetStaffTasks)
+		staff.GET("/tasks", adapt(handler.GetStaffTasks), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
+		staff.GET("/task-summary", adapt(handler.GetStaffTaskSummary), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
+		staff.POST("/orders/:order_id/claim", adapt(handler.ClaimStaffOrder), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
 	}
 }

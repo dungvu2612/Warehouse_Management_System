@@ -10,11 +10,53 @@
 */
 
 import { http } from '../../../shared/lib/http'
-import type { StaffTaskItem } from '../types/staffTasks.types'
+import type {
+  ClaimImportTaskResponse,
+  ClaimStaffTaskResponse,
+  ConfirmImportTaskPayload,
+  ConfirmImportTaskResponse,
+  StaffImportTaskItem,
+  StaffTaskItem,
+  StaffTaskSummary,
+} from '../types/staffTasks.types'
 
 export const staffTasksApi = {
   getTasks: async (): Promise<StaffTaskItem[]> => {
     const { data } = await http.get<StaffTaskItem[]>('/staff/tasks')
+    return data
+  },
+
+  getSummary: async (): Promise<StaffTaskSummary> => {
+    const { data } = await http.get<StaffTaskSummary>('/staff/task-summary')
+    return data
+  },
+
+  claimOrder: async (orderId: number): Promise<ClaimStaffTaskResponse> => {
+    const { data } = await http.post<ClaimStaffTaskResponse>(`/staff/orders/${orderId}/claim`)
+    return data
+  },
+
+  getImportTasks: async (): Promise<StaffImportTaskItem[]> => {
+    const { data } = await http.get<StaffImportTaskItem[]>('/staff/import-receipt-items')
+    return data
+  },
+
+  claimImportItem: async (itemId: number): Promise<ClaimImportTaskResponse> => {
+    const { data } = await http.post<ClaimImportTaskResponse>(`/staff/import-receipt-items/${itemId}/claim`)
+    return data
+  },
+
+  confirmImportItem: async ({
+    itemId,
+    payload,
+  }: {
+    itemId: number
+    payload: ConfirmImportTaskPayload
+  }): Promise<ConfirmImportTaskResponse> => {
+    const { data } = await http.post<ConfirmImportTaskResponse>(
+      `/staff/import-receipt-items/${itemId}/confirm`,
+      payload,
+    )
     return data
   },
 }

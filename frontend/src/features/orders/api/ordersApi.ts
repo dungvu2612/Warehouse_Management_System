@@ -42,4 +42,17 @@ export const ordersApi = {
     const { data } = await http.delete<{ message: string }>(`/orders/${id}`)
     return data
   },
+
+  assignPickingOrder: async (id: number, staffId: number): Promise<{ message: string; assigned_to: number; order: Order }> => {
+    const { data } = await http.patch<{ message: string; assigned_to: number; order: Order }>(
+      `/admin/picking/orders/${id}/assign`,
+      { staff_id: staffId },
+    )
+    return data
+  },
+
+  unassignPickingOrder: async (id: number): Promise<{ message: string; order: Order }> => {
+    const { data } = await http.patch<{ message: string; order: Order }>(`/admin/picking/orders/${id}/unassign`)
+    return data
+  },
 }

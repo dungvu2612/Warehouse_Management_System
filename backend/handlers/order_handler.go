@@ -35,7 +35,7 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 // OrderHandler xử lý transport layer cho module order/picking.
@@ -84,51 +84,93 @@ type scanProductRequest struct {
 	Note          string `json:"note"`
 }
 
-func parseOrderID(c *gin.Context) (uint, bool) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+type assignPickingOrderRequest struct {
+	StaffID uint `json:"staff_id" binding:"required,gt=0"`
+}
+
+func currentUser(c echo.Context) (uint, string) {
+	userIDValue := c.Get("user_id")
+	userID, _ := userIDValue.(uint)
+	roleRaw := c.Get("role")
+	role, _ := roleRaw.(string)
+	return userID, role
+}
+
+func parseOrderID(c echo.Context) (uint, bool) {
+	idRaw := c.Param("id")
+	if idRaw == "" {
+		idRaw = c.Param("order_id")
+	}
+	id, err := strconv.ParseUint(idRaw, 10, 64)
 	if err != nil || id == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid order id"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "invalid order id"})
 		return 0, false
 	}
 	return uint(id), true
 }
 
-func parsePickingTaskID(c *gin.Context) (uint, bool) {
+func parsePickingTaskID(c echo.Context) (uint, bool) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || id == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid picking task id"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "invalid picking task id"})
 		return 0, false
 	}
 	return uint(id), true
 }
 
-func respondOrderReadError(c *gin.Context, err error) {
+func respondOrderReadError(c echo.Context, err error) {
 	switch {
 	case errors.Is(err, services.ErrOrderInvalidID):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 	case errors.Is(err, repositories.ErrOrderEntityNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": repositories.ErrOrderEntityNotFound.Error()})
+		c.JSON(http.StatusNotFound, echo.Map{"error": repositories.ErrOrderEntityNotFound.Error()})
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 }
 
-func respondOrderDomainError(c *gin.Context, status int, errorCode string, message string) {
-	c.JSON(status, gin.H{
+func respondOrderDomainError(c echo.Context, status int, errorCode string, message string) {
+	c.JSON(status, echo.Map{
 		"error_code": errorCode,
 		"error":      message,
 	})
 }
 
+func respondPickingAssignmentError(c echo.Context, err error) bool {
+	switch {
+	case errors.Is(err, repositories.ErrPickingTaskAlreadyAssigned):
+		respondOrderDomainError(c, http.StatusConflict, "TASK_ALREADY_ASSIGNED", "Công việc đã được nhân viên khác nhận")
+	case errors.Is(err, repositories.ErrPickingTaskNotAssignedToYou):
+		respondOrderDomainError(c, http.StatusForbidden, "TASK_NOT_ASSIGNED_TO_YOU", "Bạn không phải người phụ trách công việc này")
+	case errors.Is(err, repositories.ErrPickingTaskNotClaimed):
+		respondOrderDomainError(c, http.StatusForbidden, "TASK_NOT_CLAIMED", "Bạn cần nhận việc trước khi nhặt hàng")
+	case errors.Is(err, repositories.ErrCannotUnassignAfterPicking):
+		respondOrderDomainError(c, http.StatusConflict, "CANNOT_UNASSIGN_AFTER_PICKING", "Công việc đã có dữ liệu nhặt hàng, không thể gỡ phân công trực tiếp")
+	case errors.Is(err, repositories.ErrCannotReassignAfterPicking):
+		respondOrderDomainError(c, http.StatusConflict, "CANNOT_REASSIGN_AFTER_PICKING", "Công việc đã phát sinh dữ liệu nhặt hàng, không thể gán lại trực tiếp")
+	case errors.Is(err, repositories.ErrStaffNotFound):
+		respondOrderDomainError(c, http.StatusNotFound, "STAFF_NOT_FOUND", "Không tìm thấy nhân viên")
+	case errors.Is(err, repositories.ErrInvalidStaffRole):
+		respondOrderDomainError(c, http.StatusUnprocessableEntity, "INVALID_STAFF_ROLE", "Người được gán phải là nhân viên")
+	case errors.Is(err, repositories.ErrOrderAlreadyCompleted), errors.Is(err, repositories.ErrOrderAlreadyCompletedCannotPick):
+		respondOrderDomainError(c, http.StatusBadRequest, "ORDER_ALREADY_COMPLETED", "Đơn hàng đã hoàn thành")
+	case errors.Is(err, repositories.ErrOrderCancelled):
+		respondOrderDomainError(c, http.StatusBadRequest, "ORDER_CANCELLED", "Đơn hàng đã bị hủy")
+	default:
+		return false
+	}
+	return true
+}
+
 // CreateOrder tạo order từ BOM và sinh order_items theo machine_qty.
-func (h *OrderHandler) CreateOrder(c *gin.Context) {
+func (h *OrderHandler) CreateOrder(c echo.Context) {
 	var req createOrderRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
-	userIDValue, _ := c.Get("user_id")
+	userIDValue := c.Get("user_id")
 	createdBy, _ := userIDValue.(uint)
 
 	order, err := h.service.Create(services.OrderCreateInput{
@@ -141,13 +183,17 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrOrderInvalidPayload):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error_code": "INVALID_ORDER_PAYLOAD", "error": err.Error()})
 		case errors.Is(err, repositories.ErrOrderBOMNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": repositories.ErrOrderBOMNotFound.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error_code": "ORDER_BOM_NOT_FOUND", "error": "Sản phẩm thành phẩm chưa có BOM để tạo tác vụ nhặt hàng."})
 		case errors.Is(err, repositories.ErrOrderBOMHasNoItems):
-			c.JSON(http.StatusBadRequest, gin.H{"error": repositories.ErrOrderBOMHasNoItems.Error()})
+			c.JSON(http.StatusBadRequest, echo.Map{"error_code": "ORDER_BOM_HAS_NO_ITEMS", "error": "BOM của sản phẩm chưa có linh kiện."})
+		case errors.Is(err, repositories.ErrOrderEntityNotFound):
+			c.JSON(http.StatusNotFound, echo.Map{"error_code": "ORDER_PICKING_SOURCE_NOT_FOUND", "error": "Không tìm thấy sản phẩm hoặc khay đang hoạt động để tạo tác vụ nhặt hàng."})
+		case errors.Is(err, repositories.ErrOrderHasNoItems):
+			c.JSON(http.StatusBadRequest, echo.Map{"error_code": "ORDER_HAS_NO_PICKING_TASKS", "error": "Không tạo được tác vụ nhặt hàng cho đơn này."})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
@@ -155,14 +201,14 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	c.JSON(http.StatusCreated, order)
 }
 
-func (h *OrderHandler) UpdateOrder(c *gin.Context) {
+func (h *OrderHandler) UpdateOrder(c echo.Context) {
 	orderID, ok := parseOrderID(c)
 	if !ok {
 		return
 	}
 	var req updateOrderRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
@@ -176,13 +222,13 @@ func (h *OrderHandler) UpdateOrder(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrOrderInvalidID), errors.Is(err, services.ErrOrderInvalidPayload):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrOrderCannotEditNonPending):
 			respondOrderDomainError(c, http.StatusBadRequest, "ORDER_ALREADY_PICKING_CANNOT_EDIT", err.Error())
 		case errors.Is(err, repositories.ErrOrderEntityNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": repositories.ErrOrderEntityNotFound.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": repositories.ErrOrderEntityNotFound.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
@@ -201,7 +247,7 @@ func mapOrderItems(items []orderItemRequest) []services.OrderItemInput {
 	return results
 }
 
-func (h *OrderHandler) DeleteOrder(c *gin.Context) {
+func (h *OrderHandler) DeleteOrder(c echo.Context) {
 	orderID, ok := parseOrderID(c)
 	if !ok {
 		return
@@ -209,41 +255,152 @@ func (h *OrderHandler) DeleteOrder(c *gin.Context) {
 	if err := h.service.Delete(orderID); err != nil {
 		switch {
 		case errors.Is(err, services.ErrOrderInvalidID):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrOrderEntityNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": repositories.ErrOrderEntityNotFound.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": repositories.ErrOrderEntityNotFound.Error()})
 		case errors.Is(err, repositories.ErrOrderCannotDelete):
-			c.JSON(http.StatusConflict, gin.H{"error": repositories.ErrOrderCannotDelete.Error()})
+			c.JSON(http.StatusConflict, echo.Map{"error": repositories.ErrOrderCannotDelete.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "order deleted"})
+	c.JSON(http.StatusOK, echo.Map{"message": "order deleted"})
 }
 
 // GetOrders lấy danh sách orders, hỗ trợ filter status.
-func (h *OrderHandler) GetOrders(c *gin.Context) {
-	orders, err := h.service.GetAll(c.Query("status"))
+func (h *OrderHandler) GetOrders(c echo.Context) {
+	orders, err := h.service.GetAll(c.QueryParam("status"))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, orders)
 }
 
 // GetStaffTasks tra danh sach cong viec can picking cho staff.
-func (h *OrderHandler) GetStaffTasks(c *gin.Context) {
-	rows, err := h.service.GetStaffTasks()
+func (h *OrderHandler) GetStaffTasks(c echo.Context) {
+	userID, role := currentUser(c)
+	rows, err := h.service.GetStaffTasks(services.StaffTaskQueryInput{
+		UserID:      userID,
+		CurrentRole: role,
+	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, rows)
 }
 
+func (h *OrderHandler) GetStaffTaskSummary(c echo.Context) {
+	userID, role := currentUser(c)
+	summary, err := h.service.GetStaffTaskSummary(services.StaffTaskQueryInput{
+		UserID:      userID,
+		CurrentRole: role,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, summary)
+}
+
+func (h *OrderHandler) ClaimStaffOrder(c echo.Context) {
+	orderID, ok := parseOrderID(c)
+	if !ok {
+		return
+	}
+	userID, _ := currentUser(c)
+	order, err := h.service.ClaimOrder(services.ClaimOrderInput{
+		OrderID: orderID,
+		UserID:  userID,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrOrderInvalidID):
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
+		case errors.Is(err, repositories.ErrOrderEntityNotFound):
+			respondOrderDomainError(c, http.StatusNotFound, "ORDER_NOT_FOUND", "Không tìm thấy đơn hàng")
+		case errors.Is(err, repositories.ErrOrderHasNoItems):
+			respondOrderDomainError(c, http.StatusBadRequest, "ORDER_HAS_NO_ITEMS", "Đơn hàng chưa có sản phẩm")
+		default:
+			if respondPickingAssignmentError(c, err) {
+				return
+			}
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, echo.Map{
+		"message":     "Nhận việc thành công.",
+		"order_id":    order.ID,
+		"assigned_to": userID,
+	})
+}
+
+func (h *OrderHandler) AdminAssignPickingOrder(c echo.Context) {
+	orderID, ok := parseOrderID(c)
+	if !ok {
+		return
+	}
+	var req assignPickingOrderRequest
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
+		return
+	}
+	order, err := h.service.AssignOrderToStaff(services.AdminAssignOrderInput{
+		OrderID: orderID,
+		StaffID: req.StaffID,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrOrderInvalidPayload):
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
+		case errors.Is(err, repositories.ErrOrderEntityNotFound):
+			respondOrderDomainError(c, http.StatusNotFound, "ORDER_NOT_FOUND", "Không tìm thấy đơn hàng")
+		default:
+			if respondPickingAssignmentError(c, err) {
+				return
+			}
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, echo.Map{
+		"message":     "Đã gán công việc cho nhân viên.",
+		"order":       order,
+		"assigned_to": req.StaffID,
+	})
+}
+
+func (h *OrderHandler) AdminUnassignPickingOrder(c echo.Context) {
+	orderID, ok := parseOrderID(c)
+	if !ok {
+		return
+	}
+	order, err := h.service.UnassignOrder(orderID)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrOrderInvalidID):
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
+		case errors.Is(err, repositories.ErrOrderEntityNotFound):
+			respondOrderDomainError(c, http.StatusNotFound, "ORDER_NOT_FOUND", "Không tìm thấy đơn hàng")
+		default:
+			if respondPickingAssignmentError(c, err) {
+				return
+			}
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, echo.Map{
+		"message": "Đã gỡ phân công công việc.",
+		"order":   order,
+	})
+}
+
 // GetOrderByID lấy chi tiết order kèm picking tasks/progress/shortage.
-func (h *OrderHandler) GetOrderByID(c *gin.Context) {
+func (h *OrderHandler) GetOrderByID(c echo.Context) {
 	orderID, ok := parseOrderID(c)
 	if !ok {
 		return
@@ -259,14 +416,14 @@ func (h *OrderHandler) GetOrderByID(c *gin.Context) {
 }
 
 // ScanOrderForPicking quét order_code để sinh tasks (nếu chưa có) và chuyển order sang PICKING.
-func (h *OrderHandler) ScanOrderForPicking(c *gin.Context) {
+func (h *OrderHandler) ScanOrderForPicking(c echo.Context) {
 	var req scanOrderRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
-	userIDValue, _ := c.Get("user_id")
+	userIDValue := c.Get("user_id")
 	userID, _ := userIDValue.(uint)
 
 	order, tasks, err := h.service.ScanForPicking(services.OrderScanInput{
@@ -276,31 +433,34 @@ func (h *OrderHandler) ScanOrderForPicking(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrOrderCodeIsRequired):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": services.ErrOrderCodeIsRequired.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": services.ErrOrderCodeIsRequired.Error()})
 		case errors.Is(err, repositories.ErrOrderEntityNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": repositories.ErrOrderEntityNotFound.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": repositories.ErrOrderEntityNotFound.Error()})
 		case errors.Is(err, repositories.ErrOrderAlreadyClosed):
-			c.JSON(http.StatusBadRequest, gin.H{"error": "order already completed or cancelled"})
+			c.JSON(http.StatusBadRequest, echo.Map{"error": "order already completed or cancelled"})
 		case errors.Is(err, repositories.ErrOrderHasNoItems):
-			c.JSON(http.StatusBadRequest, gin.H{"error": repositories.ErrOrderHasNoItems.Error()})
+			c.JSON(http.StatusBadRequest, echo.Map{"error": repositories.ErrOrderHasNoItems.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			if respondPickingAssignmentError(c, err) {
+				return
+			}
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "order scanned successfully",
+	c.JSON(http.StatusOK, echo.Map{
+		"message": "Quét đơn thành công.",
 		"order":   order,
 		"tasks":   tasks,
 	})
 }
 
 // ScanOrderForPickingByQRCode hỗ trợ luồng quét GET /orders/scan/:qr_code cho HT730 keyboard wedge.
-func (h *OrderHandler) ScanOrderForPickingByQRCode(c *gin.Context) {
+func (h *OrderHandler) ScanOrderForPickingByQRCode(c echo.Context) {
 	qrCode := c.Param("qr_code")
 
-	userIDValue, _ := c.Get("user_id")
+	userIDValue := c.Get("user_id")
 	userID, _ := userIDValue.(uint)
 
 	order, tasks, err := h.service.ScanForPicking(services.OrderScanInput{
@@ -310,45 +470,51 @@ func (h *OrderHandler) ScanOrderForPickingByQRCode(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrOrderCodeIsRequired):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": services.ErrOrderCodeIsRequired.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": services.ErrOrderCodeIsRequired.Error()})
 		case errors.Is(err, repositories.ErrOrderEntityNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": repositories.ErrOrderEntityNotFound.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": repositories.ErrOrderEntityNotFound.Error()})
 		case errors.Is(err, repositories.ErrOrderAlreadyClosed):
-			c.JSON(http.StatusBadRequest, gin.H{"error": "order already completed or cancelled"})
+			c.JSON(http.StatusBadRequest, echo.Map{"error": "order already completed or cancelled"})
 		case errors.Is(err, repositories.ErrOrderHasNoItems):
-			c.JSON(http.StatusBadRequest, gin.H{"error": repositories.ErrOrderHasNoItems.Error()})
+			c.JSON(http.StatusBadRequest, echo.Map{"error": repositories.ErrOrderHasNoItems.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			if respondPickingAssignmentError(c, err) {
+				return
+			}
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "order scanned successfully",
+	c.JSON(http.StatusOK, echo.Map{
+		"message": "Quét đơn thành công.",
 		"order":   order,
 		"tasks":   tasks,
 	})
 }
 
 // VerifyPickingTaskTray verify tray QR cho picking task.
-func (h *OrderHandler) VerifyPickingTaskTray(c *gin.Context) {
+func (h *OrderHandler) VerifyPickingTaskTray(c echo.Context) {
 	taskID, ok := parsePickingTaskID(c)
 	if !ok {
 		return
 	}
 
 	var req verifyTrayRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
-	roleRaw, _ := c.Get("role")
+	roleRaw := c.Get("role")
 	currentRole, _ := roleRaw.(string)
+	userIDValue := c.Get("user_id")
+	userID, _ := userIDValue.(uint)
 
 	task, err := h.service.VerifyTray(services.OrderVerifyTrayInput{
 		TaskID:      taskID,
 		TrayQRCode:  req.TrayQRCode,
+		UserID:      userID,
 		CurrentRole: currentRole,
 	})
 	if err != nil {
@@ -366,38 +532,41 @@ func (h *OrderHandler) VerifyPickingTaskTray(c *gin.Context) {
 		case errors.Is(err, repositories.ErrOrderAlreadyCompletedCannotPick):
 			respondOrderDomainError(c, http.StatusBadRequest, "ORDER_COMPLETED", repositories.ErrOrderAlreadyCompletedCannotPick.Error())
 		default:
+			if respondPickingAssignmentError(c, err) {
+				return
+			}
 			var wrongTrayErr repositories.OrderWrongTrayError
 			if errors.As(err, &wrongTrayErr) {
 				respondOrderDomainError(c, http.StatusBadRequest, "WRONG_TRAY", wrongTrayErr.Error())
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "tray verified",
+	c.JSON(http.StatusOK, echo.Map{
+		"message": "Đã xác minh đúng khay.",
 		"task":    task,
 	})
 }
 
 // ScanProductForPickingTask scan product QR tung lan (quantity=1) va tru kho atomic.
-func (h *OrderHandler) ScanProductForPickingTask(c *gin.Context) {
+func (h *OrderHandler) ScanProductForPickingTask(c echo.Context) {
 	taskID, ok := parsePickingTaskID(c)
 	if !ok {
 		return
 	}
 
 	var req scanProductRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
-	userIDValue, _ := c.Get("user_id")
+	userIDValue := c.Get("user_id")
 	userID, _ := userIDValue.(uint)
-	roleRaw, _ := c.Get("role")
+	roleRaw := c.Get("role")
 	currentRole, _ := roleRaw.(string)
 
 	task, remaining, err := h.service.ScanProduct(services.OrderScanProductInput{
@@ -431,25 +600,28 @@ func (h *OrderHandler) ScanProductForPickingTask(c *gin.Context) {
 		case errors.Is(err, repositories.ErrPickingTaskWrongProduct):
 			respondOrderDomainError(c, http.StatusBadRequest, "WRONG_PRODUCT", repositories.ErrPickingTaskWrongProduct.Error())
 		default:
+			if respondPickingAssignmentError(c, err) {
+				return
+			}
 			var wrongTrayErr repositories.OrderWrongTrayError
 			if errors.As(err, &wrongTrayErr) {
 				respondOrderDomainError(c, http.StatusBadRequest, "WRONG_TRAY", wrongTrayErr.Error())
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message":            "product scanned successfully",
+	c.JSON(http.StatusOK, echo.Map{
+		"message":            "Quét sản phẩm thành công.",
 		"task":               task,
 		"remaining_quantity": remaining,
 	})
 }
 
 // FinishOrder kết thúc order thủ công và trả cảnh báo thiếu hàng nếu có.
-func (h *OrderHandler) FinishOrder(c *gin.Context) {
+func (h *OrderHandler) FinishOrder(c echo.Context) {
 	orderID, ok := parseOrderID(c)
 	if !ok {
 		return
@@ -459,25 +631,25 @@ func (h *OrderHandler) FinishOrder(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrOrderInvalidID):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrOrderEntityNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": repositories.ErrOrderEntityNotFound.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": repositories.ErrOrderEntityNotFound.Error()})
 		case errors.Is(err, repositories.ErrOrderAlreadyCompleted):
-			c.JSON(http.StatusBadRequest, gin.H{"error": repositories.ErrOrderAlreadyCompleted.Error()})
+			c.JSON(http.StatusBadRequest, echo.Map{"error": repositories.ErrOrderAlreadyCompleted.Error()})
 		case errors.Is(err, repositories.ErrOrderCancelled):
-			c.JSON(http.StatusBadRequest, gin.H{"error": repositories.ErrOrderCancelled.Error()})
+			c.JSON(http.StatusBadRequest, echo.Map{"error": repositories.ErrOrderCancelled.Error()})
 		case errors.Is(err, repositories.ErrOrderNotInPickingStatus):
-			c.JSON(http.StatusBadRequest, gin.H{"error": "order must be in PICKING status before finish"})
+			c.JSON(http.StatusBadRequest, echo.Map{"error": "order must be in PICKING status before finish"})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
 
 	if len(shortageItems) > 0 {
-		items := make([]gin.H, 0, len(shortageItems))
+		items := make([]echo.Map, 0, len(shortageItems))
 		for _, item := range shortageItems {
-			items = append(items, gin.H{
+			items = append(items, echo.Map{
 				"picking_task_id": item.PickingTaskID,
 				"product_id":      item.ProductID,
 				"required_qty":    item.RequiredQty,
@@ -486,10 +658,10 @@ func (h *OrderHandler) FinishOrder(c *gin.Context) {
 			})
 		}
 
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusOK, echo.Map{
 			"message": "order completed with shortage",
 			"order":   order,
-			"shortage": gin.H{
+			"shortage": echo.Map{
 				"has_shortage": true,
 				"items":        items,
 			},
@@ -497,10 +669,10 @@ func (h *OrderHandler) FinishOrder(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, echo.Map{
 		"message": "order completed successfully",
 		"order":   order,
-		"shortage": gin.H{
+		"shortage": echo.Map{
 			"has_shortage": false,
 			"items":        []any{},
 		},
@@ -508,7 +680,7 @@ func (h *OrderHandler) FinishOrder(c *gin.Context) {
 }
 
 // GetOrderPickingTasks trả danh sách task của order để staff theo dõi.
-func (h *OrderHandler) GetOrderPickingTasks(c *gin.Context) {
+func (h *OrderHandler) GetOrderPickingTasks(c echo.Context) {
 	orderID, ok := parseOrderID(c)
 	if !ok {
 		return
@@ -518,16 +690,16 @@ func (h *OrderHandler) GetOrderPickingTasks(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrOrderInvalidID):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrOrderEntityNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": repositories.ErrOrderEntityNotFound.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": repositories.ErrOrderEntityNotFound.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, echo.Map{
 		"order_id": order.ID,
 		"status":   order.Status,
 		"tasks":    tasks,
@@ -535,7 +707,7 @@ func (h *OrderHandler) GetOrderPickingTasks(c *gin.Context) {
 }
 
 // GetOrderProgress trả done/total/progress (%) cho order hiện tại.
-func (h *OrderHandler) GetOrderProgress(c *gin.Context) {
+func (h *OrderHandler) GetOrderProgress(c echo.Context) {
 	orderID, ok := parseOrderID(c)
 	if !ok {
 		return
@@ -545,16 +717,16 @@ func (h *OrderHandler) GetOrderProgress(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrOrderInvalidID):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrOrderEntityNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": repositories.ErrOrderEntityNotFound.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": repositories.ErrOrderEntityNotFound.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, echo.Map{
 		"order_id":     progress.OrderID,
 		"order_status": progress.OrderStatus,
 		"done_tasks":   progress.DoneTasks,

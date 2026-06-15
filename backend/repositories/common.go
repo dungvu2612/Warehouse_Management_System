@@ -45,7 +45,7 @@ type DBTX interface {
 
 var (
 	ErrLocationCodeExists = errors.New("location_code already exists")
-	ErrTrayCodeExists     = errors.New("tray_code or product_id already exists")
+	ErrTrayCodeExists     = errors.New("tray_code already exists")
 )
 
 func isUniqueConstraintError(err error) bool {

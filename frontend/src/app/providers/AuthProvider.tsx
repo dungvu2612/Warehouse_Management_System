@@ -1,7 +1,8 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { STORAGE_KEYS } from '../../shared/constants/storage'
 import type { AuthUser, LoginResponse } from '../../shared/types/auth'
+import { http } from '../../shared/lib/http'
 
 // Interface định nghĩa toàn bộ dữ liệu/hành động auth mà app cần.
 interface AuthContextValue {
@@ -56,6 +57,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_KEYS.accessToken)
     localStorage.removeItem(STORAGE_KEYS.user)
   }
+
+  useEffect(() => {
+    if (!token) return undefined
+
+    const checkSession = () => {
+      void http.get('/auth/me').catch(() => {
+        // 401 is handled by the shared HTTP interceptor.
+      })
+    }
+
+    const intervalId = window.setInterval(checkSession, 15000)
+    return () => window.clearInterval(intervalId)
+  }, [token])
 
   // Memo hóa object value để tránh re-render thừa cho consumer.
   const value = useMemo<AuthContextValue>(

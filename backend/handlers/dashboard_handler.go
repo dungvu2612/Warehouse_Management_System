@@ -15,7 +15,7 @@ import (
 
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 type DashboardHandler struct {
@@ -26,26 +26,26 @@ func NewDashboardHandler(service services.DashboardService) *DashboardHandler {
 	return &DashboardHandler{service: service}
 }
 
-func (h *DashboardHandler) GetDashboardStats(c *gin.Context) {
-	roleRaw, exists := c.Get("role")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing auth context"})
+func (h *DashboardHandler) GetDashboardStats(c echo.Context) {
+	roleRaw := c.Get("role")
+	if roleRaw == nil {
+		c.JSON(http.StatusUnauthorized, echo.Map{"error": "missing auth context"})
 		return
 	}
 
 	role, ok := roleRaw.(string)
 	if !ok || strings.TrimSpace(role) == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid auth role"})
+		c.JSON(http.StatusUnauthorized, echo.Map{"error": "invalid auth role"})
 		return
 	}
 
 	stats, err := h.service.GetStatsByRole(role)
 	if err != nil {
 		if errors.Is(err, services.ErrDashboardForbiddenRole) {
-			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden - insufficient role"})
+			c.JSON(http.StatusForbidden, echo.Map{"error": "forbidden - insufficient role"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, stats)

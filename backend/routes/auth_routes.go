@@ -20,16 +20,18 @@ Luu y khi sua:
 import (
 	"quan_ly_kho/config"
 	"quan_ly_kho/handlers"
+	"quan_ly_kho/middleware"
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
-func AuthRoutes(r *gin.Engine) {
+func AuthRoutes(r *echo.Echo) {
 	repo := repositories.NewAuthRepository(config.DB)
 	service := services.NewAuthService(repo)
 	handler := handlers.NewAuthHandler(service)
 
-	r.POST("/auth/login", handler.Login)
+	r.POST("/auth/login", adapt(handler.Login))
+	r.GET("/auth/me", adapt(handler.Me), middleware.AuthRequired())
 }

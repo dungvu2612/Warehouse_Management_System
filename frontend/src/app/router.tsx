@@ -20,9 +20,9 @@ import { WarehouseOverviewPage } from '../features/warehouse-overview/pages/Ware
 import { PDAPickingPage } from '../features/pda-picking/pages/PDAPickingPage'
 import { PDAStocktakingPage } from '../features/pda-stocktaking/pages/PDAStocktakingPage'
 import { PDAProductLookupPage } from '../features/pda-product-lookup/pages/PDAProductLookupPage'
-import { PDAPutawayPage } from '../features/pda-putaway/pages/PDAPutawayPage'
 import { DashboardPage } from '../features/dashboard/pages/DashboardPage'
 import { StaffTasksPage } from '../features/staff-tasks/pages/StaffTasksPage'
+import { StaffImportTasksPage } from '../features/staff-tasks/pages/StaffImportTasksPage'
 import { StaffPickingDetailPage } from '../features/pda-picking/pages/StaffPickingDetailPage'
 import { UserManagementPage } from '../features/users/pages/UserManagementPage'
 import { UserDetailPage } from '../features/users/pages/UserDetailPage'
@@ -115,6 +115,14 @@ export const router = createBrowserRouter([
           </RoleRoute>
         ),
       },
+      {
+        path: 'staff/import-tasks',
+        element: (
+          <RoleRoute allowedRoles={['WAREHOUSE']}>
+            <StaffImportTasksPage />
+          </RoleRoute>
+        ),
+      },
       { path: 'stock-transactions', element: <Navigate to="/warehouse-overview" replace /> },
       { path: 'pick-logs', element: <Navigate to="/orders" replace /> },
       {
@@ -138,14 +146,6 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute allowedRoles={['WAREHOUSE']}>
             <PDAProductLookupPage />
-          </RoleRoute>
-        ),
-      },
-      {
-        path: 'pda/putaway',
-        element: (
-          <RoleRoute allowedRoles={['WAREHOUSE']}>
-            <PDAPutawayPage />
           </RoleRoute>
         ),
       },

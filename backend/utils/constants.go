@@ -17,8 +17,8 @@ const (
 
 // Stock transaction type constants
 const (
-	StockTxTypeImport = "IMPORT"
-	StockTxTypeExport = "EXPORT"
-	StockTxTypeAdjust = "ADJUST"
+	StockTxTypeImport   = "IMPORT"
+	StockTxTypeExport   = "EXPORT"
+	StockTxTypeAdjust   = "ADJUST"
 	StockTxTypeRollback = "ROLLBACK"
 )

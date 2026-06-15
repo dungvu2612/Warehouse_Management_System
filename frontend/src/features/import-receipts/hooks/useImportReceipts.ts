@@ -90,6 +90,43 @@ export function useCreateImportReceiptMutation(options?: {
   })
 }
 
+export function useAssignImportReceiptItemMutation(options?: {
+  onSuccess?: (message: string) => void
+  onError?: (error: unknown) => void
+}) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ itemId, staffId }: { itemId: number; staffId: number }) =>
+      importReceiptsService.assignImportReceiptItem(itemId, staffId),
+    onSuccess: async (response) => {
+      await invalidateImportReceiptQueries(queryClient)
+      await queryClient.invalidateQueries({ queryKey: ['staff-import-tasks'] })
+      await queryClient.invalidateQueries({ queryKey: ['staff-task-summary'] })
+      options?.onSuccess?.(response.message)
+    },
+    onError: (error) => options?.onError?.(error),
+  })
+}
+
+export function useUnassignImportReceiptItemMutation(options?: {
+  onSuccess?: (message: string) => void
+  onError?: (error: unknown) => void
+}) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (itemId: number) => importReceiptsService.unassignImportReceiptItem(itemId),
+    onSuccess: async (response) => {
+      await invalidateImportReceiptQueries(queryClient)
+      await queryClient.invalidateQueries({ queryKey: ['staff-import-tasks'] })
+      await queryClient.invalidateQueries({ queryKey: ['staff-task-summary'] })
+      options?.onSuccess?.(response.message)
+    },
+    onError: (error) => options?.onError?.(error),
+  })
+}
+
 export function useApprovePutawayRequestMutation(options?: {
   onSuccess?: () => void
   onError?: (error: unknown) => void

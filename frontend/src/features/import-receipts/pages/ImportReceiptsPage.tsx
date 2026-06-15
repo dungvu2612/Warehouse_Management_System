@@ -8,22 +8,22 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Add, Refresh } from '@mui/icons-material'
-import { Alert, Box, Button, Chip, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material'
+import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
 import { useAuth } from '../../../app/providers/AuthProvider'
 import { ImportReceiptCreateDialog } from '../components/ImportReceiptCreateDialog'
 import { ImportReceiptDetailDialog } from '../components/ImportReceiptDetailDialog'
 import { ImportReceiptTable } from '../components/ImportReceiptTable'
 import {
+  useAssignImportReceiptItemMutation,
   useCreateImportReceiptMutation,
   useImportReceiptDetailQuery,
   useImportReceiptLocationsQuery,
   useImportReceiptProductsQuery,
   useImportReceiptTraysQuery,
   useImportReceiptsQuery,
-  usePutawayRequestsQuery,
-  useApprovePutawayRequestMutation,
-  useRejectPutawayRequestMutation,
+  useUnassignImportReceiptItemMutation,
 } from '../hooks/useImportReceipts'
+import { useUsersQuery } from '../../users/hooks/useUsers'
 import { importReceiptsService } from '../services/importReceiptsService'
 import type { CreateImportReceiptPayload } from '../types/importReceiptTypes'
 import { mapImportReceiptApiError } from '../utils/importReceiptError'
@@ -37,7 +37,7 @@ import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination
 const defaultCreateForm: CreateImportReceiptPayload = {
   supplier_name: '',
   note: '',
-  items: [{ product_id: 0, tray_id: 0, tray_qr_code: '', quantity: 1 }],
+  items: [{ product_id: 0, quantity: 1 }],
 }
 
 export function ImportReceiptsPage() {
@@ -55,22 +55,13 @@ export function ImportReceiptsPage() {
 
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const [putawayStatusFilter, setPutawayStatusFilter] = useState<'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL'>('PENDING')
 
   const receiptsQuery = useImportReceiptsQuery()
   const productsQuery = useImportReceiptProductsQuery()
   const traysQuery = useImportReceiptTraysQuery()
   const locationsQuery = useImportReceiptLocationsQuery()
   const receiptDetailQuery = useImportReceiptDetailQuery(selectedReceiptId)
-  const putawayRequestsQuery = usePutawayRequestsQuery(putawayStatusFilter)
-  const approvePutawayMutation = useApprovePutawayRequestMutation({
-    onSuccess: () => setBanner({ type: 'success', text: 'Đã duyệt yêu cầu nhập kho.' }),
-    onError: () => setBanner({ type: 'error', text: 'Duyệt yêu cầu thất bại.' }),
-  })
-  const rejectPutawayMutation = useRejectPutawayRequestMutation({
-    onSuccess: () => setBanner({ type: 'success', text: 'Đã từ chối yêu cầu nhập kho.' }),
-    onError: () => setBanner({ type: 'error', text: 'Từ chối yêu cầu thất bại.' }),
-  })
+  const staffQuery = useUsersQuery({ role: 'WAREHOUSE', is_active: 'true' })
 
   // Ghi chú: Khối làm mới dữ liệu - map danh sách phiếu nhập để render bảng tổng hợp.
   const receiptDisplay = useMemo(() => {
@@ -100,6 +91,16 @@ export function ImportReceiptsPage() {
     onError: (error) => setCreateError(mapImportReceiptApiError(error)),
   })
 
+  const assignItemMutation = useAssignImportReceiptItemMutation({
+    onSuccess: (message) => setBanner({ type: 'success', text: message || 'Đã gán công việc nhập kho cho nhân viên.' }),
+    onError: (error) => setBanner({ type: 'error', text: mapImportReceiptApiError(error) }),
+  })
+
+  const unassignItemMutation = useUnassignImportReceiptItemMutation({
+    onSuccess: (message) => setBanner({ type: 'success', text: message || 'Đã gỡ phân công công việc nhập kho.' }),
+    onError: (error) => setBanner({ type: 'error', text: mapImportReceiptApiError(error) }),
+  })
+
   const handleOpenCreate = () => {
     if (!isAdmin) return
     setCreateForm(defaultCreateForm)
@@ -118,30 +119,12 @@ export function ImportReceiptsPage() {
       return
     }
 
-    const trayMap = new Map((traysQuery.data || []).map((tray) => [tray.id, tray]))
-    for (const [index, item] of createForm.items.entries()) {
-      const selectedTray = trayMap.get(item.tray_id)
-      if (!selectedTray || selectedTray.product_id !== item.product_id) {
-        setCreateError(`Dòng ${index + 1}: Khay không thuộc sản phẩm đã chọn.`)
-        return
-      }
-    }
-
     createMutation.mutate(normalizeImportReceiptPayload(createForm))
   }
 
   const handleViewDetail = (id: number) => {
     setSelectedReceiptId(id)
     setDetailOpen(true)
-  }
-
-  const handleApprovePutaway = (id: number) => {
-    approvePutawayMutation.mutate(id)
-  }
-
-  const handleRejectPutaway = (id: number) => {
-    const reason = window.prompt('Nhập lý do từ chối yêu cầu nhập kho:', '') || ''
-    rejectPutawayMutation.mutate({ id, reason })
   }
 
   return (
@@ -209,92 +192,6 @@ export function ImportReceiptsPage() {
         />
       </Paper>
 
-      {isAdmin && (
-        <Paper sx={{ p: 2.5 }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ mb: 2, alignItems: { md: 'center' }, justifyContent: 'space-between' }}>
-            <Typography sx={{ fontWeight: 900 }}>Yêu cầu nhập kho chờ duyệt</Typography>
-            <TextField
-              select
-              size="small"
-              label="Trạng thái"
-              value={putawayStatusFilter}
-              onChange={(e) => setPutawayStatusFilter(e.target.value as 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL')}
-              sx={{ minWidth: 180 }}
-            >
-              <MenuItem value="PENDING">Chờ duyệt</MenuItem>
-              <MenuItem value="APPROVED">Đã duyệt</MenuItem>
-              <MenuItem value="REJECTED">Đã từ chối</MenuItem>
-              <MenuItem value="ALL">Tất cả</MenuItem>
-            </TextField>
-          </Stack>
-
-          <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: 2 }}>
-            <Table>
-              <TableHead sx={{ bgcolor: 'grey.50' }}>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 800 }}>ID</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Mã SP QR</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Mã khay QR</TableCell>
-                  <TableCell sx={{ fontWeight: 800, textAlign: 'right' }}>Số lượng</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Trạng thái</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Tạo lúc</TableCell>
-                  <TableCell sx={{ fontWeight: 800, textAlign: 'center' }}>Thao tác</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {putawayRequestsQuery.isLoading && (
-                  <TableRow>
-                    <TableCell colSpan={7}>Đang tải yêu cầu nhập kho...</TableCell>
-                  </TableRow>
-                )}
-                {putawayRequestsQuery.isError && (
-                  <TableRow>
-                    <TableCell colSpan={7}>Không tải được yêu cầu nhập kho.</TableCell>
-                  </TableRow>
-                )}
-                {!putawayRequestsQuery.isLoading && !putawayRequestsQuery.isError && (putawayRequestsQuery.data || []).length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7}>Chưa có yêu cầu nhập kho.</TableCell>
-                  </TableRow>
-                )}
-                {(putawayRequestsQuery.data || []).map((req) => (
-                  <TableRow key={req.id} hover>
-                    <TableCell>{req.id}</TableCell>
-                    <TableCell sx={{ fontFamily: 'monospace' }}>{req.product_qr_code}</TableCell>
-                    <TableCell sx={{ fontFamily: 'monospace' }}>{req.tray_qr_code}</TableCell>
-                    <TableCell sx={{ textAlign: 'right', fontWeight: 800 }}>{req.quantity}</TableCell>
-                    <TableCell>{req.status}</TableCell>
-                    <TableCell>{new Date(req.created_at).toLocaleString('vi-VN')}</TableCell>
-                    <TableCell sx={{ textAlign: 'center' }}>
-                      <Stack direction="row" spacing={1} sx={{ justifyContent: 'center' }}>
-                        <Button
-                          size="small"
-                          variant="contained"
-                          color="success"
-                          disabled={req.status !== 'PENDING' || approvePutawayMutation.isPending || rejectPutawayMutation.isPending}
-                          onClick={() => handleApprovePutaway(req.id)}
-                        >
-                          Duyệt
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          color="error"
-                          disabled={req.status !== 'PENDING' || approvePutawayMutation.isPending || rejectPutawayMutation.isPending}
-                          onClick={() => handleRejectPutaway(req.id)}
-                        >
-                          Từ chối
-                        </Button>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      )}
-
       <ImportReceiptCreateDialog
         open={createOpen}
         form={createForm}
@@ -312,8 +209,13 @@ export function ImportReceiptsPage() {
         open={detailOpen}
         receipt={receiptDetailQuery.data || null}
         products={productsQuery.data || []}
+        trays={traysQuery.data || []}
+        staffOptions={staffQuery.data || []}
+        canManageAssignment={isAdmin}
         isLoading={receiptDetailQuery.isLoading}
         isError={receiptDetailQuery.isError}
+        onAssign={(itemId, staffId) => assignItemMutation.mutate({ itemId, staffId })}
+        onUnassign={(itemId) => unassignItemMutation.mutate(itemId)}
         onClose={() => {
           setDetailOpen(false)
           setSelectedReceiptId(null)

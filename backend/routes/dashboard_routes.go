@@ -9,10 +9,10 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
-func DashboardRoutes(r *gin.Engine) {
+func DashboardRoutes(r *echo.Echo) {
 	repo := repositories.NewDashboardRepository(config.DB)
 	service := services.NewDashboardService(repo)
 	handler := handlers.NewDashboardHandler(service)
@@ -20,6 +20,6 @@ func DashboardRoutes(r *gin.Engine) {
 	dashboard := r.Group("/dashboard")
 	dashboard.Use(middleware.AuthRequired())
 	{
-		dashboard.GET("/stats", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetDashboardStats)
+		dashboard.GET("/stats", adapt(handler.GetDashboardStats), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
 	}
 }

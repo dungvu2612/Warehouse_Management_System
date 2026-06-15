@@ -15,26 +15,31 @@ import { formatDateVN } from '../../../shared/lib/datetime'
 interface StaffOrderCardProps {
   item: StaffTaskItem
   onStart: (orderId: number) => void
+  onClaim: (orderId: number) => void
+  isClaiming?: boolean
 }
 
 const statusLabel: Record<string, string> = {
-  PENDING: 'Chờ xử lý',
+  WAITING: 'Chờ nhận',
   PICKING: 'Đang nhặt',
   COMPLETED: 'Hoàn thành',
   CANCELLED: 'Đã hủy',
 }
 
-export function StaffOrderCard({ item, onStart }: StaffOrderCardProps) {
+export function StaffOrderCard({ item, onStart, onClaim, isClaiming = false }: StaffOrderCardProps) {
   const progress = item.total_items > 0 ? Math.round((item.picked_items / item.total_items) * 100) : 0
+  const isWaiting = item.status === 'WAITING' || !item.assigned_to
 
   return (
     <Paper
       variant="outlined"
-      onClick={() => onStart(item.id)}
+      onClick={() => {
+        if (!isWaiting) onStart(item.id)
+      }}
       sx={{
         p: 1.5,
         borderRadius: 2,
-        cursor: 'pointer',
+        cursor: isWaiting ? 'default' : 'pointer',
         '&:active': { bgcolor: 'action.selected' },
       }}
     >
@@ -51,7 +56,7 @@ export function StaffOrderCard({ item, onStart }: StaffOrderCardProps) {
           </Box>
             <Chip
               size="small"
-              color={item.status === 'PENDING' ? 'warning' : 'secondary'}
+              color={isWaiting ? 'warning' : 'secondary'}
               label={statusLabel[item.status] || item.status}
               sx={{ fontWeight: 900 }}
             />
@@ -76,6 +81,10 @@ export function StaffOrderCard({ item, onStart }: StaffOrderCardProps) {
           <LinearProgress variant="determinate" value={progress} sx={{ mt: 0.75, height: 8, borderRadius: 99 }} />
         </Box>
 
+        <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>
+          Phụ trách: {item.assignee_name || item.assignee_username || 'Chưa có người nhận'}
+        </Typography>
+
         <Button
           type="button"
           fullWidth
@@ -83,11 +92,16 @@ export function StaffOrderCard({ item, onStart }: StaffOrderCardProps) {
           endIcon={<ArrowForward />}
           onClick={(event) => {
             event.stopPropagation()
+            if (isWaiting) {
+              onClaim(item.id)
+              return
+            }
             onStart(item.id)
           }}
+          disabled={isClaiming}
           sx={{ minHeight: 48, fontSize: 15, fontWeight: 900 }}
         >
-          Mở chi tiết
+          {isWaiting ? 'Nhận việc' : 'Tiếp tục nhặt'}
         </Button>
       </Stack>
     </Paper>

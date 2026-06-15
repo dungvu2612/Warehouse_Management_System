@@ -24,10 +24,10 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
-func PickLogRoutes(r *gin.Engine) {
+func PickLogRoutes(r *echo.Echo) {
 	repo := repositories.NewPickLogRepository(config.DB)
 	service := services.NewPickLogService(repo)
 	handler := handlers.NewPickLogHandler(service)
@@ -35,6 +35,6 @@ func PickLogRoutes(r *gin.Engine) {
 	pickLogs := r.Group("/pick-logs")
 	pickLogs.Use(middleware.AuthRequired())
 	{
-		pickLogs.GET("", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetPickLogs)
+		pickLogs.GET("", adapt(handler.GetPickLogs), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
 	}
 }

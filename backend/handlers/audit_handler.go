@@ -26,7 +26,7 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 type AuditHandler struct {
@@ -37,11 +37,11 @@ func NewAuditHandler(service services.AuditService) *AuditHandler {
 	return &AuditHandler{service: service}
 }
 
-func (h *AuditHandler) GetOrderAuditConsistency(c *gin.Context) {
+func (h *AuditHandler) GetOrderAuditConsistency(c echo.Context) {
 	orderIDRaw := c.Param("order_id")
 	orderID, err := strconv.ParseUint(orderIDRaw, 10, 64)
 	if err != nil || orderID == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid order id"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "invalid order id"})
 		return
 	}
 
@@ -49,11 +49,11 @@ func (h *AuditHandler) GetOrderAuditConsistency(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrInvalidOrderID):
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		case errors.Is(err, repositories.ErrOrderNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		}
 		return
 	}

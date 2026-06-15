@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "build:frontend": "npm --prefix frontend run build",
+    "start:backend": "cd backend && go run ./cmd",
+    "start": "npm run build:frontend && npm run start:backend"
+  },
   "dependencies": {
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6"

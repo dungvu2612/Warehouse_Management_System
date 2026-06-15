@@ -11,6 +11,7 @@ import type {
   CreateImportReceiptResponse,
   ImportReceipt,
   ImportReceiptDisplay,
+  ImportReceiptItemActionResponse,
   LocationOption,
   ProductOption,
   PutawayRequest,
@@ -34,6 +35,14 @@ export const importReceiptsService = {
     payload: CreateImportReceiptPayload,
   ): Promise<CreateImportReceiptResponse> => {
     return importReceiptsApi.createImportReceipt(payload)
+  },
+
+  assignImportReceiptItem: async (itemId: number, staffId: number): Promise<ImportReceiptItemActionResponse> => {
+    return importReceiptsApi.assignImportReceiptItem(itemId, staffId)
+  },
+
+  unassignImportReceiptItem: async (itemId: number): Promise<ImportReceiptItemActionResponse> => {
+    return importReceiptsApi.unassignImportReceiptItem(itemId)
   },
 
   getProductOptions: async (): Promise<ProductOption[]> => {
@@ -66,10 +75,12 @@ export const importReceiptsService = {
   mapReceiptsForDisplay: (receipts: ImportReceipt[]): ImportReceiptDisplay[] => {
     return receipts.map((receipt) => {
       const totalQuantity = receipt.items.reduce((sum, item) => sum + item.quantity, 0)
+      const totalActualQuantity = receipt.items.reduce((sum, item) => sum + (item.actual_quantity || 0), 0)
       return {
         ...receipt,
         item_count: receipt.items.length,
         total_quantity: totalQuantity,
+        total_actual_quantity: totalActualQuantity,
       }
     })
   },

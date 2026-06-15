@@ -23,7 +23,7 @@ import (
 
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 type PickLogHandler struct {
@@ -34,16 +34,16 @@ func NewPickLogHandler(service services.PickLogService) *PickLogHandler {
 	return &PickLogHandler{service: service}
 }
 
-func (h *PickLogHandler) GetPickLogs(c *gin.Context) {
+func (h *PickLogHandler) GetPickLogs(c echo.Context) {
 	logs, err := h.service.GetByFilters(services.PickLogQuery{
-		OrderIDRaw:  c.Query("order_id"),
-		PickedByRaw: c.Query("picked_by"),
-		DateFromRaw: c.Query("date_from"),
-		DateToRaw:   c.Query("date_to"),
-		LimitRaw:    c.Query("limit"),
+		OrderIDRaw:  c.QueryParam("order_id"),
+		PickedByRaw: c.QueryParam("picked_by"),
+		DateFromRaw: c.QueryParam("date_from"),
+		DateToRaw:   c.QueryParam("date_to"),
+		LimitRaw:    c.QueryParam("limit"),
 	})
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, logs)

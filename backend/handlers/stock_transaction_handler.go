@@ -23,7 +23,7 @@ import (
 
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 type StockTransactionHandler struct {
@@ -34,16 +34,16 @@ func NewStockTransactionHandler(service services.StockTransactionService) *Stock
 	return &StockTransactionHandler{service: service}
 }
 
-func (h *StockTransactionHandler) GetStockTransactions(c *gin.Context) {
+func (h *StockTransactionHandler) GetStockTransactions(c echo.Context) {
 	transactions, err := h.service.GetByFilters(services.StockTransactionQuery{
-		ProductIDRaw:       c.Query("product_id"),
-		TrayIDRaw:          c.Query("tray_id"),
-		CreatedByRaw:       c.Query("created_by"),
-		TransactionTypeRaw: c.Query("transaction_type"),
-		LimitRaw:           c.Query("limit"),
+		ProductIDRaw:       c.QueryParam("product_id"),
+		TrayIDRaw:          c.QueryParam("tray_id"),
+		CreatedByRaw:       c.QueryParam("created_by"),
+		TransactionTypeRaw: c.QueryParam("transaction_type"),
+		LimitRaw:           c.QueryParam("limit"),
 	})
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 

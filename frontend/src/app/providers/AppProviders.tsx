@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { CssBaseline, GlobalStyles, ThemeProvider, createTheme } from '@mui/material'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './AuthProvider'
+import { useRealtimeInvalidation } from '../../shared/realtime/useRealtimeInvalidation'
 
 // Query client dùng chung cho toàn app React Query.
 const queryClient = new QueryClient()
@@ -97,6 +98,11 @@ const theme = createTheme({
   },
 })
 
+function RealtimeBridge() {
+  useRealtimeInvalidation()
+  return null
+}
+
 // Provider tổng: nơi bọc tất cả provider nền của ứng dụng.
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
@@ -124,7 +130,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
           }}
         />
         {/* AuthProvider bọc dưới để mọi màn/router guard đọc được auth state */}
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <RealtimeBridge />
+          {children}
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   )

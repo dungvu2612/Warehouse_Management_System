@@ -13,6 +13,7 @@ import { http } from '../../../shared/lib/http'
 import type { Order } from '../types/orderTypes'
 import { OrderItemsEditor, type OrderEditorItem } from './OrderItemsEditor'
 import { useProductsQuery } from '../../products/hooks/useProducts'
+import { mapOrderApiError } from '../utils/orderError'
 
 export interface OrderCreateDialogProps {
   open: boolean
@@ -79,7 +80,7 @@ export function OrderCreateDialog({
       onSuccess(data)
       handleClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không tạo được đơn hàng')
+      setError(mapOrderApiError(err))
     } finally {
       setLoading(false)
     }

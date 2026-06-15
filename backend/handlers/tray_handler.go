@@ -32,7 +32,7 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 type TrayHandler struct {
@@ -49,41 +49,41 @@ type trayRequest struct {
 	Description string `json:"description"`
 }
 
-func parseTrayID(c *gin.Context) (uint, bool) {
+func parseTrayID(c echo.Context) (uint, bool) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || id == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid tray id"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "invalid tray id"})
 		return 0, false
 	}
 	return uint(id), true
 }
 
-func mapTrayServiceError(c *gin.Context, err error) {
+func mapTrayServiceError(c echo.Context, err error) {
 	switch {
 	case errors.Is(err, services.ErrInvalidTrayID):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error_code": "INVALID_TRAY_ID", "error": "Mã khay không hợp lệ."})
 	case errors.Is(err, services.ErrInvalidTrayPayload):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error_code": "INVALID_TRAY_PAYLOAD", "error": "Vui lòng chọn sản phẩm và vị trí hợp lệ."})
 	case errors.Is(err, repositories.ErrTrayNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, echo.Map{"error_code": "TRAY_NOT_FOUND", "error": "Không tìm thấy khay hoặc khay đã bị khóa."})
 	case errors.Is(err, repositories.ErrProductNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, echo.Map{"error_code": "TRAY_PRODUCT_NOT_FOUND", "error": "Không tìm thấy sản phẩm hoặc sản phẩm đã bị khóa."})
 	case errors.Is(err, repositories.ErrLocationNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, echo.Map{"error_code": "TRAY_LOCATION_NOT_FOUND", "error": "Không tìm thấy vị trí hoặc vị trí đã bị khóa."})
 	case errors.Is(err, repositories.ErrTrayCodeExists):
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		c.JSON(http.StatusConflict, echo.Map{"error_code": "TRAY_CODE_EXISTS", "error": "Mã khay tự sinh đã tồn tại, vui lòng thử lại."})
 	case errors.Is(err, repositories.ErrTrayPairExists):
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		c.JSON(http.StatusConflict, echo.Map{"error_code": "TRAY_PAIR_EXISTS", "error": "Sản phẩm này đã có khay active tại vị trí đã chọn."})
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, echo.Map{"error_code": "TRAY_INTERNAL_ERROR", "error": err.Error()})
 	}
 }
 
 // CreateTray tạo khay chứa hàng.
-func (h *TrayHandler) CreateTray(c *gin.Context) {
+func (h *TrayHandler) CreateTray(c echo.Context) {
 	var req trayRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
@@ -97,10 +97,10 @@ func (h *TrayHandler) CreateTray(c *gin.Context) {
 }
 
 // GetTrays lấy danh sách khay active.
-func (h *TrayHandler) GetTrays(c *gin.Context) {
+func (h *TrayHandler) GetTrays(c echo.Context) {
 	trays, err := h.service.GetAllActive()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		return
 	}
 
@@ -108,7 +108,7 @@ func (h *TrayHandler) GetTrays(c *gin.Context) {
 }
 
 // ScanTrayByQRCode tra thong tin tray + ton kho theo qr_code de phuc vu HT730 scan workflow.
-func (h *TrayHandler) ScanTrayByQRCode(c *gin.Context) {
+func (h *TrayHandler) ScanTrayByQRCode(c echo.Context) {
 	qrCode := c.Param("qr_code")
 	result, err := h.service.ScanByQRCode(qrCode)
 	if err != nil {
@@ -120,15 +120,15 @@ func (h *TrayHandler) ScanTrayByQRCode(c *gin.Context) {
 }
 
 // UpdateTray cap nhat khay (ADMIN).
-func (h *TrayHandler) UpdateTray(c *gin.Context) {
+func (h *TrayHandler) UpdateTray(c echo.Context) {
 	id, ok := parseTrayID(c)
 	if !ok {
 		return
 	}
 
 	var req trayRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
@@ -142,7 +142,7 @@ func (h *TrayHandler) UpdateTray(c *gin.Context) {
 }
 
 // DeleteTray xoa mem khay (is_active=false, ADMIN).
-func (h *TrayHandler) DeleteTray(c *gin.Context) {
+func (h *TrayHandler) DeleteTray(c echo.Context) {
 	id, ok := parseTrayID(c)
 	if !ok {
 		return
@@ -153,5 +153,5 @@ func (h *TrayHandler) DeleteTray(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "tray deactivated successfully"})
+	c.JSON(http.StatusOK, echo.Map{"message": "tray deactivated successfully"})
 }

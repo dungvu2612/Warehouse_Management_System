@@ -6,8 +6,27 @@ Thông tin ghi chú:
 */
 
 export function mapTrayApiError(error: unknown): string {
-  const status = (error as { response?: { status?: number } })?.response?.status
-  const apiMessage = (error as { response?: { data?: { error?: string } } })?.response?.data?.error
+  const typedError = error as {
+    code?: string
+    response?: { status?: number; data?: { error?: string; error_code?: string } }
+  }
+  const status = typedError?.response?.status
+  const apiMessage = typedError?.response?.data?.error
+  const errorCode = typedError?.response?.data?.error_code
+
+  if (!typedError?.response) {
+    if (typedError?.code === 'ECONNABORTED') return 'Kết nối API quá lâu, kiểm tra backend hoặc mạng.'
+    return 'Không kết nối được API. Kiểm tra backend service, Nginx /api hoặc địa chỉ API của frontend.'
+  }
+
+  if (errorCode === 'INVALID_TRAY_ID') return apiMessage || 'Mã khay không hợp lệ.'
+  if (errorCode === 'INVALID_TRAY_PAYLOAD') return apiMessage || 'Vui lòng chọn sản phẩm và vị trí hợp lệ.'
+  if (errorCode === 'TRAY_NOT_FOUND') return apiMessage || 'Không tìm thấy khay hoặc khay đã bị khóa.'
+  if (errorCode === 'TRAY_PRODUCT_NOT_FOUND') return apiMessage || 'Không tìm thấy sản phẩm hoặc sản phẩm đã bị khóa.'
+  if (errorCode === 'TRAY_LOCATION_NOT_FOUND') return apiMessage || 'Không tìm thấy vị trí hoặc vị trí đã bị khóa.'
+  if (errorCode === 'TRAY_CODE_EXISTS') return apiMessage || 'Mã khay tự sinh đã tồn tại, vui lòng thử lại.'
+  if (errorCode === 'TRAY_PAIR_EXISTS') return apiMessage || 'Sản phẩm này đã có khay active tại vị trí đã chọn.'
+  if (errorCode === 'TRAY_INTERNAL_ERROR') return apiMessage || 'Có lỗi hệ thống khi xử lý khay.'
 
   // Ghi chú: 422 cho validate payload.
   if (status === 422) return apiMessage || 'Dữ liệu khay không hợp lệ (422).'

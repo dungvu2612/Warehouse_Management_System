@@ -11,16 +11,13 @@ import type {
 } from '../types/importReceiptTypes'
 
 export function validateImportReceiptForm(form: CreateImportReceiptPayload): string | null {
-  // Ghi chú: Dynamic item form block - moi item bat buoc product/tray/quantity > 0 theo contract backend.
+  // Ghi chú: ADMIN tạo phiếu kế hoạch, STAFF sẽ quét khay khi nhập thực tế.
   if (!form.items.length) return 'Phiếu nhập phải có ít nhất 1 dòng sản phẩm.'
 
   for (let index = 0; index < form.items.length; index += 1) {
     const item = form.items[index]
     if (!item.product_id || item.product_id <= 0) {
       return `Dòng ${index + 1}: Vui lòng chọn sản phẩm.`
-    }
-    if (!item.tray_id || item.tray_id <= 0) {
-      return `Dòng ${index + 1}: Vui lòng quét QR khay.`
     }
     if (!item.quantity || item.quantity <= 0) {
       return `Dòng ${index + 1}: Số lượng phải lớn hơn 0.`
@@ -29,9 +26,9 @@ export function validateImportReceiptForm(form: CreateImportReceiptPayload): str
 
   const seen = new Set<string>()
   for (const item of form.items) {
-    const key = `${item.product_id}-${item.tray_id}`
+    const key = `${item.product_id}`
     if (seen.has(key)) {
-      return 'Không được trùng cặp sản phẩm-khay trong cùng một phiếu nhập.'
+      return 'Không được trùng sản phẩm trong cùng một phiếu nhập.'
     }
     seen.add(key)
   }
@@ -42,7 +39,6 @@ export function validateImportReceiptForm(form: CreateImportReceiptPayload): str
 function normalizeItem(item: CreateImportReceiptItemPayload): CreateImportReceiptItemPayload {
   return {
     product_id: Number(item.product_id),
-    tray_id: Number(item.tray_id),
     quantity: Number(item.quantity),
   }
 }

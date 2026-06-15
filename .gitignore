@@ -13,9 +13,4 @@ backend/.gocache/
 *.aab
 *.jks
 *.keystore
-android-webview/.gradle/
-android-webview/.idea/
-android-webview/app/build/
-android-webview/local.properties
-android-webview/**/*.DS_Store
 release/

@@ -10,6 +10,7 @@ import type {
   CreateImportReceiptPayload,
   CreateImportReceiptResponse,
   ImportReceipt,
+  ImportReceiptItemActionResponse,
   LocationOption,
   ProductOption,
   PutawayRequest,
@@ -35,6 +36,21 @@ export const importReceiptsApi = {
     payload: CreateImportReceiptPayload,
   ): Promise<CreateImportReceiptResponse> => {
     const { data } = await http.post<CreateImportReceiptResponse>('/import-receipts', payload)
+    return data
+  },
+
+  assignImportReceiptItem: async (itemId: number, staffId: number): Promise<ImportReceiptItemActionResponse> => {
+    const { data } = await http.patch<ImportReceiptItemActionResponse>(
+      `/admin/import-receipt-items/${itemId}/assign`,
+      { staff_id: staffId },
+    )
+    return data
+  },
+
+  unassignImportReceiptItem: async (itemId: number): Promise<ImportReceiptItemActionResponse> => {
+    const { data } = await http.patch<ImportReceiptItemActionResponse>(
+      `/admin/import-receipt-items/${itemId}/unassign`,
+    )
     return data
   },
 

@@ -21,7 +21,17 @@ const badgeConfig: Record<StockTransactionType, { label: string; color: 'success
   IMPORT: { label: 'Nhập kho', color: 'success' },
   EXPORT: { label: 'Xuất kho', color: 'error' },
   ADJUST: { label: 'Điều chỉnh', color: 'warning' },
-  ROLLBACK: { label: 'Rollback', color: 'warning' },
+  ROLLBACK: { label: 'Hoàn tác', color: 'warning' },
+}
+
+function signedQuantity(row: StockTransactionDisplayItem) {
+  if (row.transaction_type === 'EXPORT') return -Math.abs(row.quantity)
+  if (row.transaction_type === 'IMPORT') return Math.abs(row.quantity)
+  return row.quantity
+}
+
+function formatSignedQuantity(value: number) {
+  return value > 0 ? `+${value}` : `${value}`
 }
 
 export function StockTransactionsTable({ rows, isLoading, isError }: StockTransactionsTableProps) {
@@ -47,6 +57,7 @@ export function StockTransactionsTable({ rows, isLoading, isError }: StockTransa
       <Stack spacing={1.25}>
         {rows.map((row) => {
           const config = badgeConfig[row.transaction_type]
+          const displayQuantity = signedQuantity(row)
           return (
             <Paper key={row.id} variant="outlined" sx={{ p: 1.25 }}>
               <Stack spacing={0.75}>
@@ -58,7 +69,7 @@ export function StockTransactionsTable({ rows, isLoading, isError }: StockTransa
                   {row.product_code} - {row.product_name}
                 </Typography>
                 <Typography variant="body2">
-                  Số lượng: <strong>{row.quantity >= 0 ? `+${row.quantity}` : row.quantity}</strong>
+                  Số lượng: <strong>{formatSignedQuantity(displayQuantity)}</strong>
                 </Typography>
                 <Typography variant="body2">Trước/Sau: {row.before_quantity} → {row.after_quantity}</Typography>
                 <Typography variant="body2">Mã tham chiếu: {row.reference_code || '-'}</Typography>
@@ -106,6 +117,7 @@ export function StockTransactionsTable({ rows, isLoading, isError }: StockTransa
 
           {rows.map((row) => {
             const config = badgeConfig[row.transaction_type]
+            const displayQuantity = signedQuantity(row)
 
             return (
               <TableRow key={row.id} hover>
@@ -121,10 +133,10 @@ export function StockTransactionsTable({ rows, isLoading, isError }: StockTransa
                   sx={{
                     textAlign: 'right',
                     fontWeight: 900,
-                    color: row.quantity >= 0 ? 'success.main' : 'error.main',
+                    color: displayQuantity >= 0 ? 'success.main' : 'error.main',
                   }}
                 >
-                  {row.quantity >= 0 ? `+${row.quantity}` : row.quantity}
+                  {formatSignedQuantity(displayQuantity)}
                 </TableCell>
                 <TableCell sx={{ textAlign: 'right' }}>{row.before_quantity}</TableCell>
                 <TableCell sx={{ textAlign: 'right', fontWeight: 800 }}>{row.after_quantity}</TableCell>

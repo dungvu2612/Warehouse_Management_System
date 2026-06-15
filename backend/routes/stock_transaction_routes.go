@@ -15,10 +15,10 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
-func StockTransactionRoutes(r *gin.Engine) {
+func StockTransactionRoutes(r *echo.Echo) {
 	repo := repositories.NewStockTransactionRepository(config.DB)
 	service := services.NewStockTransactionService(repo)
 	handler := handlers.NewStockTransactionHandler(service)
@@ -27,6 +27,6 @@ func StockTransactionRoutes(r *gin.Engine) {
 	stockTransactions.Use(middleware.AuthRequired())
 	{
 		// ADMIN và WAREHOUSE đều có nhu cầu xem lịch sử giao dịch kho
-		stockTransactions.GET("", middleware.RequireRoles("ADMIN", "WAREHOUSE"), handler.GetStockTransactions)
+		stockTransactions.GET("", adapt(handler.GetStockTransactions), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
 	}
 }

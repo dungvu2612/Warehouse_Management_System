@@ -49,13 +49,15 @@ export function PdaLayout({ title, subtitle, children, bottomAction }: PdaLayout
       {/* Ghi chú: Mục tiêu viewport HT730 là màn hình dọc 480x800 */}
       <Box
         sx={{
-          width: '100%',
-          maxWidth: { xs: '480px', sm: '480px', md: '100%' },
+          width: 'min(100%, 480px)',
+          maxWidth: '480px',
           minHeight: '100dvh',
           mx: 'auto',
           bgcolor: '#f4f6f8',
           display: 'flex',
           flexDirection: 'column',
+          boxSizing: 'border-box',
+          overflowX: 'hidden',
         }}
       >
         <PdaHeader
@@ -98,6 +100,9 @@ export function PdaLayout({ title, subtitle, children, bottomAction }: PdaLayout
             p: { xs: 1.5, sm: 2 },
             // Ghi chú: Thanh thao tác dưới cần padding nội dung để không che nút cuối trên HT730.
             pb: bottomAction ? 'calc(112px + env(safe-area-inset-bottom))' : 2,
+            width: '100%',
+            minWidth: 0,
+            boxSizing: 'border-box',
             overflowX: 'hidden',
           }}
         >

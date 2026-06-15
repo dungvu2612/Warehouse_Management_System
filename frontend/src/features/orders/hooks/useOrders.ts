@@ -69,3 +69,43 @@ export function useDeleteOrderMutation(options?: {
     onError: (error) => options?.onError?.(error),
   })
 }
+
+export function useAssignPickingOrderMutation(options?: {
+  onSuccess?: () => void
+  onError?: (error: unknown) => void
+}) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, staffId }: { id: number; staffId: number }) => orderService.assignPickingOrder(id, staffId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: ORDER_DETAIL_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: ['staff-tasks'] }),
+        queryClient.invalidateQueries({ queryKey: ['staff-task-summary'] }),
+      ])
+      options?.onSuccess?.()
+    },
+    onError: (error) => options?.onError?.(error),
+  })
+}
+
+export function useUnassignPickingOrderMutation(options?: {
+  onSuccess?: () => void
+  onError?: (error: unknown) => void
+}) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => orderService.unassignPickingOrder(id),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: ORDER_DETAIL_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: ['staff-tasks'] }),
+        queryClient.invalidateQueries({ queryKey: ['staff-task-summary'] }),
+      ])
+      options?.onSuccess?.()
+    },
+    onError: (error) => options?.onError?.(error),
+  })
+}

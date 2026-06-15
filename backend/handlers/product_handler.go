@@ -34,7 +34,7 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 // ProductHandler chỉ xử lý transport layer (HTTP), không chứa business logic.
@@ -48,21 +48,21 @@ func NewProductHandler(service services.ProductService) *ProductHandler {
 
 // Request DTO cho layer HTTP.
 type productRequest struct {
-	ProductCode     string  `json:"product_code" binding:"omitempty,max=100"`
-	QRCode          string  `json:"qr_code" binding:"omitempty,max=100"`
-	ProductName     string  `json:"product_name" binding:"required,max=255"`
-	ProductType     string  `json:"product_type" binding:"omitempty,max=30"`
-	ImageURL        string  `json:"image_url"`
-	Description     string  `json:"description"`
-	Unit            string  `json:"unit" binding:"omitempty,max=50"`
-	MinStock        int     `json:"min_stock" binding:"gte=0"`
-	Price           float64 `json:"price" binding:"gte=0"`
+	ProductCode string  `json:"product_code" binding:"omitempty,max=100"`
+	QRCode      string  `json:"qr_code" binding:"omitempty,max=100"`
+	ProductName string  `json:"product_name" binding:"required,max=255"`
+	ProductType string  `json:"product_type" binding:"omitempty,max=30"`
+	ImageURL    string  `json:"image_url"`
+	Description string  `json:"description"`
+	Unit        string  `json:"unit" binding:"omitempty,max=50"`
+	MinStock    int     `json:"min_stock" binding:"gte=0"`
+	Price       float64 `json:"price" binding:"gte=0"`
 }
 
-func parseProductID(c *gin.Context) (uint, bool) {
+func parseProductID(c echo.Context) (uint, bool) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || id == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid product id"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "invalid product id"})
 		return 0, false
 	}
 	return uint(id), true
@@ -83,7 +83,7 @@ func toProductInput(req productRequest) services.ProductInput {
 }
 
 // ScanProductByQRCode tra product + inventory/trays theo qr_code de ho tro workflow scan PDA.
-func (h *ProductHandler) ScanProductByQRCode(c *gin.Context) {
+func (h *ProductHandler) ScanProductByQRCode(c echo.Context) {
 	qrCode := c.Param("qr_code")
 	result, err := h.service.ScanByQRCode(qrCode)
 	if err != nil {
@@ -94,29 +94,29 @@ func (h *ProductHandler) ScanProductByQRCode(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func mapProductServiceError(c *gin.Context, err error) {
+func mapProductServiceError(c echo.Context, err error) {
 	switch {
 	case errors.Is(err, services.ErrInvalidProductID):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 	case errors.Is(err, services.ErrInvalidProductType):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 	case errors.Is(err, services.ErrInvalidProductPayload):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "product_name is required and numeric fields must be >= 0"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "product_name is required and numeric fields must be >= 0"})
 	case errors.Is(err, repositories.ErrProductEntityNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 	case errors.Is(err, repositories.ErrProductEntityCodeExists):
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		c.JSON(http.StatusConflict, echo.Map{"error": err.Error()})
 	case errors.Is(err, repositories.ErrProductEntityNameExists):
-		c.JSON(http.StatusConflict, gin.H{"error": "product_name already exists"})
+		c.JSON(http.StatusConflict, echo.Map{"error": "product_name already exists"})
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 }
 
 // GetProductCodePreview preview mã product_code dựa trên product_type + product_name.
-func (h *ProductHandler) GetProductCodePreview(c *gin.Context) {
-	productType := c.Query("product_type")
-	productName := c.Query("product_name")
+func (h *ProductHandler) GetProductCodePreview(c echo.Context) {
+	productType := c.QueryParam("product_type")
+	productName := c.QueryParam("product_name")
 
 	code, err := h.service.PreviewCode(productType, productName)
 	if err != nil {
@@ -124,16 +124,16 @@ func (h *ProductHandler) GetProductCodePreview(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, echo.Map{
 		"product_code": code,
 	})
 }
 
 // CreateProduct tạo product mới (ADMIN).
-func (h *ProductHandler) CreateProduct(c *gin.Context) {
+func (h *ProductHandler) CreateProduct(c echo.Context) {
 	var req productRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
@@ -147,7 +147,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 }
 
 // GetProducts trả danh sách product active.
-func (h *ProductHandler) GetProducts(c *gin.Context) {
+func (h *ProductHandler) GetProducts(c echo.Context) {
 	products, err := h.service.GetAllActive()
 	if err != nil {
 		mapProductServiceError(c, err)
@@ -157,7 +157,7 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 }
 
 // GetProductByID lấy chi tiết 1 product active.
-func (h *ProductHandler) GetProductByID(c *gin.Context) {
+func (h *ProductHandler) GetProductByID(c echo.Context) {
 	id, ok := parseProductID(c)
 	if !ok {
 		return
@@ -173,15 +173,15 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 }
 
 // UpdateProduct cập nhật product (ADMIN).
-func (h *ProductHandler) UpdateProduct(c *gin.Context) {
+func (h *ProductHandler) UpdateProduct(c echo.Context) {
 	id, ok := parseProductID(c)
 	if !ok {
 		return
 	}
 
 	var req productRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
@@ -195,7 +195,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 }
 
 // DeleteProduct xóa mềm product (is_active=false, ADMIN).
-func (h *ProductHandler) DeleteProduct(c *gin.Context) {
+func (h *ProductHandler) DeleteProduct(c echo.Context) {
 	id, ok := parseProductID(c)
 	if !ok {
 		return
@@ -206,5 +206,5 @@ func (h *ProductHandler) DeleteProduct(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "product deactivated successfully"})
+	c.JSON(http.StatusOK, echo.Map{"message": "product deactivated successfully"})
 }

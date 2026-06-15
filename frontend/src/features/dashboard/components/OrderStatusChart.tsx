@@ -1,9 +1,7 @@
 /*
-- Mục đích: Render ECharts donut chart trạng thái vận hành đơn hàng.
+- Mục đích: Render ECharts donut chart trạng thái đơn hàng trong khối phân tích doanh thu.
 - Phụ thuộc: DashboardOrderStatusSummaryItem type, echarts-for-react, helper mapping status.
-- Hợp đồng API: Dữ liệu từ dashboard API (`admin_revenue.order_status_summary` hoặc `warehouse_operations.order_status_chart`).
-- Quy tắc dữ liệu biểu đồ: Group theo status order và hiển thị count.
-- Quy tắc phân quyền: ADMIN và WAREHOUSE được xem chart theo block được cấp.
+- Hợp đồng API: Dữ liệu từ dashboard API `admin_revenue.order_status_summary`.
 - Ghi chú bảo trì: Chart data đến từ backend, frontend không tự tổng hợp từ danh sách orders.
 */
 
@@ -13,11 +11,10 @@ import { Box, Paper, Typography } from '@mui/material'
 import type { DashboardOrderStatusSummaryItem } from '../types/dashboard.types'
 import { mapOrderStatusLabel } from '../utils/dashboardChartUtils'
 
-export function OrderStatusChart({ items, title = 'Trạng thái vận hành kho' }: { items: DashboardOrderStatusSummaryItem[]; title?: string }) {
+export function OrderStatusChart({ items, title = 'Trạng thái đơn hàng' }: { items: DashboardOrderStatusSummaryItem[]; title?: string }) {
   const chartData = items.map((item) => ({
     name: mapOrderStatusLabel(item.status),
     value: Number(item.count || 0),
-    status: item.status,
   }))
   const totalOrders = chartData.reduce((sum, item) => sum + item.value, 0)
 

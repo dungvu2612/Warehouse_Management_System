@@ -24,10 +24,10 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
-func ProductRoutes(r *gin.Engine) {
+func ProductRoutes(r *echo.Echo) {
 	repo := repositories.NewProductRepository(config.DB)
 	service := services.NewProductService(repo)
 	handler := handlers.NewProductHandler(service)
@@ -35,12 +35,12 @@ func ProductRoutes(r *gin.Engine) {
 	products := r.Group("/products")
 	products.Use(middleware.AuthRequired())
 	{
-		products.GET("", handler.GetProducts)
-		products.GET("/code-preview", handler.GetProductCodePreview)
-		products.GET("/scan/:qr_code", handler.ScanProductByQRCode)
-		products.GET("/:id", handler.GetProductByID)
-		products.POST("", middleware.RequireRoles("ADMIN"), handler.CreateProduct)
-		products.PUT("/:id", middleware.RequireRoles("ADMIN"), handler.UpdateProduct)
-		products.DELETE("/:id", middleware.RequireRoles("ADMIN"), handler.DeleteProduct)
+		products.GET("", adapt(handler.GetProducts))
+		products.GET("/code-preview", adapt(handler.GetProductCodePreview))
+		products.GET("/scan/:qr_code", adapt(handler.ScanProductByQRCode))
+		products.GET("/:id", adapt(handler.GetProductByID))
+		products.POST("", adapt(handler.CreateProduct), middleware.RequireRoles("ADMIN"))
+		products.PUT("/:id", adapt(handler.UpdateProduct), middleware.RequireRoles("ADMIN"))
+		products.DELETE("/:id", adapt(handler.DeleteProduct), middleware.RequireRoles("ADMIN"))
 	}
 }

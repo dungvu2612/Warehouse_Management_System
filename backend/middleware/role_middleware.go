@@ -5,34 +5,33 @@ import (
 	"quan_ly_kho/utils"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
-func RequireRoles(allowedRoles ...string) gin.HandlerFunc {
+func RequireRoles(allowedRoles ...string) echo.MiddlewareFunc {
 	allowed := make(map[string]struct{}, len(allowedRoles))
 	for _, role := range allowedRoles {
 		allowed[utils.NormalizeRole(role)] = struct{}{}
 	}
 
-	return func(c *gin.Context) {
-		roleRaw, exists := c.Get("role")
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "missing auth context",
-			})
-			c.Abort()
-			return
-		}
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			roleRaw := c.Get("role")
+			roleValue, ok := roleRaw.(string)
+			if !ok {
+				return c.JSON(http.StatusUnauthorized, echo.Map{
+					"error": "missing auth context",
+				})
+			}
 
-		role := utils.NormalizeRole(strings.TrimSpace(roleRaw.(string)))
-		if _, ok := allowed[role]; !ok {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error": "forbidden - insufficient role",
-			})
-			c.Abort()
-			return
-		}
+			role := utils.NormalizeRole(strings.TrimSpace(roleValue))
+			if _, ok := allowed[role]; !ok {
+				return c.JSON(http.StatusForbidden, echo.Map{
+					"error": "forbidden - insufficient role",
+				})
+			}
 
-		c.Next()
+			return next(c)
+		}
 	}
 }

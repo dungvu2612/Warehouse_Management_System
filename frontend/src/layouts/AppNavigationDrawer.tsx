@@ -29,7 +29,9 @@ import {
 } from '@mui/icons-material'
 import type { SvgIconComponent } from '@mui/icons-material'
 import { Link as RouterLink } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import type { AuthUser, UserRole } from '../shared/types/auth'
+import { staffTasksApi } from '../features/staff-tasks/api/staffTasks.api'
 
 export const appDrawerWidth = 240
 export const appDrawerCollapsedWidth = 72
@@ -51,11 +53,11 @@ const menuItems: MenuItem[] = [
   { label: 'Phân rã sản phẩm', path: '/boms', icon: QrCodeScannerOutlined, roles: ['ADMIN'] },
   { label: 'Đơn hàng', path: '/orders', icon: ShoppingCartOutlined, roles: ['ADMIN'] },
   { label: 'Quản lý tài khoản', path: '/users', icon: SupervisedUserCircleOutlined, roles: ['ADMIN'] },
-  { label: 'Tác vụ kho', path: '/staff/tasks', icon: PhoneAndroidOutlined, roles: ['WAREHOUSE'] },
+  { label: 'Tác vụ nhặt', path: '/staff/tasks', icon: PhoneAndroidOutlined, roles: ['WAREHOUSE'] },
+  { label: 'Tác vụ nhập kho', path: '/staff/import-tasks', icon: ReceiptLongOutlined, roles: ['WAREHOUSE'] },
   { label: 'Quét đơn ', path: '/pda/picking', icon: PhoneAndroidOutlined, roles: ['WAREHOUSE'] },
   { label: 'Kiểm kê', path: '/pda/stocktaking', icon: PhoneAndroidOutlined, roles: ['WAREHOUSE'] },
   { label: 'Tra cứu', path: '/pda/lookup', icon: PhoneAndroidOutlined, roles: ['WAREHOUSE'] },
-  { label: 'Nhập kho', path: '/pda/putaway', icon: PhoneAndroidOutlined, roles: ['WAREHOUSE'] },
 ]
 
 interface AppNavigationDrawerProps {
@@ -76,6 +78,17 @@ export function AppNavigationDrawer({
   onLogout,
 }: AppNavigationDrawerProps) {
   const visibleMenuItems = menuItems.filter((item) => user?.role && item.roles.includes(user.role))
+  const taskSummaryQuery = useQuery({
+    queryKey: ['staff-task-summary'],
+    queryFn: staffTasksApi.getSummary,
+    enabled: Boolean(user?.role),
+    staleTime: 15000,
+  })
+  const taskSummary = taskSummaryQuery.data
+  const pickingWaitingCount = Number(taskSummary?.picking_waiting_count ?? taskSummary?.waiting_count ?? 0)
+  const pickingCount = Number(taskSummary?.picking_in_progress_count ?? taskSummary?.my_picking_count ?? 0)
+  const importWaitingCount = Number(taskSummary?.import_waiting_count || 0)
+  const importProgressCount = Number(taskSummary?.import_in_progress_count || 0)
 
   return (
     <>
@@ -132,6 +145,13 @@ export function AppNavigationDrawer({
         {visibleMenuItems.map((item) => {
           const selected = pathname === item.path
           const Icon = item.icon
+          const isPickingTaskMenu = item.path === '/staff/tasks'
+          const isImportTaskMenu = item.path === '/staff/import-tasks'
+          const waitingCount = isImportTaskMenu ? importWaitingCount : pickingWaitingCount
+          const inProgressCount = isImportTaskMenu ? importProgressCount : pickingCount
+          const tooltipText = isPickingTaskMenu || isImportTaskMenu
+            ? `${item.label} - ${waitingCount} chờ nhận, ${inProgressCount} đang làm`
+            : item.label
           const button = (
             <ListItemButton
               key={item.path}
@@ -154,19 +174,57 @@ export function AppNavigationDrawer({
             >
               <ListItemIcon
                 sx={{
+                  position: 'relative',
                   minWidth: collapsed ? 0 : 35,
                   color: selected ? 'white' : 'grey.400',
                   justifyContent: 'center',
                 }}
               >
                 <Icon fontSize="small" />
+                {(isPickingTaskMenu || isImportTaskMenu) && collapsed && (waitingCount > 0 || inProgressCount > 0) && (
+                  <Box
+                    component="span"
+                    sx={{
+                      position: 'absolute',
+                      top: -5,
+                      right: -8,
+                      minWidth: 18,
+                      height: 18,
+                      px: 0.4,
+                      borderRadius: 99,
+                      bgcolor: waitingCount > 0 ? 'warning.main' : 'info.main',
+                      color: waitingCount > 0 ? 'warning.contrastText' : 'info.contrastText',
+                      fontSize: 11,
+                      fontWeight: 900,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {waitingCount + inProgressCount}
+                  </Box>
+                )}
               </ListItemIcon>
-              {!collapsed && <ListItemText primary={<Typography sx={{ fontSize: '13px', fontWeight: 700 }}>{item.label}</Typography>} />}
+              {!collapsed && (
+                <ListItemText
+                  primary={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                      <Typography sx={{ fontSize: '13px', fontWeight: 700, flex: 1 }} noWrap>{item.label}</Typography>
+                      {(isPickingTaskMenu || isImportTaskMenu) && waitingCount > 0 && (
+                        <Chip size="small" color="warning" label={waitingCount} sx={{ height: 20, fontSize: 11, fontWeight: 900 }} />
+                      )}
+                      {(isPickingTaskMenu || isImportTaskMenu) && inProgressCount > 0 && (
+                        <Chip size="small" color="info" label={inProgressCount} sx={{ height: 20, fontSize: 11, fontWeight: 900 }} />
+                      )}
+                    </Box>
+                  }
+                />
+              )}
             </ListItemButton>
           )
 
           return (
-            <Tooltip key={item.path} title={collapsed ? item.label : ''} placement="right">
+            <Tooltip key={item.path} title={collapsed ? tooltipText : ''} placement="right">
               {button}
             </Tooltip>
           )

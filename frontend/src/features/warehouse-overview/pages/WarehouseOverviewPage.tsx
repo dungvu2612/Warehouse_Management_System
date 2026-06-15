@@ -370,6 +370,7 @@ export function WarehouseOverviewPage() {
                 <MenuItem value="IMPORT">Nhập kho</MenuItem>
                 <MenuItem value="EXPORT">Xuất kho</MenuItem>
                 <MenuItem value="ADJUST">Điều chỉnh</MenuItem>
+                <MenuItem value="ROLLBACK">Hoàn tác</MenuItem>
               </TextField>
 
               <TextField

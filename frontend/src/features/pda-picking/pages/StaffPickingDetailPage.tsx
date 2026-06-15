@@ -11,6 +11,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowBack, QrCode2 } from '@mui/icons-material'
 import { Alert, Box, Button, Chip, Paper, Stack, Typography } from '@mui/material'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '../../../app/providers/AuthProvider'
 import { PdaLayout } from '../../pda/layout/PdaLayout'
 import { useScannerInput } from '../../scanner/hooks/useScannerInput'
 import { ScannerHiddenInput } from '../../scanner/components/ScannerHiddenInput'
@@ -23,10 +25,13 @@ import { PickingItemCard } from '../components/PickingItemCard'
 import { ListPagination } from '../../../shared/components/ListPagination'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination'
 import { formatDateTimeVN } from '../../../shared/lib/datetime'
+import { staffTasksApi } from '../../staff-tasks/api/staffTasks.api'
 
 export function StaffPickingDetailPage() {
   const { orderId } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
   const numericOrderId = Number(orderId)
   const detailQuery = useOrderByIdQuery(Number.isFinite(numericOrderId) ? numericOrderId : null)
   const verifyTrayMutation = usePDAVerifyTrayMutation()
@@ -36,14 +41,37 @@ export function StaffPickingDetailPage() {
   const [verifiedTrayCode, setVerifiedTrayCode] = useState('')
   const [productFeedback, setProductFeedback] = useState<{ severity: 'success' | 'error' | 'info' | 'warning'; title: string; message: string } | null>(null)
   const [taskPage, setTaskPage] = useState(1)
+  const [claimMessage, setClaimMessage] = useState<{ severity: 'success' | 'error'; text: string } | null>(null)
 
   const detail = detailQuery.data
   const tasks = detail?.picking_tasks || []
+  const firstAssignedTask = tasks.find((task) => task.assigned_to)
+  const assignedTo = firstAssignedTask?.assigned_to || null
+  const assigneeLabel = firstAssignedTask?.assignee_name || firstAssignedTask?.assignee_username || ''
+  const isOrderCompleted = detail?.order.status === 'COMPLETED'
+  const isAssignedToMe = Boolean(assignedTo && user?.id && assignedTo === user.id)
+  const canPick = Boolean(!isOrderCompleted && assignedTo && isAssignedToMe)
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) || null
   const openTasks = tasks.filter((task) => task.status !== 'DONE')
   const paginatedTasks = useMemo(() => {
     return paginateItems(tasks, taskPage, DEFAULT_PAGE_SIZE)
   }, [tasks, taskPage])
+
+  const claimMutation = useMutation({
+    mutationFn: staffTasksApi.claimOrder,
+    onSuccess: async () => {
+      setClaimMessage({ severity: 'success', text: 'Nhận việc thành công.' })
+      await Promise.all([
+        detailQuery.refetch(),
+        queryClient.invalidateQueries({ queryKey: ['staff-tasks'] }),
+        queryClient.invalidateQueries({ queryKey: ['staff-task-summary'] }),
+      ])
+    },
+    onError: (error: any) => {
+      setClaimMessage({ severity: 'error', text: error?.response?.data?.error || 'Không thể nhận việc. Vui lòng thử lại.' })
+      void detailQuery.refetch()
+    },
+  })
 
   useEffect(() => {
     if (selectedTaskId || tasks.length === 0) return
@@ -148,6 +176,7 @@ export function StaffPickingDetailPage() {
     // Ghi chú: Loại mã quét được suy ra từ trạng thái picking hiện tại, không phụ thuộc nút thủ công.
     // Ghi chú: Tập trung logic quét tại đây để tránh lặp handler.
     onScanComplete: async ({ code }) => {
+      if (!canPick) return
       if (!selectedTask) return
       if (!verifiedTrayCode) {
         await handleVerifyTray(code)
@@ -160,12 +189,13 @@ export function StaffPickingDetailPage() {
 
   const isBusy = verifyTrayMutation.isPending || scanProductMutation.isPending || detailQuery.isFetching
   const currentScanStep = useMemo(() => {
+    if (!canPick) return 'BLOCKED'
     if (isBusy) return 'PROCESSING_SCAN'
     if (openTasks.length === 0) return 'COMPLETED'
     if (!selectedTask) return 'READY_TO_SCAN_TRAY'
     if (!verifiedTrayCode) return 'READY_TO_SCAN_TRAY'
     return 'READY_TO_SCAN_PRODUCT'
-  }, [isBusy, openTasks.length, selectedTask, verifiedTrayCode])
+  }, [canPick, isBusy, openTasks.length, selectedTask, verifiedTrayCode])
 
   useEffect(() => {
     if (currentScanStep === 'READY_TO_SCAN_TRAY') {
@@ -226,6 +256,29 @@ export function StaffPickingDetailPage() {
             </Stack>
           </Paper>
 
+          {claimMessage && <Alert severity={claimMessage.severity}>{claimMessage.text}</Alert>}
+          {isOrderCompleted && <Alert severity="success">Công việc đã hoàn thành.</Alert>}
+          {!isOrderCompleted && !assignedTo && (
+            <Alert
+              severity="warning"
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => claimMutation.mutate(numericOrderId)}
+                  disabled={claimMutation.isPending}
+                >
+                  Nhận việc
+                </Button>
+              }
+            >
+              Bạn cần nhận việc trước khi nhặt hàng.
+            </Alert>
+          )}
+          {!isOrderCompleted && assignedTo && !isAssignedToMe && (
+            <Alert severity="warning">Công việc này đang được nhân viên khác xử lý: {assigneeLabel || `#${assignedTo}`}.</Alert>
+          )}
+
           <Paper sx={{ p: 1.5, borderRadius: 2 }}>
             <Stack spacing={0.75}>
               <Typography sx={{ fontSize: 16, fontWeight: 900 }}>Khách hàng</Typography>
@@ -240,6 +293,7 @@ export function StaffPickingDetailPage() {
           <Paper sx={{ p: 1.5, borderRadius: 2 }}>
             <Stack spacing={1}>
               <Typography sx={{ fontWeight: 900 }}>
+                {currentScanStep === 'BLOCKED' && 'Chưa thể quét'}
                 {currentScanStep === 'READY_TO_SCAN_TRAY' && 'Sẵn sàng quét mã khay'}
                 {currentScanStep === 'READY_TO_SCAN_PRODUCT' && 'Sẵn sàng quét mã sản phẩm'}
                 {currentScanStep === 'PROCESSING_SCAN' && 'Đang xử lý mã...'}
@@ -251,7 +305,7 @@ export function StaffPickingDetailPage() {
                 </Typography>
               )}
               <Stack direction="row" spacing={1}>
-                <Button type="button" variant="outlined" onClick={() => scanner.focusScannerInput()}>
+                <Button type="button" variant="outlined" onClick={() => scanner.focusScannerInput()} disabled={!canPick}>
                   Đưa con trỏ quét về máy scan
                 </Button>
                 <Button
@@ -261,7 +315,7 @@ export function StaffPickingDetailPage() {
                     setVerifiedTrayCode('')
                     scanner.resumeScanner('TRAY')
                   }}
-                  disabled={!selectedTask}
+                  disabled={!selectedTask || !canPick}
                 >
                   Quét lại khay
                 </Button>

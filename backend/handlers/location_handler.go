@@ -32,7 +32,7 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 type LocationHandler struct {
@@ -49,35 +49,35 @@ type locationRequest struct {
 	Description  string `json:"description"`
 }
 
-func parseLocationID(c *gin.Context) (uint, bool) {
+func parseLocationID(c echo.Context) (uint, bool) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || id == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid location id"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "invalid location id"})
 		return 0, false
 	}
 	return uint(id), true
 }
 
-func mapLocationServiceError(c *gin.Context, err error) {
+func mapLocationServiceError(c echo.Context, err error) {
 	switch {
 	case errors.Is(err, services.ErrInvalidLocationID):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 	case errors.Is(err, services.ErrInvalidLocationPayload):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 	case errors.Is(err, repositories.ErrLocationCodeExists):
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		c.JSON(http.StatusConflict, echo.Map{"error": err.Error()})
 	case errors.Is(err, repositories.ErrLocationNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 }
 
 // CreateLocation tạo vị trí/kệ mới.
-func (h *LocationHandler) CreateLocation(c *gin.Context) {
+func (h *LocationHandler) CreateLocation(c echo.Context) {
 	var req locationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
@@ -91,17 +91,17 @@ func (h *LocationHandler) CreateLocation(c *gin.Context) {
 }
 
 // GetLocations lấy danh sách location active.
-func (h *LocationHandler) GetLocations(c *gin.Context) {
+func (h *LocationHandler) GetLocations(c echo.Context) {
 	locations, err := h.service.GetAllActive()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, locations)
 }
 
 // GetLocationTrays lay danh sach khay dang thuoc location, kem tong ton va so san pham.
-func (h *LocationHandler) GetLocationTrays(c *gin.Context) {
+func (h *LocationHandler) GetLocationTrays(c echo.Context) {
 	id, ok := parseLocationID(c)
 	if !ok {
 		return
@@ -117,15 +117,15 @@ func (h *LocationHandler) GetLocationTrays(c *gin.Context) {
 }
 
 // UpdateLocation cap nhat location (ADMIN).
-func (h *LocationHandler) UpdateLocation(c *gin.Context) {
+func (h *LocationHandler) UpdateLocation(c echo.Context) {
 	id, ok := parseLocationID(c)
 	if !ok {
 		return
 	}
 
 	var req locationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
@@ -139,7 +139,7 @@ func (h *LocationHandler) UpdateLocation(c *gin.Context) {
 }
 
 // DeleteLocation xoa mem location (is_active=false, ADMIN).
-func (h *LocationHandler) DeleteLocation(c *gin.Context) {
+func (h *LocationHandler) DeleteLocation(c echo.Context) {
 	id, ok := parseLocationID(c)
 	if !ok {
 		return
@@ -150,5 +150,5 @@ func (h *LocationHandler) DeleteLocation(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "location deactivated successfully"})
+	c.JSON(http.StatusOK, echo.Map{"message": "location deactivated successfully"})
 }

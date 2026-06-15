@@ -46,6 +46,9 @@ export interface PickingTask {
   verified: boolean
   status: PickingStatus
   assigned_to?: number | null
+  assigned_at?: string | null
+  started_at?: string | null
+  completed_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -66,6 +69,9 @@ export interface OrderDetailPickingTask {
   status: PickingStatus
   verified: boolean
   assigned_to?: number | null
+  assigned_at?: string | null
+  started_at?: string | null
+  completed_at?: string | null
   assignee_name?: string
   assignee_username?: string
 }

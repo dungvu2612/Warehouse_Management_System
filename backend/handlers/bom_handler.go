@@ -30,7 +30,7 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 // BOMHandler xử lý transport layer cho module BOM.
@@ -49,7 +49,6 @@ type createBOMItemRequest struct {
 	Quantity           int  `json:"quantity" binding:"required,gt=0"`
 }
 
-
 // createBOMRequest là DTO request tạo BOM.
 type createBOMRequest struct {
 	ProductID   uint                   `json:"product_id" binding:"required,gt=0"`
@@ -66,39 +65,39 @@ type updateBOMRequest struct {
 	Items       []createBOMItemRequest `json:"items" binding:"required,min=1,dive"`
 }
 
-func mapBOMServiceError(c *gin.Context, err error) {
+func mapBOMServiceError(c echo.Context, err error) {
 	switch {
 	case errors.Is(err, services.ErrInvalidBOMPayload):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error_code": "INVALID_BOM_PAYLOAD", "error": "Dữ liệu BOM không hợp lệ."})
 	case errors.Is(err, services.ErrInvalidBOMID):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error_code": "INVALID_BOM_ID", "error": "Mã BOM không hợp lệ."})
 	case errors.Is(err, repositories.ErrBOMDuplicateComponent):
-		c.JSON(http.StatusBadRequest, gin.H{"error": repositories.ErrBOMDuplicateComponent.Error()})
+		c.JSON(http.StatusBadRequest, echo.Map{"error_code": "BOM_DUPLICATE_COMPONENT", "error": "Không được chọn trùng linh kiện trong cùng BOM."})
 	case errors.Is(err, repositories.ErrBOMParentProductNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": repositories.ErrBOMParentProductNotFound.Error()})
+		c.JSON(http.StatusNotFound, echo.Map{"error_code": "BOM_PARENT_PRODUCT_NOT_FOUND", "error": "Không tìm thấy thành phẩm cha hoặc thành phẩm đã bị khóa."})
 	case errors.Is(err, repositories.ErrBOMComponentProductsNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": repositories.ErrBOMComponentProductsNotFound.Error()})
+		c.JSON(http.StatusNotFound, echo.Map{"error_code": "BOM_COMPONENT_PRODUCTS_NOT_FOUND", "error": "Một hoặc nhiều linh kiện không tồn tại hoặc đã bị khóa."})
 	case errors.Is(err, repositories.ErrBOMParentMustBeFinishedGood):
-		c.JSON(http.StatusBadRequest, gin.H{"error": repositories.ErrBOMParentMustBeFinishedGood.Error()})
+		c.JSON(http.StatusBadRequest, echo.Map{"error_code": "BOM_PARENT_MUST_BE_FINISHED_GOOD", "error": "Sản phẩm cha của BOM phải là thành phẩm FINISHED_GOOD."})
 	case errors.Is(err, repositories.ErrBOMComponentsMustBeComponents):
-		c.JSON(http.StatusBadRequest, gin.H{"error": repositories.ErrBOMComponentsMustBeComponents.Error()})
+		c.JSON(http.StatusBadRequest, echo.Map{"error_code": "BOM_COMPONENTS_MUST_BE_COMPONENTS", "error": "Tất cả dòng linh kiện trong BOM phải là sản phẩm loại COMPONENT."})
 	case errors.Is(err, repositories.ErrBOMNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": repositories.ErrBOMNotFound.Error()})
+		c.JSON(http.StatusNotFound, echo.Map{"error_code": "BOM_NOT_FOUND", "error": "Không tìm thấy BOM."})
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, echo.Map{"error_code": "BOM_INTERNAL_ERROR", "error": err.Error()})
 	}
 }
 
 // CreateBOM tạo BOM + danh sách BOM items trong cùng transaction.
-func (h *BOMHandler) CreateBOM(c *gin.Context) {
+func (h *BOMHandler) CreateBOM(c echo.Context) {
 	var req createBOMRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
 	// Lấy user_id từ auth context để lưu created_by cho BOM.
-	userIDValue, _ := c.Get("user_id")
+	userIDValue := c.Get("user_id")
 	createdBy, _ := userIDValue.(uint)
 
 	items := make([]services.BOMCreateItemInput, 0, len(req.Items))
@@ -125,17 +124,17 @@ func (h *BOMHandler) CreateBOM(c *gin.Context) {
 }
 
 // UpdateBOM cập nhật BOM header + thay danh sách BOM items.
-func (h *BOMHandler) UpdateBOM(c *gin.Context) {
+func (h *BOMHandler) UpdateBOM(c echo.Context) {
 	bomIDRaw := c.Param("id")
 	bomID, err := strconv.ParseUint(bomIDRaw, 10, 64)
 	if err != nil || bomID == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid bom id"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "invalid bom id"})
 		return
 	}
 
 	var req updateBOMRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
@@ -163,11 +162,11 @@ func (h *BOMHandler) UpdateBOM(c *gin.Context) {
 }
 
 // DeleteBOM xóa BOM và toàn bộ BOM items liên quan.
-func (h *BOMHandler) DeleteBOM(c *gin.Context) {
+func (h *BOMHandler) DeleteBOM(c echo.Context) {
 	bomIDRaw := c.Param("id")
 	bomID, err := strconv.ParseUint(bomIDRaw, 10, 64)
 	if err != nil || bomID == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid bom id"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "invalid bom id"})
 		return
 	}
 
@@ -176,18 +175,18 @@ func (h *BOMHandler) DeleteBOM(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "bom deleted successfully"})
+	c.JSON(http.StatusOK, echo.Map{"message": "bom deleted successfully"})
 }
 
 // GetBOMs trả danh sách BOM, hỗ trợ filter product_id.
-func (h *BOMHandler) GetBOMs(c *gin.Context) {
-	boms, err := h.service.GetAll(services.BOMListQuery{ProductIDRaw: c.Query("product_id")})
+func (h *BOMHandler) GetBOMs(c echo.Context) {
+	boms, err := h.service.GetAll(services.BOMListQuery{ProductIDRaw: c.QueryParam("product_id")})
 	if err != nil {
 		if err.Error() == "invalid product_id" {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid product_id"})
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "invalid product_id"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 		return
 	}
 
@@ -195,11 +194,11 @@ func (h *BOMHandler) GetBOMs(c *gin.Context) {
 }
 
 // GetBOMItems trả chi tiết 1 BOM và danh sách component items của BOM đó.
-func (h *BOMHandler) GetBOMItems(c *gin.Context) {
+func (h *BOMHandler) GetBOMItems(c echo.Context) {
 	bomIDRaw := c.Param("id")
 	bomID, err := strconv.ParseUint(bomIDRaw, 10, 64)
 	if err != nil || bomID == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid bom id"})
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "invalid bom id"})
 		return
 	}
 
@@ -209,7 +208,7 @@ func (h *BOMHandler) GetBOMItems(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, echo.Map{
 		"bom":   bom,
 		"items": items,
 	})

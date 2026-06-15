@@ -8,6 +8,7 @@ type ImportReceipt struct {
 	ReceiptCode  string    `gorm:"unique;not null" json:"receipt_code"`
 	SupplierName string    `json:"supplier_name"`
 	Note         string    `json:"note"`
+	Status       string    `gorm:"default:WAITING" json:"status"`
 	CreatedBy    *uint     `json:"created_by"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`

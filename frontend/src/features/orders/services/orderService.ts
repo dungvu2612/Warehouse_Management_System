@@ -39,6 +39,14 @@ export const orderService = {
     return ordersApi.deleteOrder(id)
   },
 
+  assignPickingOrder: async (id: number, staffId: number) => {
+    return ordersApi.assignPickingOrder(id, staffId)
+  },
+
+  unassignPickingOrder: async (id: number) => {
+    return ordersApi.unassignPickingOrder(id)
+  },
+
   // Loc nhanh danh sach orders theo keyword (order_code, customer_name, qr_code).
   filterOrdersByKeyword: (orders: Order[], keywordRaw: string): Order[] => {
     const keyword = keywordRaw.trim().toLowerCase()

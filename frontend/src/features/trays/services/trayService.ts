@@ -47,7 +47,7 @@ export const trayService = {
     return locations.filter((location) => location.is_active)
   },
 
-  // Ghi chú: Loc list tray theo ma khay / qr / mo ta / id.
+  // Ghi chú: Loc list tray theo ma khay / QR / san pham / vi tri / mo ta / id.
   // Ghi chú: Join trays voi locations de hien thi location_code + location_description thay vi location_id.
   mapTraysForDisplay: (
     trays: Tray[],
@@ -79,6 +79,8 @@ export const trayService = {
       (tray) =>
         tray.tray_code.toLowerCase().includes(keyword) ||
         tray.qr_code.toLowerCase().includes(keyword) ||
+        tray.product_code.toLowerCase().includes(keyword) ||
+        tray.product_name.toLowerCase().includes(keyword) ||
         tray.description.toLowerCase().includes(keyword) ||
         tray.location_code.toLowerCase().includes(keyword) ||
         tray.location_description.toLowerCase().includes(keyword) ||

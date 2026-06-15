@@ -12,27 +12,63 @@
 - Ghi chú bảo trì: Neu can assign task theo user sau nay, mo rong filter tai trang nay.
 */
 
-import { useEffect, useMemo, useState } from 'react'
-import { Alert, Paper, Stack, Typography } from '@mui/material'
+import { useMemo, useState } from 'react'
+import {
+  Alert,
+  Paper,
+  Stack,
+  Typography,
+} from '@mui/material'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { staffTasksApi } from '../api/staffTasks.api'
 import type { StaffTaskStatus } from '../types/staffTasks.types'
 import { StaffTaskList } from '../components/StaffTaskList'
 import { StaffTaskFilters } from '../components/StaffTaskFilters'
 import { PdaLayout } from '../../pda/layout/PdaLayout'
-import { ListPagination } from '../../../shared/components/ListPagination'
-import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination'
+
+function getApiErrorData(error: unknown): { error_code?: string; error?: string } {
+  if (!error || typeof error !== 'object') return {}
+  const response = 'response' in error ? error.response : undefined
+  if (!response || typeof response !== 'object') return {}
+  const data = 'data' in response ? response.data : undefined
+  return data && typeof data === 'object' ? data : {}
+}
+
+function mapStaffTaskError(error: unknown) {
+  const { error_code: code, error: message } = getApiErrorData(error)
+  if (code === 'TASK_ALREADY_ASSIGNED') return 'Công việc đã được nhân viên khác nhận.'
+  if (code === 'ORDER_ALREADY_COMPLETED') return 'Đơn hàng đã hoàn thành.'
+  if (code === 'ORDER_CANCELLED') return 'Đơn hàng đã bị hủy.'
+  return message || 'Không thể nhận việc. Vui lòng thử lại.'
+}
 
 export function StaffTasksPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StaffTaskStatus | 'ALL'>('ALL')
-  const [currentPage, setCurrentPage] = useState(1)
+  const [banner, setBanner] = useState<{ severity: 'success' | 'error'; text: string } | null>(null)
 
   const tasksQuery = useQuery({
     queryKey: ['staff-tasks'],
     queryFn: staffTasksApi.getTasks,
+  })
+
+  const claimMutation = useMutation({
+    mutationFn: staffTasksApi.claimOrder,
+    onSuccess: async (_, orderId) => {
+      setBanner({ severity: 'success', text: 'Nhận việc thành công.' })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['staff-tasks'] }),
+        queryClient.invalidateQueries({ queryKey: ['staff-task-summary'] }),
+      ])
+      navigate(`/staff/picking/${orderId}`)
+    },
+    onError: async (error) => {
+      setBanner({ severity: 'error', text: mapStaffTaskError(error) })
+      await queryClient.invalidateQueries({ queryKey: ['staff-tasks'] })
+    },
   })
 
   const filteredTasks = useMemo(() => {
@@ -44,24 +80,28 @@ export function StaffTasksPage() {
     })
   }, [search, statusFilter, tasksQuery.data])
 
-  useEffect(() => {
-    // Ghi chú: Reset trang to 1 whenever search/filter changes.
-    setCurrentPage(1)
-  }, [search, statusFilter])
+  const waitingTasks = useMemo(() => {
+    return filteredTasks.filter((item) => item.status === 'WAITING' || !item.assigned_to)
+  }, [filteredTasks])
 
-  const paginatedTasks = useMemo(() => {
-    return paginateItems(filteredTasks, currentPage, DEFAULT_PAGE_SIZE)
-  }, [filteredTasks, currentPage])
+  const myTasks = useMemo(() => {
+    return filteredTasks.filter((item) => item.status === 'PICKING' && item.assigned_to)
+  }, [filteredTasks])
 
   const handleStart = (orderId: number) => {
     navigate(`/staff/picking/${orderId}`)
   }
 
+  const handleClaim = (orderId: number) => {
+    setBanner(null)
+    claimMutation.mutate(orderId)
+  }
+
   return (
-    <PdaLayout title="Tác vụ kho" subtitle="Đơn cần nhặt">
+    <PdaLayout title="Tác vụ nhặt hàng" subtitle="Đơn cần nhặt">
       <Paper sx={{ p: 1.5, borderRadius: 2 }}>
         <Stack spacing={1.2}>
-          <Typography sx={{ fontSize: 16, fontWeight: 900 }}>Danh sách đơn</Typography>
+          <Typography sx={{ fontSize: 16, fontWeight: 900 }}>Tác vụ nhặt hàng</Typography>
           <StaffTaskFilters
             search={search}
             status={statusFilter}
@@ -72,18 +112,32 @@ export function StaffTasksPage() {
         </Stack>
       </Paper>
 
-      <StaffTaskList
-        items={paginatedTasks}
-        isLoading={tasksQuery.isLoading}
-        isError={tasksQuery.isError}
-        onStart={handleStart}
-      />
-      <ListPagination
-        currentPage={currentPage}
-        totalItems={filteredTasks.length}
-        trangSize={DEFAULT_PAGE_SIZE}
-        onPageChange={setCurrentPage}
-      />
+      {banner && <Alert severity={banner.severity}>{banner.text}</Alert>}
+
+      <Stack spacing={1}>
+        <Typography sx={{ fontSize: 16, fontWeight: 900 }}>Việc nhặt hàng đang chờ nhận</Typography>
+        <StaffTaskList
+          items={waitingTasks}
+          isLoading={tasksQuery.isLoading}
+          isError={tasksQuery.isError}
+          onStart={handleStart}
+          onClaim={handleClaim}
+          claimingOrderId={claimMutation.isPending ? Number(claimMutation.variables || 0) : null}
+          emptyText="Chưa có công việc chờ nhận."
+        />
+      </Stack>
+
+      <Stack spacing={1}>
+        <Typography sx={{ fontSize: 16, fontWeight: 900 }}>Việc nhặt hàng của tôi</Typography>
+        <StaffTaskList
+          items={myTasks}
+          isLoading={tasksQuery.isLoading}
+          isError={tasksQuery.isError}
+          onStart={handleStart}
+          onClaim={handleClaim}
+          emptyText="Bạn chưa nhận công việc nào."
+        />
+      </Stack>
 
       {tasksQuery.isError && <Alert severity="error">Không tải được dữ liệu từ backend.</Alert>}
     </PdaLayout>

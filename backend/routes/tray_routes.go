@@ -24,10 +24,10 @@ import (
 	"quan_ly_kho/repositories"
 	"quan_ly_kho/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
-func TrayRoutes(r *gin.Engine) {
+func TrayRoutes(r *echo.Echo) {
 	repo := repositories.NewTrayRepository(config.DB)
 	service := services.NewTrayService(repo)
 	handler := handlers.NewTrayHandler(service)
@@ -35,10 +35,10 @@ func TrayRoutes(r *gin.Engine) {
 	trays := r.Group("/trays")
 	trays.Use(middleware.AuthRequired())
 	{
-		trays.GET("", handler.GetTrays)
-		trays.GET("/scan/:qr_code", handler.ScanTrayByQRCode)
-		trays.POST("", middleware.RequireRoles("ADMIN"), handler.CreateTray)
-		trays.PUT("/:id", middleware.RequireRoles("ADMIN"), handler.UpdateTray)
-		trays.DELETE("/:id", middleware.RequireRoles("ADMIN"), handler.DeleteTray)
+		trays.GET("", adapt(handler.GetTrays))
+		trays.GET("/scan/:qr_code", adapt(handler.ScanTrayByQRCode))
+		trays.POST("", adapt(handler.CreateTray), middleware.RequireRoles("ADMIN"))
+		trays.PUT("/:id", adapt(handler.UpdateTray), middleware.RequireRoles("ADMIN"))
+		trays.DELETE("/:id", adapt(handler.DeleteTray), middleware.RequireRoles("ADMIN"))
 	}
 }
