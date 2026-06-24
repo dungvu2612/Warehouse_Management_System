@@ -11,6 +11,36 @@ Thông tin handover:
 
 // Ghi chú: RunDatabaseMigrations chạy các migration thủ công, idempotent cho schema hiện tại.
 func RunDatabaseMigrations() {
+	// Ghi chú: token_version cho phép login mới làm mất hiệu lực JWT cũ của cùng user.
+	if err := DB.Exec(`
+		ALTER TABLE users
+		ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 1
+	`).Error; err != nil {
+		log.Fatalf("failed to add users.token_version: %v", err)
+	}
+
+	if err := DB.Exec(`
+		ALTER TABLE users
+		ALTER COLUMN token_version SET DEFAULT 1
+	`).Error; err != nil {
+		log.Fatalf("failed to set users.token_version default: %v", err)
+	}
+
+	if err := DB.Exec(`
+		UPDATE users
+		SET token_version = 1
+		WHERE token_version = 0
+	`).Error; err != nil {
+		log.Fatalf("failed to backfill users.token_version: %v", err)
+	}
+
+	if err := DB.Exec(`
+		ALTER TABLE users
+		ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER NOT NULL DEFAULT 0
+	`).Error; err != nil {
+		log.Fatalf("failed to add users.failed_login_attempts: %v", err)
+	}
+
 	// 0) Tao bang putaway_requests de staff gui yeu cau cho admin duyet.
 	if err := DB.Exec(`
 		CREATE TABLE IF NOT EXISTS putaway_requests (
@@ -140,6 +170,22 @@ func RunDatabaseMigrations() {
 		ADD COLUMN IF NOT EXISTS image_url TEXT
 	`).Error; err != nil {
 		log.Fatalf("failed to add products.image_url: %v", err)
+	}
+
+	// Ghi chú: Hệ số độ khó sản phẩm dùng để quy đổi hiệu suất nhập/nhặt hàng.
+	if err := DB.Exec(`
+		ALTER TABLE products
+		ADD COLUMN IF NOT EXISTS difficulty_weight DOUBLE PRECISION NOT NULL DEFAULT 1.0
+	`).Error; err != nil {
+		log.Fatalf("failed to add products.difficulty_weight: %v", err)
+	}
+
+	if err := DB.Exec(`
+		UPDATE products
+		SET difficulty_weight = 1.0
+		WHERE difficulty_weight IS NULL OR difficulty_weight <= 0
+	`).Error; err != nil {
+		log.Fatalf("failed to backfill products.difficulty_weight: %v", err)
 	}
 
 	// Ghi chú: Them cot qr_code cho products phuc vu scan workflow warehouse.

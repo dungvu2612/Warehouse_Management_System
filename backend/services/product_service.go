@@ -40,15 +40,16 @@ const (
 
 // ProductInput là DTO nghiệp vụ cho create/update.
 type ProductInput struct {
-	ProductCode string
-	QRCode      string
-	ProductName string
-	ProductType string
-	ImageURL    string
-	Description string
-	Unit        string
-	MinStock    int
-	Price       float64
+	ProductCode      string
+	QRCode           string
+	ProductName      string
+	ProductType      string
+	ImageURL         string
+	Description      string
+	Unit             string
+	MinStock         int
+	Price            float64
+	DifficultyWeight float64
 }
 
 // ProductScanTrayResult la dong inventory enrich theo tray/location khi scan product QR.
@@ -101,29 +102,22 @@ func (s *productService) Create(input ProductInput) (*models.Product, error) {
 		return nil, repositories.ErrProductEntityNameExists
 	}
 
-	// Retry de tranh race condition khi tao cung luc va trung product_code.
+	if normalized.ProductCode != "" {
+		product := buildProductForCreate(normalized, normalized.ProductCode)
+		if err := s.repo.Create(product); err != nil {
+			return nil, err
+		}
+		return product, nil
+	}
+
+	// Retry de tranh race condition khi tao cung luc va trung product_code tu dong.
 	for attempt := 0; attempt < 5; attempt++ {
 		generatedCode, err := s.GenerateFinalCode(normalized.ProductType, normalized.ProductName)
 		if err != nil {
 			return nil, err
 		}
 
-		product := &models.Product{
-			ProductCode: generatedCode,
-			QRCode:      generatedCode,
-			ProductName: normalized.ProductName,
-			ProductType: normalized.ProductType,
-			ImageURL:    normalized.ImageURL,
-			Description: normalized.Description,
-			Unit:        normalized.Unit,
-			MinStock:    normalized.MinStock,
-			Price:       normalized.Price,
-			IsActive:    true,
-		}
-
-		if normalized.QRCode != "" {
-			product.QRCode = normalized.QRCode
-		}
+		product := buildProductForCreate(normalized, generatedCode)
 
 		if err := s.repo.Create(product); err != nil {
 			if errors.Is(err, repositories.ErrProductEntityCodeExists) {
@@ -221,12 +215,34 @@ func (s *productService) Update(id uint, input ProductInput) (*models.Product, e
 	product.Unit = normalized.Unit
 	product.MinStock = normalized.MinStock
 	product.Price = normalized.Price
+	product.DifficultyWeight = normalized.DifficultyWeight
 
 	if err := s.repo.Update(product); err != nil {
 		return nil, err
 	}
 
 	return product, nil
+}
+
+func buildProductForCreate(input ProductInput, productCode string) *models.Product {
+	qrCode := input.QRCode
+	if qrCode == "" {
+		qrCode = productCode
+	}
+
+	return &models.Product{
+		ProductCode:      productCode,
+		QRCode:           qrCode,
+		ProductName:      input.ProductName,
+		ProductType:      input.ProductType,
+		ImageURL:         input.ImageURL,
+		Description:      input.Description,
+		Unit:             input.Unit,
+		MinStock:         input.MinStock,
+		Price:            input.Price,
+		DifficultyWeight: input.DifficultyWeight,
+		IsActive:         true,
+	}
 }
 
 func (s *productService) Delete(id uint) error {
@@ -275,6 +291,13 @@ func normalizeAndValidateInput(input ProductInput) (ProductInput, error) {
 		return ProductInput{}, ErrInvalidProductType
 	}
 
+	if input.DifficultyWeight == 0 {
+		input.DifficultyWeight = 1.0
+	}
+	if input.DifficultyWeight < 0.5 || input.DifficultyWeight > 5.0 {
+		return ProductInput{}, ErrInvalidProductDifficulty
+	}
+
 	if input.MinStock < 0 || input.Price < 0 {
 		return ProductInput{}, ErrInvalidProductPayload
 	}
@@ -283,9 +306,10 @@ func normalizeAndValidateInput(input ProductInput) (ProductInput, error) {
 }
 
 var (
-	ErrInvalidProductID      = errors.New("invalid product id")
-	ErrInvalidProductType    = errors.New("product_type must be COMPONENT or FINISHED_GOOD")
-	ErrInvalidProductPayload = errors.New("invalid product payload")
+	ErrInvalidProductID         = errors.New("invalid product id")
+	ErrInvalidProductType       = errors.New("product_type must be COMPONENT or FINISHED_GOOD")
+	ErrInvalidProductPayload    = errors.New("invalid product payload")
+	ErrInvalidProductDifficulty = errors.New("difficulty_weight must be between 0.5 and 5.0")
 )
 
 // GenerateFinalCode sinh product_code theo format: PREFIX-ABBREVIATION-SEQ.

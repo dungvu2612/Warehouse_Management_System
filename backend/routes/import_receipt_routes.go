@@ -29,6 +29,8 @@ func ImportReceiptRoutes(r *echo.Echo) {
 		importReceipts.POST("", adapt(handler.CreateImportReceipt), middleware.RequireRoles("ADMIN"))
 		importReceipts.GET("", adapt(handler.GetImportReceipts), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
 		importReceipts.GET("/:id", adapt(handler.GetImportReceiptByID), middleware.RequireRoles("ADMIN", "WAREHOUSE"))
+		importReceipts.PUT("/:id", adapt(handler.UpdateImportReceipt), middleware.RequireRoles("ADMIN"))
+		importReceipts.DELETE("/:id", adapt(handler.DeleteImportReceipt), middleware.RequireRoles("ADMIN"))
 	}
 
 	staff := r.Group("/staff/import-receipt-items")

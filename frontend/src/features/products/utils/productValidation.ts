@@ -17,6 +17,10 @@ export function validateProductForm(form: ProductPayload): string | null {
     return 'min_stock và price phải >= 0.'
   }
 
+  if (form.difficulty_weight < 0.5 || form.difficulty_weight > 5.0) {
+    return 'Độ khó xử lý phải nằm trong khoảng 0.5 đến 5.0.'
+  }
+
   return null
 }
 
@@ -35,5 +39,6 @@ export function normalizeProductPayload(form: ProductPayload): ProductPayload {
     unit: form.unit.trim() || 'pcs',
     min_stock: Number(form.min_stock),
     price: Number(form.price),
+    difficulty_weight: Number(form.difficulty_weight || 1.0),
   }
 }

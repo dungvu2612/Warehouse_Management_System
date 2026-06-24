@@ -55,6 +55,11 @@ func (h *AuthHandler) Login(c echo.Context) {
 		switch {
 		case errors.Is(err, services.ErrInvalidAuthPayload):
 			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
+		case errors.Is(err, services.ErrAccountLockedByFailedLogin):
+			c.JSON(http.StatusLocked, echo.Map{
+				"error_code": "ACCOUNT_LOCKED_BY_FAILED_LOGIN",
+				"error":      "account locked by failed login attempts",
+			})
 		case errors.Is(err, services.ErrInvalidCredentials):
 			c.JSON(http.StatusUnauthorized, echo.Map{"error": err.Error()})
 		default:

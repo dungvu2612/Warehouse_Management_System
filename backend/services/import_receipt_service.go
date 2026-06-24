@@ -37,6 +37,13 @@ type ImportReceiptCreateInput struct {
 	Items        []ImportReceiptCreateItemInput
 }
 
+type ImportReceiptUpdateInput struct {
+	ID           uint
+	SupplierName string
+	Note         string
+	Items        []ImportReceiptCreateItemInput
+}
+
 // ImportReceiptCreateItemInput biểu diễn từng dòng item đầu vào.
 type ImportReceiptCreateItemInput struct {
 	ProductID uint
@@ -60,6 +67,8 @@ type ImportReceiptAssignInput struct {
 // ImportReceiptService định nghĩa use-cases của module import receipt.
 type ImportReceiptService interface {
 	Create(input ImportReceiptCreateInput) (*models.ImportReceipt, []models.ImportReceiptItem, error)
+	Update(input ImportReceiptUpdateInput) (*models.ImportReceipt, error)
+	Delete(id uint) error
 	GetAll() ([]models.ImportReceipt, error)
 	GetByID(id uint) (*models.ImportReceipt, error)
 	GetStaffImportTasks(userID uint, role string) ([]repositories.ImportReceiptTaskRow, error)
@@ -88,26 +97,39 @@ func NewImportReceiptService(repo repositories.ImportReceiptRepository) ImportRe
 
 // Create tạo phiếu nhập mới sau khi validate payload nghiệp vụ.
 func (s *importReceiptService) Create(input ImportReceiptCreateInput) (*models.ImportReceipt, []models.ImportReceiptItem, error) {
-	if len(input.Items) == 0 {
-		return nil, nil, ErrInvalidImportReceiptPayload
+	repoItems, err := normalizeImportReceiptItems(input.Items)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	// Chuẩn hóa text để tránh lưu khoảng trắng thừa.
 	input.SupplierName = strings.TrimSpace(input.SupplierName)
 	input.Note = strings.TrimSpace(input.Note)
 
-	// Validate duplicate product trong cùng payload để fail sớm theo phiếu kế hoạch.
-	seen := make(map[string]struct{}, len(input.Items))
-	repoItems := make([]repositories.ImportReceiptCreateItem, 0, len(input.Items))
+	receipt, items, err := s.repo.CreateReceiptWithItemsAndInventory(
+		input.SupplierName,
+		input.Note,
+		input.CreatedBy,
+		repoItems,
+	)
+	return receipt, items, err
+}
 
-	for _, item := range input.Items {
+func normalizeImportReceiptItems(items []ImportReceiptCreateItemInput) ([]repositories.ImportReceiptCreateItem, error) {
+	if len(items) == 0 {
+		return nil, ErrInvalidImportReceiptPayload
+	}
+
+	seen := make(map[string]struct{}, len(items))
+	repoItems := make([]repositories.ImportReceiptCreateItem, 0, len(items))
+
+	for _, item := range items {
 		if item.ProductID == 0 || item.Quantity <= 0 {
-			return nil, nil, ErrInvalidImportReceiptPayload
+			return nil, ErrInvalidImportReceiptPayload
 		}
 
 		key := fmt.Sprintf("%d", item.ProductID)
 		if _, ok := seen[key]; ok {
-			return nil, nil, repositories.ErrImportReceiptDuplicateItem
+			return nil, repositories.ErrImportReceiptDuplicateItem
 		}
 		seen[key] = struct{}{}
 
@@ -117,12 +139,31 @@ func (s *importReceiptService) Create(input ImportReceiptCreateInput) (*models.I
 		})
 	}
 
-	return s.repo.CreateReceiptWithItemsAndInventory(
-		input.SupplierName,
-		input.Note,
-		input.CreatedBy,
-		repoItems,
-	)
+	return repoItems, nil
+}
+
+func (s *importReceiptService) Update(input ImportReceiptUpdateInput) (*models.ImportReceipt, error) {
+	if input.ID == 0 {
+		return nil, ErrInvalidImportReceiptID
+	}
+	repoItems, err := normalizeImportReceiptItems(input.Items)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.repo.UpdateReceiptWithItems(repositories.ImportReceiptUpdateInput{
+		ID:           input.ID,
+		SupplierName: strings.TrimSpace(input.SupplierName),
+		Note:         strings.TrimSpace(input.Note),
+		Items:        repoItems,
+	})
+}
+
+func (s *importReceiptService) Delete(id uint) error {
+	if id == 0 {
+		return ErrInvalidImportReceiptID
+	}
+	return s.repo.DeleteReceiptByID(id)
 }
 
 // GetAll lấy danh sách phiếu nhập.

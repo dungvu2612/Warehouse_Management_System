@@ -117,6 +117,84 @@ func (h *ImportReceiptHandler) CreateImportReceipt(c echo.Context) {
 	})
 }
 
+func parseImportReceiptID(c echo.Context) (uint, bool) {
+	idRaw := c.Param("id")
+	id, err := strconv.ParseUint(idRaw, 10, 64)
+	if err != nil || id == 0 {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "Phiếu nhập không hợp lệ."})
+		return 0, false
+	}
+	return uint(id), true
+}
+
+func respondImportReceiptWriteError(c echo.Context, err error) {
+	switch {
+	case errors.Is(err, services.ErrInvalidImportReceiptPayload):
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "Dữ liệu phiếu nhập không hợp lệ."})
+	case errors.Is(err, services.ErrInvalidImportReceiptID):
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "Phiếu nhập không hợp lệ."})
+	case errors.Is(err, repositories.ErrImportReceiptDuplicateItem):
+		c.JSON(http.StatusBadRequest, echo.Map{"error": "Không được trùng sản phẩm trong cùng một phiếu nhập."})
+	case errors.Is(err, repositories.ErrImportReceiptNotFound):
+		c.JSON(http.StatusNotFound, echo.Map{"error": "Không tìm thấy phiếu nhập."})
+	case errors.Is(err, repositories.ErrImportReceiptLocked):
+		c.JSON(http.StatusConflict, echo.Map{"error": "Phiếu nhập đã có người nhận hoặc đã phát sinh nhập kho, không thể sửa/xóa."})
+	case errors.Is(err, repositories.ErrProductNotFound):
+		c.JSON(http.StatusNotFound, echo.Map{"error": "Không tìm thấy sản phẩm."})
+	default:
+		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+}
+
+func (h *ImportReceiptHandler) UpdateImportReceipt(c echo.Context) {
+	id, ok := parseImportReceiptID(c)
+	if !ok {
+		return
+	}
+
+	var req createImportReceiptRequest
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
+		return
+	}
+
+	items := make([]services.ImportReceiptCreateItemInput, 0, len(req.Items))
+	for _, item := range req.Items {
+		items = append(items, services.ImportReceiptCreateItemInput{
+			ProductID: item.ProductID,
+			Quantity:  item.Quantity,
+		})
+	}
+
+	receipt, err := h.service.Update(services.ImportReceiptUpdateInput{
+		ID:           id,
+		SupplierName: req.SupplierName,
+		Note:         req.Note,
+		Items:        items,
+	})
+	if err != nil {
+		respondImportReceiptWriteError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, echo.Map{
+		"message": "Cập nhật phiếu nhập thành công.",
+		"receipt": receipt,
+	})
+}
+
+func (h *ImportReceiptHandler) DeleteImportReceipt(c echo.Context) {
+	id, ok := parseImportReceiptID(c)
+	if !ok {
+		return
+	}
+	if err := h.service.Delete(id); err != nil {
+		respondImportReceiptWriteError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, echo.Map{"message": "Xóa phiếu nhập thành công."})
+}
+
 // GetImportReceipts trả danh sách phiếu nhập mới nhất trước.
 func (h *ImportReceiptHandler) GetImportReceipts(c echo.Context) {
 	receipts, err := h.service.GetAll()
@@ -129,14 +207,12 @@ func (h *ImportReceiptHandler) GetImportReceipts(c echo.Context) {
 
 // GetImportReceiptByID trả chi tiết 1 phiếu nhập.
 func (h *ImportReceiptHandler) GetImportReceiptByID(c echo.Context) {
-	idRaw := c.Param("id")
-	id, err := strconv.ParseUint(idRaw, 10, 64)
-	if err != nil || id == 0 {
-		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "invalid import receipt id"})
+	id, ok := parseImportReceiptID(c)
+	if !ok {
 		return
 	}
 
-	receipt, err := h.service.GetByID(uint(id))
+	receipt, err := h.service.GetByID(id)
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrInvalidImportReceiptID):

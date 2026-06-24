@@ -61,6 +61,12 @@ func AuthRequired() echo.MiddlewareFunc {
 					"error":      "account disabled",
 				})
 			}
+			if user.TokenVersion != claims.TokenVersion {
+				return c.JSON(http.StatusUnauthorized, echo.Map{
+					"error_code": "SESSION_REVOKED",
+					"error":      "session revoked",
+				})
+			}
 
 			c.Set("user_id", user.ID)
 			c.Set("username", user.Username)

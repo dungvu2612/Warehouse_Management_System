@@ -26,6 +26,7 @@ import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
 import type { TrayDisplay } from '../types/trayTypes'
 import { ContentCopyOutlined, PrintOutlined, QrCode2Outlined } from '@mui/icons-material'
 import { useEffect, useState } from 'react'
+import { formatDateTimeVN } from '../../../shared/lib/datetime'
 import { toQrDataUrl } from '../../../shared/lib/qrCode'
 
 interface TrayTableProps {
@@ -142,8 +143,8 @@ export function TrayTable({ trays, isLoading, isError, isAdmin, onEdit, onDelete
                   color={tray.is_active ? 'success' : 'default'}
                 />
               </TableCell>
-              <TableCell>{new Date(tray.created_at).toLocaleString('vi-VN')}</TableCell>
-              <TableCell>{new Date(tray.updated_at).toLocaleString('vi-VN')}</TableCell>
+              <TableCell>{formatDateTimeVN(tray.created_at)}</TableCell>
+              <TableCell>{formatDateTimeVN(tray.updated_at)}</TableCell>
               <TableCell sx={{ textAlign: 'center' }}>
                 <Tooltip title="Sửa khay">
                   <span>

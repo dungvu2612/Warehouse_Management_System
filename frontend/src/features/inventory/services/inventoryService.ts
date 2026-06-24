@@ -129,10 +129,14 @@ export const inventoryService = {
       if (filters.lowStockOnly && !item.is_low_stock) return false
 
       if (!keyword) return true
+      const code = item.product_code.toLowerCase()
+      const name = item.product_name.toLowerCase()
+      const displayText = `${code} - ${name}`
 
       return (
-        item.product_code.toLowerCase().includes(keyword) ||
-        item.product_name.toLowerCase().includes(keyword) ||
+        code.includes(keyword) ||
+        name.includes(keyword) ||
+        displayText.includes(keyword) ||
         item.tray_code.toLowerCase().includes(keyword) ||
         item.location_code.toLowerCase().includes(keyword) ||
         item.location_description.toLowerCase().includes(keyword)

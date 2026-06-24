@@ -468,9 +468,11 @@ func (r *orderRepository) GetStaffTaskSummary(userID uint, role string) (*StaffT
 
 	if strings.ToUpper(strings.TrimSpace(role)) == "ADMIN" {
 		summary.MyPickingCount = 0
+		summary.PickingInProgressCount = summary.PickingCount
+	} else {
+		summary.PickingInProgressCount = summary.MyPickingCount
 	}
 	summary.PickingWaitingCount = summary.WaitingCount
-	summary.PickingInProgressCount = summary.PickingCount
 
 	if err := r.db.Raw(`
 		SELECT COUNT(*) AS import_waiting_count
@@ -500,7 +502,7 @@ func (r *orderRepository) GetStaffTaskSummary(userID uint, role string) (*StaffT
 	if strings.ToUpper(strings.TrimSpace(role)) == "ADMIN" {
 		summary.PickingCount = summary.PickingInProgressCount + summary.ImportInProgressCount
 	} else {
-		summary.MyPickingCount = summary.MyPickingCount + summary.ImportInProgressCount
+		summary.PickingCount = summary.MyPickingCount
 	}
 
 	return &summary, nil

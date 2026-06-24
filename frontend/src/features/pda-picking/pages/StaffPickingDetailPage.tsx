@@ -12,7 +12,7 @@ import { ArrowBack, QrCode2 } from '@mui/icons-material'
 import { Alert, Box, Button, Chip, Paper, Stack, Typography } from '@mui/material'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '../../../app/providers/AuthProvider'
+import { useAuth } from '../../../app/providers/useAuth'
 import { PdaLayout } from '../../pda/layout/PdaLayout'
 import { useScannerInput } from '../../scanner/hooks/useScannerInput'
 import { ScannerHiddenInput } from '../../scanner/components/ScannerHiddenInput'
@@ -23,6 +23,7 @@ import { mapOrderApiError } from '../../orders/utils/orderError'
 import { usePDAScanProductMutation, usePDAVerifyTrayMutation } from '../hooks/usePdaPicking'
 import { PickingItemCard } from '../components/PickingItemCard'
 import { ListPagination } from '../../../shared/components/ListPagination'
+import { getApiErrorInfo } from '../../../shared/lib/apiError'
 import { DEFAULT_PAGE_SIZE, paginateItems } from '../../../shared/lib/pagination'
 import { formatDateTimeVN } from '../../../shared/lib/datetime'
 import { staffTasksApi } from '../../staff-tasks/api/staffTasks.api'
@@ -44,7 +45,7 @@ export function StaffPickingDetailPage() {
   const [claimMessage, setClaimMessage] = useState<{ severity: 'success' | 'error'; text: string } | null>(null)
 
   const detail = detailQuery.data
-  const tasks = detail?.picking_tasks || []
+  const tasks = useMemo(() => detail?.picking_tasks || [], [detail?.picking_tasks])
   const firstAssignedTask = tasks.find((task) => task.assigned_to)
   const assignedTo = firstAssignedTask?.assigned_to || null
   const assigneeLabel = firstAssignedTask?.assignee_name || firstAssignedTask?.assignee_username || ''
@@ -67,8 +68,8 @@ export function StaffPickingDetailPage() {
         queryClient.invalidateQueries({ queryKey: ['staff-task-summary'] }),
       ])
     },
-    onError: (error: any) => {
-      setClaimMessage({ severity: 'error', text: error?.response?.data?.error || 'Không thể nhận việc. Vui lòng thử lại.' })
+    onError: (error: unknown) => {
+      setClaimMessage({ severity: 'error', text: getApiErrorInfo(error).message || 'Không thể nhận việc. Vui lòng thử lại.' })
       void detailQuery.refetch()
     },
   })

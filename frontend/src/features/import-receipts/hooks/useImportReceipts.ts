@@ -90,6 +90,43 @@ export function useCreateImportReceiptMutation(options?: {
   })
 }
 
+export function useUpdateImportReceiptMutation(options?: {
+  onSuccess?: (message: string) => void
+  onError?: (error: unknown) => void
+}) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: CreateImportReceiptPayload }) =>
+      importReceiptsService.updateImportReceipt(id, payload),
+    onSuccess: async (response) => {
+      await invalidateImportReceiptQueries(queryClient)
+      await queryClient.invalidateQueries({ queryKey: ['staff-import-tasks'] })
+      await queryClient.invalidateQueries({ queryKey: ['staff-task-summary'] })
+      options?.onSuccess?.(response.message)
+    },
+    onError: (error) => options?.onError?.(error),
+  })
+}
+
+export function useDeleteImportReceiptMutation(options?: {
+  onSuccess?: (message: string) => void
+  onError?: (error: unknown) => void
+}) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) => importReceiptsService.deleteImportReceipt(id),
+    onSuccess: async (response) => {
+      await invalidateImportReceiptQueries(queryClient)
+      await queryClient.invalidateQueries({ queryKey: ['staff-import-tasks'] })
+      await queryClient.invalidateQueries({ queryKey: ['staff-task-summary'] })
+      options?.onSuccess?.(response.message)
+    },
+    onError: (error) => options?.onError?.(error),
+  })
+}
+
 export function useAssignImportReceiptItemMutation(options?: {
   onSuccess?: (message: string) => void
   onError?: (error: unknown) => void

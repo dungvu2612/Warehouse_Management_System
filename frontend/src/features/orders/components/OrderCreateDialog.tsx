@@ -13,6 +13,7 @@ import { http } from '../../../shared/lib/http'
 import type { Order } from '../types/orderTypes'
 import { OrderItemsEditor, type OrderEditorItem } from './OrderItemsEditor'
 import { useProductsQuery } from '../../products/hooks/useProducts'
+import { useInventoryQuery, useInventoryTraysQuery } from '../../inventory/hooks/useInventory'
 import { mapOrderApiError } from '../utils/orderError'
 
 export interface OrderCreateDialogProps {
@@ -29,6 +30,8 @@ export function OrderCreateDialog({
   canEditPrice,
 }: OrderCreateDialogProps) {
   const productsQuery = useProductsQuery()
+  const inventoryQuery = useInventoryQuery()
+  const traysQuery = useInventoryTraysQuery()
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerAddress, setCustomerAddress] = useState('')
@@ -44,6 +47,21 @@ export function OrderCreateDialog({
     }
     return false
   }, [items])
+
+  const stockQuantityByProductId = useMemo(() => {
+    const result = new Map<number, number>()
+    for (const tray of traysQuery.data || []) {
+      result.set(tray.product_id, 0)
+    }
+    for (const item of inventoryQuery.data || []) {
+      result.set(item.product_id, (result.get(item.product_id) || 0) + item.quantity)
+    }
+    return result
+  }, [inventoryQuery.data, traysQuery.data])
+
+  const productsWithTray = useMemo(() => {
+    return (productsQuery.data || []).filter((product) => stockQuantityByProductId.has(product.id))
+  }, [productsQuery.data, stockQuantityByProductId])
 
   const handleClose = () => {
     setCustomerName('')
@@ -65,6 +83,13 @@ export function OrderCreateDialog({
     for (const item of items) {
       if (!item.product_id || item.quantity <= 0 || item.unit_price < 0) {
         return setError('Dữ liệu sản phẩm không hợp lệ')
+      }
+      const availableQuantity = stockQuantityByProductId.get(item.product_id) || 0
+      if (availableQuantity <= 0) {
+        return setError('Sản phẩm đã chọn chưa có khay hoặc chưa có tồn kho.')
+      }
+      if (item.quantity > availableQuantity) {
+        return setError(`Số lượng đặt vượt tồn kho hiện có. Tồn hiện tại: ${availableQuantity}.`)
       }
     }
 
@@ -98,18 +123,29 @@ export function OrderCreateDialog({
           <TextField label="Địa chỉ giao hàng" value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} fullWidth multiline rows={2} />
 
           <OrderItemsEditor
-            products={productsQuery.data || []}
+            products={productsWithTray}
             items={items}
             onChange={setItems}
             canEditPrice={canEditPrice}
+            availableQuantityByProductId={stockQuantityByProductId}
           />
+
+          {!productsQuery.isLoading && !inventoryQuery.isLoading && !traysQuery.isLoading && productsWithTray.length === 0 && (
+            <Alert severity="warning">
+              Chưa có sản phẩm nào có khay để tạo đơn.
+            </Alert>
+          )}
 
           {error && <Alert severity="error">{error}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} disabled={loading}>Hủy</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading || productsQuery.isLoading}>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={loading || productsQuery.isLoading || inventoryQuery.isLoading || traysQuery.isLoading}
+        >
           {loading ? 'Đang tạo...' : 'Tạo đơn'}
         </Button>
       </DialogActions>

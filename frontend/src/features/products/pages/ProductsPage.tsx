@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Add, Refresh } from '@mui/icons-material'
 import { Alert, Box, Button, Chip, Paper, Stack, Tab, Tabs, TextField, Typography } from '@mui/material'
-import { useAuth } from '../../../app/providers/AuthProvider'
+import { useAuth } from '../../../app/providers/useAuth'
 import { defaultProductForm } from '../constants/productForm'
 import {
   useCreateProductMutation,
@@ -35,6 +35,7 @@ export function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [form, setForm] = useState<ProductPayload>(defaultProductForm)
   const [debouncedProductName, setDebouncedProductName] = useState('')
+  const [productCodeEdited, setProductCodeEdited] = useState(false)
   const [formError, setFormError] = useState('')
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -65,6 +66,9 @@ export function ProductsPage() {
   const createMutation = useCreateProductMutation({
     onSuccess: () => {
       setBanner({ type: 'success', text: 'Tạo sản phẩm thành công.' })
+      setSearch('')
+      setActiveType(form.product_type)
+      setCurrentPage(1)
       setDialogOpen(false)
       setForm(defaultProductForm)
     },
@@ -108,17 +112,18 @@ export function ProductsPage() {
 
   // Preview product_code realtime tu backend khi tao moi.
   useEffect(() => {
-    if (editingProduct) return
+    if (editingProduct || productCodeEdited) return
     const preview = previewQuery.data?.product_code || ''
     if (!preview) return
     setForm((prev) => {
       if (prev.product_code === preview) return prev
       return { ...prev, product_code: preview }
     })
-  }, [previewQuery.data?.product_code, editingProduct])
+  }, [previewQuery.data?.product_code, editingProduct, productCodeEdited])
 
   const openCreateDialog = () => {
     setEditingProduct(null)
+    setProductCodeEdited(false)
     setForm({
       ...defaultProductForm,
       product_type: activeType,
@@ -129,6 +134,7 @@ export function ProductsPage() {
 
   const openEditDialog = (product: Product) => {
     setEditingProduct(product)
+    setProductCodeEdited(false)
     setForm({
       product_code: product.product_code,
       qr_code: product.qr_code || product.product_code,
@@ -139,9 +145,18 @@ export function ProductsPage() {
       unit: product.unit || 'pcs',
       min_stock: product.min_stock,
       price: product.price,
+      difficulty_weight: product.difficulty_weight || 1.0,
     })
     setFormError('')
     setDialogOpen(true)
+  }
+
+  const closeProductDialog = () => {
+    setDialogOpen(false)
+    setEditingProduct(null)
+    setProductCodeEdited(false)
+    setForm(defaultProductForm)
+    setFormError('')
   }
 
   const handleSubmit = () => {
@@ -351,9 +366,10 @@ export function ProductsPage() {
         title={editingProduct ? 'Cập nhật sản phẩm' : 'Tạo sản phẩm mới'}
         form={form}
         onChange={setForm}
+        onProductCodeManualChange={() => setProductCodeEdited(true)}
         onImportImage={handleImportImage}
         errorMessage={formError}
-        onClose={() => setDialogOpen(false)}
+        onClose={closeProductDialog}
         onSubmit={handleSubmit}
         isSubmitting={createMutation.isPending || updateMutation.isPending}
         isEditing={Boolean(editingProduct)}

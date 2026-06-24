@@ -8,10 +8,15 @@ Thông tin ghi chú:
 import { locationsApi } from '../api/locationsApi'
 import type { CreateLocationPayload, Location, LocationTraysResponse, UpdateLocationPayload } from '../types/locationTypes'
 
+function sortLocationsNewestFirst(locations: Location[]): Location[] {
+  return [...locations].sort((a, b) => b.id - a.id)
+}
+
 export const locationService = {
   // Ghi chú: Lấy danh sách location từ backend.
   getLocations: async (): Promise<Location[]> => {
-    return locationsApi.getLocations()
+    const locations = await locationsApi.getLocations()
+    return sortLocationsNewestFirst(locations)
   },
 
   getLocationTrays: async (locationId: number): Promise<LocationTraysResponse> => {
@@ -36,9 +41,10 @@ export const locationService = {
   // Ghi chú: Lọc cục bộ theo mã vị trí, shelf, mô tả để UX tìm kiếm nhanh.
   filterLocationsByKeyword: (locations: Location[], keywordRaw: string): Location[] => {
     const keyword = keywordRaw.trim().toLowerCase()
-    if (!keyword) return locations
+    const newestFirst = sortLocationsNewestFirst(locations)
+    if (!keyword) return newestFirst
 
-    return locations.filter(
+    return newestFirst.filter(
       (location) =>
         location.location_code.toLowerCase().includes(keyword) ||
         location.shelf.toLowerCase().includes(keyword) ||

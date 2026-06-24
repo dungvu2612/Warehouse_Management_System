@@ -54,27 +54,31 @@ type DocUpdateUserStatusRequest struct {
 }
 
 type DocProduct struct {
-	ID          uint    `json:"id" example:"1"`
-	ProductCode string  `json:"product_code" example:"PRD-0001"`
-	QRCode      string  `json:"qr_code" example:"PRD-0001"`
-	ProductName string  `json:"product_name" example:"Motor A"`
-	ProductType string  `json:"product_type" example:"COMPONENT"`
-	ImageURL    string  `json:"image_url" example:"https://example.com/product.png"`
-	Description string  `json:"description" example:"Linh kiện sản xuất"`
-	Unit        string  `json:"unit" example:"pcs"`
-	MinStock    int     `json:"min_stock" example:"10"`
-	Price       float64 `json:"price" example:"150000"`
-	IsActive    bool    `json:"is_active" example:"true"`
+	ID               uint    `json:"id" example:"1"`
+	ProductCode      string  `json:"product_code" example:"PRD-0001"`
+	QRCode           string  `json:"qr_code" example:"PRD-0001"`
+	ProductName      string  `json:"product_name" example:"Motor A"`
+	ProductType      string  `json:"product_type" example:"COMPONENT"`
+	ImageURL         string  `json:"image_url" example:"https://example.com/product.png"`
+	Description      string  `json:"description" example:"Linh kiện sản xuất"`
+	Unit             string  `json:"unit" example:"pcs"`
+	MinStock         int     `json:"min_stock" example:"10"`
+	Price            float64 `json:"price" example:"150000"`
+	DifficultyWeight float64 `json:"difficulty_weight" example:"1.5"`
+	IsActive         bool    `json:"is_active" example:"true"`
 }
 
 type DocProductRequest struct {
-	ProductName string  `json:"product_name" example:"Motor A"`
-	ProductType string  `json:"product_type" example:"COMPONENT"`
-	ImageURL    string  `json:"image_url" example:"https://example.com/product.png"`
-	Description string  `json:"description" example:"Linh kiện sản xuất"`
-	Unit        string  `json:"unit" example:"pcs"`
-	MinStock    int     `json:"min_stock" example:"10"`
-	Price       float64 `json:"price" example:"150000"`
+	ProductCode      string  `json:"product_code" example:"LK-MOTOR-001"`
+	QRCode           string  `json:"qr_code" example:"QR-LK-MOTOR-001"`
+	ProductName      string  `json:"product_name" example:"Motor A"`
+	ProductType      string  `json:"product_type" example:"COMPONENT"`
+	ImageURL         string  `json:"image_url" example:"https://example.com/product.png"`
+	Description      string  `json:"description" example:"Linh kiện sản xuất"`
+	Unit             string  `json:"unit" example:"pcs"`
+	MinStock         int     `json:"min_stock" example:"10"`
+	Price            float64 `json:"price" example:"150000"`
+	DifficultyWeight float64 `json:"difficulty_weight" example:"1.5"`
 }
 
 type DocProductCodePreviewResponse struct {

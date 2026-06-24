@@ -1,20 +1,9 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { STORAGE_KEYS } from '../../shared/constants/storage'
 import type { AuthUser, LoginResponse } from '../../shared/types/auth'
 import { http } from '../../shared/lib/http'
-
-// Interface định nghĩa toàn bộ dữ liệu/hành động auth mà app cần.
-interface AuthContextValue {
-  token: string | null
-  user: AuthUser | null
-  isAuthenticated: boolean
-  loginSuccess: (payload: LoginResponse) => void
-  logout: () => void
-}
-
-// Tạo context auth. Ban đầu để undefined để bắt lỗi dùng sai provider.
-const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+import { AuthContext, type AuthContextValue } from './authContext'
 
 // Đọc token ban đầu từ localStorage khi app vừa mount.
 function readInitialToken(): string | null {
@@ -84,14 +73,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-// Custom hook giúp dùng auth context gọn hơn.
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) {
-    // Nếu dùng ngoài AuthProvider thì báo lỗi rõ ràng cho dev.
-    throw new Error('useAuth must be used inside AuthProvider')
-  }
-  return context
 }

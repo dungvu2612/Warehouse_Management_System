@@ -7,6 +7,7 @@
 import { WarningAmberOutlined } from '@mui/icons-material'
 import { Box, Button, Chip, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, useMediaQuery, useTheme } from '@mui/material'
 import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
+import { formatDateTimeVN } from '../../../shared/lib/datetime'
 import type { InventoryDisplayItem } from '../types/inventoryTypes'
 
 interface InventoryTableProps {
@@ -163,7 +164,7 @@ export function InventoryTable({
                   <Chip size="small" color="success" label="Ổn định" />
                 )}
               </TableCell>
-              <TableCell>{new Date(item.updated_at).toLocaleString('vi-VN')}</TableCell>
+              <TableCell>{formatDateTimeVN(item.updated_at)}</TableCell>
               {showActions && (
                 <TableCell sx={{ textAlign: 'center' }}>
                   <Button

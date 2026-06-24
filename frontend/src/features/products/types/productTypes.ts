@@ -19,6 +19,7 @@ export interface Product {
   unit: string
   min_stock: number
   price: number
+  difficulty_weight: number
   is_active: boolean
   created_at: string
   updated_at: string
@@ -35,6 +36,7 @@ export interface ProductPayload {
   unit: string
   min_stock: number
   price: number
+  difficulty_weight: number
 }
 
 export interface ProductCodePreviewResponse {

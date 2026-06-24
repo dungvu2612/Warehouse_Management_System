@@ -63,7 +63,7 @@ Port mặc định lấy từ `APP_PORT`, nếu không có thì dùng `8080`.
 ## Mở Swagger UI
 
 ```text
-http://localhost:8080/docs/index.html
+  http://localhost:8080/docs/index.html
 ```
 
 Nếu chạy trong LAN theo `.env` hiện tại:

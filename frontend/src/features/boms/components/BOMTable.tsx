@@ -19,6 +19,7 @@ import {
 import { DeleteOutlined, EditOutlined, VisibilityOutlined, ShoppingCartOutlined } from '@mui/icons-material'
 import type { BOM } from '../types/bomTypes'
 import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
+import { formatDateTimeVN } from '../../../shared/lib/datetime'
 
 interface BOMTableProps {
   boms: BOM[]
@@ -51,8 +52,8 @@ export function BOMTable({
             <TableCell sx={{ fontWeight: 800 }}>Thành phẩm cha</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Tên BOM</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Mô tả</TableCell>
-            <TableCell sx={{ fontWeight: 800, textAlign: 'right' }}>Số loại linh kiện</TableCell>
-            <TableCell sx={{ fontWeight: 800, textAlign: 'right' }}>Tổng SL linh kiện</TableCell>
+            <TableCell sx={{ fontWeight: 800, textAlign: 'left' }}>Số loại linh kiện</TableCell>
+            <TableCell sx={{ fontWeight: 800, textAlign: 'left' }}>Tổng SL linh kiện</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Người tạo</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Ngày tạo</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Cập nhật</TableCell>
@@ -114,11 +115,11 @@ export function BOMTable({
                 </TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>{bom.bom_name || '-'}</TableCell>
                 <TableCell>{bom.description || '-'}</TableCell>
-                <TableCell sx={{ textAlign: 'right', fontWeight: 700 }}>{itemCount}</TableCell>
-                <TableCell sx={{ textAlign: 'right', fontWeight: 700 }}>{totalQty}</TableCell>
+                <TableCell sx={{ textAlign: 'left', fontWeight: 700 }}>{itemCount}</TableCell>
+                <TableCell sx={{ textAlign: 'left', fontWeight: 700 }}>{totalQty}</TableCell>
                 <TableCell>{creatorText}</TableCell>
-                <TableCell>{new Date(bom.created_at).toLocaleString('vi-VN')}</TableCell>
-                <TableCell>{new Date(bom.updated_at).toLocaleString('vi-VN')}</TableCell>
+                <TableCell>{formatDateTimeVN(bom.created_at)}</TableCell>
+                <TableCell>{formatDateTimeVN(bom.updated_at)}</TableCell>
                 <TableCell sx={{ textAlign: 'center' }}>
                   <Tooltip title="Xem linh kiện">
                     <IconButton color="info" size="small" onClick={() => onViewItems(bom)}>

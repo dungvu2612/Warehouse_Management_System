@@ -26,6 +26,7 @@ import {
   ShoppingCartOutlined,
   SupervisedUserCircleOutlined,
   WarehouseOutlined,
+  AssessmentOutlined,
 } from '@mui/icons-material'
 import type { SvgIconComponent } from '@mui/icons-material'
 import { Link as RouterLink } from 'react-router-dom'
@@ -52,6 +53,7 @@ const menuItems: MenuItem[] = [
   { label: 'Phiếu nhập', path: '/import-receipts', icon: ReceiptLongOutlined, roles: ['ADMIN'] },
   { label: 'Phân rã sản phẩm', path: '/boms', icon: QrCodeScannerOutlined, roles: ['ADMIN'] },
   { label: 'Đơn hàng', path: '/orders', icon: ShoppingCartOutlined, roles: ['ADMIN'] },
+  { label: 'Hiệu suất nhân viên', path: '/admin/reports/staff-performance', icon: AssessmentOutlined, roles: ['ADMIN'] },
   { label: 'Quản lý tài khoản', path: '/users', icon: SupervisedUserCircleOutlined, roles: ['ADMIN'] },
   { label: 'Tác vụ nhặt', path: '/staff/tasks', icon: PhoneAndroidOutlined, roles: ['WAREHOUSE'] },
   { label: 'Tác vụ nhập kho', path: '/staff/import-tasks', icon: ReceiptLongOutlined, roles: ['WAREHOUSE'] },
@@ -86,7 +88,9 @@ export function AppNavigationDrawer({
   })
   const taskSummary = taskSummaryQuery.data
   const pickingWaitingCount = Number(taskSummary?.picking_waiting_count ?? taskSummary?.waiting_count ?? 0)
-  const pickingCount = Number(taskSummary?.picking_in_progress_count ?? taskSummary?.my_picking_count ?? 0)
+  const pickingCount = user?.role === 'ADMIN'
+    ? Number(taskSummary?.picking_in_progress_count ?? taskSummary?.my_picking_count ?? 0)
+    : Number(taskSummary?.my_picking_count ?? taskSummary?.picking_in_progress_count ?? 0)
   const importWaitingCount = Number(taskSummary?.import_waiting_count || 0)
   const importProgressCount = Number(taskSummary?.import_in_progress_count || 0)
 

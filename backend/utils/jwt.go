@@ -10,9 +10,10 @@ import (
 )
 
 type AuthClaims struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	UserID       uint   `json:"user_id"`
+	Username     string `json:"username"`
+	Role         string `json:"role"`
+	TokenVersion int    `json:"token_version"`
 	jwt.RegisteredClaims
 }
 
@@ -47,12 +48,13 @@ func jwtExpiry() time.Duration {
 	return time.Duration(hours) * time.Hour
 }
 
-func GenerateToken(userID uint, username, role string) (string, error) {
+func GenerateToken(userID uint, username, role string, tokenVersion int) (string, error) {
 	now := time.Now()
 	claims := AuthClaims{
-		UserID:   userID,
-		Username: username,
-		Role:     NormalizeRole(role),
+		UserID:       userID,
+		Username:     username,
+		Role:         NormalizeRole(role),
+		TokenVersion: tokenVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(jwtExpiry())),

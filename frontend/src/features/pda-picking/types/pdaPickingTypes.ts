@@ -32,7 +32,7 @@ export interface PDAPickingTaskView extends PickingTask {
   product_name?: string
 }
 
-export interface PDAPickingOrderDetailResult extends OrderDetailResponse {}
+export type PDAPickingOrderDetailResult = OrderDetailResponse
 
 export interface PDAVerifyTrayInput {
   taskId: number

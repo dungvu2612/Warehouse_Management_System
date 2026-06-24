@@ -9,6 +9,7 @@ import { importReceiptsApi } from '../api/importReceiptsApi'
 import type {
   CreateImportReceiptPayload,
   CreateImportReceiptResponse,
+  DeleteImportReceiptResponse,
   ImportReceipt,
   ImportReceiptDisplay,
   ImportReceiptItemActionResponse,
@@ -17,6 +18,7 @@ import type {
   PutawayRequest,
   PutawayRequestApproveResponse,
   TrayOption,
+  UpdateImportReceiptResponse,
 } from '../types/importReceiptTypes'
 
 export const importReceiptsService = {
@@ -35,6 +37,17 @@ export const importReceiptsService = {
     payload: CreateImportReceiptPayload,
   ): Promise<CreateImportReceiptResponse> => {
     return importReceiptsApi.createImportReceipt(payload)
+  },
+
+  updateImportReceipt: async (
+    id: number,
+    payload: CreateImportReceiptPayload,
+  ): Promise<UpdateImportReceiptResponse> => {
+    return importReceiptsApi.updateImportReceipt(id, payload)
+  },
+
+  deleteImportReceipt: async (id: number): Promise<DeleteImportReceiptResponse> => {
+    return importReceiptsApi.deleteImportReceipt(id)
   },
 
   assignImportReceiptItem: async (itemId: number, staffId: number): Promise<ImportReceiptItemActionResponse> => {

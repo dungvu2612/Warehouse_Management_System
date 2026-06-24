@@ -26,6 +26,8 @@ import { StaffImportTasksPage } from '../features/staff-tasks/pages/StaffImportT
 import { StaffPickingDetailPage } from '../features/pda-picking/pages/StaffPickingDetailPage'
 import { UserManagementPage } from '../features/users/pages/UserManagementPage'
 import { UserDetailPage } from '../features/users/pages/UserDetailPage'
+import { StaffPerformancePage } from '../features/staff-performance/pages/StaffPerformancePage'
+import { NotificationsPage } from '../features/notifications/pages/NotificationsPage'
 
 // Cấu hình toàn bộ route của app.
 export const router = createBrowserRouter([
@@ -59,6 +61,15 @@ export const router = createBrowserRouter([
       { path: 'warehouse-overview', element: <WarehouseOverviewPage /> },
       { path: 'import-receipts', element: <ImportReceiptsPage /> },
       { path: 'boms', element: <BOMsPage /> },
+      { path: 'notifications', element: <NotificationsPage /> },
+      {
+        path: 'admin/reports/staff-performance',
+        element: (
+          <RoleRoute allowedRoles={['ADMIN']}>
+            <StaffPerformancePage />
+          </RoleRoute>
+        ),
+      },
       {
         path: 'orders',
         element: (

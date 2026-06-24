@@ -11,19 +11,20 @@ import "time"
 - Ghi chú bảo trì: Neu doi ten cot/format QR, cap nhat dong bo migration + service + frontend types.
 */
 type Product struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	ProductCode string    `gorm:"unique;not null" json:"product_code"`
-	QRCode      string    `gorm:"unique;not null" json:"qr_code"`
-	ProductName string    `gorm:"not null" json:"product_name"`
-	ProductType string    `gorm:"not null;default:COMPONENT" json:"product_type"`
-	ImageURL    string    `json:"image_url"`
-	Description string    `json:"description"`
-	Unit        string    `json:"unit"`
-	MinStock    int       `json:"min_stock"`
-	Price       float64   `json:"price"`
-	IsActive    bool      `json:"is_active"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID               uint      `gorm:"primaryKey" json:"id"`
+	ProductCode      string    `gorm:"unique;not null" json:"product_code"`
+	QRCode           string    `gorm:"unique;not null" json:"qr_code"`
+	ProductName      string    `gorm:"not null" json:"product_name"`
+	ProductType      string    `gorm:"not null;default:COMPONENT" json:"product_type"`
+	ImageURL         string    `json:"image_url"`
+	Description      string    `json:"description"`
+	Unit             string    `json:"unit"`
+	MinStock         int       `json:"min_stock"`
+	Price            float64   `json:"price"`
+	DifficultyWeight float64   `gorm:"not null;default:1.0" json:"difficulty_weight"`
+	IsActive         bool      `json:"is_active"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 func (Product) TableName() string {

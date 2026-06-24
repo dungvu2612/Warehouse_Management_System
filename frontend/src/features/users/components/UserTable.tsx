@@ -1,5 +1,6 @@
 import { DeleteOutlined, EditOutlined, LockOpenOutlined, LockOutlined, VisibilityOutlined } from '@mui/icons-material'
 import { IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip } from '@mui/material'
+import { formatDateTimeVN } from '../../../shared/lib/datetime'
 import type { User } from '../types/user.types'
 import { UserRoleBadge } from './UserRoleBadge'
 import { UserStatusBadge } from './UserStatusBadge'
@@ -50,7 +51,7 @@ export function UserTable({ users, isLoading, isError, onView, onEdit, onToggleS
               <TableCell>{user.full_name || '-'}</TableCell>
               <TableCell><UserRoleBadge role={user.role} /></TableCell>
               <TableCell><UserStatusBadge isActive={user.is_active} /></TableCell>
-              <TableCell>{new Date(user.created_at).toLocaleString('vi-VN')}</TableCell>
+              <TableCell>{formatDateTimeVN(user.created_at)}</TableCell>
               <TableCell>
                 <Tooltip title="Xem chi tiết">
                   <IconButton size="small" color="primary" onClick={() => onView(user)}>

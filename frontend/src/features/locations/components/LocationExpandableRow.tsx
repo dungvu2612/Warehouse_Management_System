@@ -15,6 +15,7 @@ import {
   Tooltip,
 } from '@mui/material'
 import { LocationTrayDropdown } from './LocationTrayDropdown'
+import { formatDateTimeVN } from '../../../shared/lib/datetime'
 import type { Location, LocationTray } from '../types/locationTypes'
 
 interface LocationExpandableRowProps {
@@ -55,7 +56,14 @@ export function LocationExpandableRow({
         onClick={() => onToggle(location)}
       >
         <TableCell sx={{ width: 52 }}>
-          <IconButton size="small" aria-label={expanded ? 'Thu danh sách khay' : 'Mở danh sách khay'}>
+          <IconButton
+            size="small"
+            aria-label={expanded ? 'Thu danh sách khay' : 'Mở danh sách khay'}
+            onClick={(event) => {
+              event.stopPropagation()
+              onToggle(location)
+            }}
+          >
             {expanded ? <KeyboardArrowDown fontSize="small" /> : <KeyboardArrowRight fontSize="small" />}
           </IconButton>
         </TableCell>
@@ -72,8 +80,8 @@ export function LocationExpandableRow({
             color={location.is_active ? 'success' : 'default'}
           />
         </TableCell>
-        <TableCell>{new Date(location.created_at).toLocaleString('vi-VN')}</TableCell>
-        <TableCell>{new Date(location.updated_at).toLocaleString('vi-VN')}</TableCell>
+        <TableCell>{formatDateTimeVN(location.created_at)}</TableCell>
+        <TableCell>{formatDateTimeVN(location.updated_at)}</TableCell>
         <TableCell sx={{ textAlign: 'center' }} onClick={(event) => event.stopPropagation()}>
           <Tooltip title="Sửa vị trí">
             <span>

@@ -14,7 +14,8 @@ import {
 import { Visibility, VisibilityOff } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 import { authApi } from '../api/authApi'
-import { useAuth } from '../../../app/providers/AuthProvider'
+import { useAuth } from '../../../app/providers/useAuth'
+import { getApiErrorInfo } from '../../../shared/lib/apiError'
 
 // Trang đăng nhập: hệ thống quản trị kho chỉ cho admin tạo user,
 // nên frontend chỉ giữ luồng login.
@@ -50,8 +51,17 @@ export function LoginPage() {
       // Lưu token/user vào context + localStorage.
       loginSuccess(data)
       navigate('/dashboard', { replace: true })
-    } catch (err: any) {
-      setError(err?.response?.data?.error || 'Đăng nhập thất bại')
+    } catch (err: unknown) {
+      const errorInfo = getApiErrorInfo(err)
+      if (errorInfo.code === 'ACCOUNT_LOCKED_BY_FAILED_LOGIN') {
+        setError('Tài khoản đã bị khóa do nhập sai mật khẩu quá nhiều lần. Vui lòng liên hệ Admin để mở khóa.')
+        return
+      }
+      if (errorInfo.code === 'LOGIN_RATE_LIMITED') {
+        setError('Bạn đã đăng nhập sai quá 15 lần. Vui lòng chờ một lúc rồi thử lại.')
+        return
+      }
+      setError(errorInfo.message || 'Đăng nhập thất bại')
     } finally {
       setLoading(false)
     }

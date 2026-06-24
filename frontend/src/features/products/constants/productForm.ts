@@ -18,4 +18,5 @@ export const defaultProductForm: ProductPayload = {
   unit: 'pcs',
   min_stock: 0,
   price: 0,
+  difficulty_weight: 1.0,
 }

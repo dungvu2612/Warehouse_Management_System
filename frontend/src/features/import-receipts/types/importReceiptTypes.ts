@@ -50,6 +50,15 @@ export interface CreateImportReceiptResponse {
   items: ImportReceiptItem[]
 }
 
+export interface UpdateImportReceiptResponse {
+  message: string
+  receipt: ImportReceipt
+}
+
+export interface DeleteImportReceiptResponse {
+  message: string
+}
+
 export interface ImportReceiptItemActionResponse {
   message: string
   item: ImportReceiptItem

@@ -9,6 +9,7 @@ import { http } from '../../../shared/lib/http'
 import type {
   CreateImportReceiptPayload,
   CreateImportReceiptResponse,
+  DeleteImportReceiptResponse,
   ImportReceipt,
   ImportReceiptItemActionResponse,
   LocationOption,
@@ -16,6 +17,7 @@ import type {
   PutawayRequest,
   PutawayRequestApproveResponse,
   TrayOption,
+  UpdateImportReceiptResponse,
 } from '../types/importReceiptTypes'
 
 export const importReceiptsApi = {
@@ -36,6 +38,19 @@ export const importReceiptsApi = {
     payload: CreateImportReceiptPayload,
   ): Promise<CreateImportReceiptResponse> => {
     const { data } = await http.post<CreateImportReceiptResponse>('/import-receipts', payload)
+    return data
+  },
+
+  updateImportReceipt: async (
+    id: number,
+    payload: CreateImportReceiptPayload,
+  ): Promise<UpdateImportReceiptResponse> => {
+    const { data } = await http.put<UpdateImportReceiptResponse>(`/import-receipts/${id}`, payload)
+    return data
+  },
+
+  deleteImportReceipt: async (id: number): Promise<DeleteImportReceiptResponse> => {
+    const { data } = await http.delete<DeleteImportReceiptResponse>(`/import-receipts/${id}`)
     return data
   },
 

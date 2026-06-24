@@ -46,7 +46,7 @@ export function UserManagementPage() {
   const updateStatusMutation = useUpdateUserStatusMutation()
   const deleteMutation = useDeleteUserMutation()
 
-  const users = usersQuery.data || []
+  const users = useMemo(() => usersQuery.data || [], [usersQuery.data])
   const paginatedUsers = useMemo(() => paginateItems(users, currentPage, DEFAULT_PAGE_SIZE), [users, currentPage])
 
   useEffect(() => {

@@ -15,6 +15,7 @@ import {
 } from '@mui/material'
 import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
 import { PRODUCT_IMAGE_SIZE } from '../../../shared/constants/productImage'
+import { PRODUCT_DIFFICULTY_OPTIONS } from '../constants/productDifficulty'
 import type { ProductPayload } from '../types/productTypes'
 
 interface ProductFormDialogProps {
@@ -27,6 +28,7 @@ interface ProductFormDialogProps {
   onClose: () => void
   onSubmit: () => void
   onChange: (next: ProductPayload) => void
+  onProductCodeManualChange?: (value: string) => void
   onImportImage: (file: File | null) => void
 }
 
@@ -41,6 +43,7 @@ export function ProductFormDialog({
   onClose,
   onSubmit,
   onChange,
+  onProductCodeManualChange,
   onImportImage,
 }: ProductFormDialogProps) {
   return (
@@ -49,10 +52,21 @@ export function ProductFormDialog({
       <DialogContent>
         <Stack spacing={1.6} sx={{ mt: 0.5 }}>
           <TextField
-            label="Mã sản phẩm (tự sinh)"
+            label="Mã sản phẩm"
             value={form.product_code}
-            slotProps={{ input: { readOnly: true } }}
-            helperText={isEditing ? 'Mã đã phát hành, không thay đổi khi cập nhật.' : 'Mã do hệ thống tự cấp khi lưu.'}
+            onChange={(e) => {
+              onProductCodeManualChange?.(e.target.value)
+              onChange({ ...form, product_code: e.target.value })
+            }}
+            slotProps={{ input: { readOnly: isEditing } }}
+            helperText={isEditing ? 'Mã đã phát hành, không thay đổi khi cập nhật.' : 'Có thể sửa hoặc để trống để hệ thống tự sinh.'}
+            fullWidth
+          />
+          <TextField
+            label="Mã QR"
+            value={form.qr_code}
+            onChange={(e) => onChange({ ...form, qr_code: e.target.value })}
+            helperText="Nếu để trống khi tạo mới, hệ thống dùng mã sản phẩm làm mã QR."
             fullWidth
           />
           <TextField
@@ -63,24 +77,32 @@ export function ProductFormDialog({
           />
           <Box>
             <InputLabel sx={{ mb: 0.8, fontSize: 13, color: 'text.secondary' }}>Ảnh sản phẩm</InputLabel>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ alignItems: 'center' }}>
+            <Stack
+              spacing={1.2}
+              sx={{
+                alignItems: 'center',
+                border: '1px dashed #cbd5e1',
+                borderRadius: 2,
+                px: 2,
+                py: 1.75,
+                textAlign: 'center',
+              }}
+            >
               <ProductImageThumb src={form.image_url} alt={form.product_name || 'Ảnh sản phẩm'} size={PRODUCT_IMAGE_SIZE} />
-              <Stack spacing={0.6}>
-                <Button variant="outlined" component="label">
-                  Import ảnh
-                  <input
-                    hidden
-                    accept="image/png,image/jpeg,image/webp"
-                    type="file"
-                    onChange={(e) => onImportImage(e.target.files?.[0] || null)}
-                  />
-                </Button>
-                <Typography variant="caption" color="text.secondary">
-                  Ảnh sẽ được chuẩn hóa về cùng kích thước trước khi lưu.
-                </Typography>
-              </Stack>
+              <Button variant="outlined" component="label">
+                Import ảnh
+                <input
+                  hidden
+                  accept="image/png,image/jpeg,image/webp"
+                  type="file"
+                  onChange={(e) => onImportImage(e.target.files?.[0] || null)}
+                />
+              </Button>
+              <Typography variant="caption" color="text.secondary">
+                Ảnh sẽ được chuẩn hóa về cùng kích thước trước khi lưu.
+              </Typography>
+              {!form.image_url && <FormHelperText sx={{ m: 0 }}>Chưa có ảnh sản phẩm.</FormHelperText>}
             </Stack>
-            {!form.image_url && <FormHelperText>Chưa có ảnh sản phẩm.</FormHelperText>}
           </Box>
           <TextField
             select
@@ -120,6 +142,19 @@ export function ProductFormDialog({
               fullWidth
             />
           </Stack>
+          <TextField
+            select
+            label="Độ khó xử lý"
+            value={form.difficulty_weight || 1.0}
+            onChange={(e) => onChange({ ...form, difficulty_weight: Number(e.target.value) })}
+            fullWidth
+          >
+            {PRODUCT_DIFFICULTY_OPTIONS.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </TextField>
           <TextField
             label="Mô tả"
             value={form.description}

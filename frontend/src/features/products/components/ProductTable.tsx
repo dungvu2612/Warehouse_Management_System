@@ -26,6 +26,7 @@ import {
 } from '@mui/material'
 import { ContentCopyOutlined, DeleteOutlined, EditOutlined, PrintOutlined, QrCode2Outlined } from '@mui/icons-material'
 import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
+import { productDifficultyLabel } from '../constants/productDifficulty'
 import type { Product } from '../types/productTypes'
 import { useEffect, useState } from 'react'
 import { toQrDataUrl } from '../../../shared/lib/qrCode'
@@ -116,8 +117,9 @@ export function ProductTable({
             <TableCell sx={{ fontWeight: 800 }}>Tên sản phẩm</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Loại</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Đơn vị</TableCell>
-            <TableCell sx={{ fontWeight: 800, textAlign: 'right' }}>Min stock</TableCell>
-            <TableCell sx={{ fontWeight: 800, textAlign: 'right' }}>Giá</TableCell>
+            <TableCell sx={{ fontWeight: 800, textAlign: 'left' }}>Min stock</TableCell>
+            <TableCell sx={{ fontWeight: 800, textAlign: 'left' }}>Giá</TableCell>
+            <TableCell sx={{ fontWeight: 800 }}>Độ khó</TableCell>
             <TableCell sx={{ fontWeight: 800 }}>Mô tả</TableCell>
             <TableCell sx={{ fontWeight: 800, textAlign: 'center' }}>Thao tác</TableCell>
           </TableRow>
@@ -126,19 +128,19 @@ export function ProductTable({
         <TableBody>
           {isLoading && (
             <TableRow>
-              <TableCell colSpan={11}>Đang tải dữ liệu...</TableCell>
+              <TableCell colSpan={12}>Đang tải dữ liệu...</TableCell>
             </TableRow>
           )}
 
           {isError && (
             <TableRow>
-              <TableCell colSpan={11}>Không tải được dữ liệu sản phẩm.</TableCell>
+              <TableCell colSpan={12}>Không tải được dữ liệu sản phẩm.</TableCell>
             </TableRow>
           )}
 
           {!isLoading && !isError && products.length === 0 && (
             <TableRow>
-              <TableCell colSpan={11}>Không có sản phẩm phù hợp.</TableCell>
+              <TableCell colSpan={12}>Không có sản phẩm phù hợp.</TableCell>
             </TableRow>
           )}
 
@@ -167,9 +169,12 @@ export function ProductTable({
                 />
               </TableCell>
               <TableCell>{product.unit}</TableCell>
-              <TableCell sx={{ textAlign: 'right' }}>{product.min_stock}</TableCell>
-              <TableCell sx={{ textAlign: 'right', fontWeight: 700 }}>
+              <TableCell sx={{ textAlign: 'left' }}>{product.min_stock}</TableCell>
+              <TableCell sx={{ textAlign: 'left', fontWeight: 700 }}>
                 {Number(product.price).toLocaleString('vi-VN')} đ
+              </TableCell>
+              <TableCell>
+                <Chip size="small" variant="outlined" label={productDifficultyLabel(product.difficulty_weight)} />
               </TableCell>
               <TableCell>{product.description || '-'}</TableCell>
               <TableCell sx={{ textAlign: 'center' }}>

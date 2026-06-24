@@ -30,8 +30,13 @@ import (
 )
 
 var (
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrInvalidAuthPayload = errors.New("username and password are required")
+	ErrInvalidCredentials         = errors.New("invalid credentials")
+	ErrInvalidAuthPayload         = errors.New("username and password are required")
+	ErrAccountLockedByFailedLogin = errors.New("account locked by failed login attempts")
+)
+
+const (
+	maxFailedLoginAttempts = 10
 )
 
 type AuthService interface {
@@ -61,10 +66,27 @@ func (s *authService) Login(username, password string) (string, *models.User, er
 	}
 
 	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)) != nil {
+		updatedUser, recordErr := s.repo.RecordFailedLogin(user.ID, maxFailedLoginAttempts)
+		if recordErr != nil {
+			return "", nil, recordErr
+		}
+		if !updatedUser.IsActive {
+			return "", nil, ErrAccountLockedByFailedLogin
+		}
 		return "", nil, ErrInvalidCredentials
 	}
 
-	token, err := utils.GenerateToken(user.ID, user.Username, user.Role)
+	if err := s.repo.ResetLoginFailures(user.ID); err != nil {
+		return "", nil, err
+	}
+
+	tokenVersion, err := s.repo.IncrementTokenVersion(user.ID)
+	if err != nil {
+		return "", nil, errors.New("failed to start login session")
+	}
+	user.TokenVersion = tokenVersion
+
+	token, err := utils.GenerateToken(user.ID, user.Username, user.Role, user.TokenVersion)
 	if err != nil {
 		return "", nil, errors.New("failed to generate token")
 	}

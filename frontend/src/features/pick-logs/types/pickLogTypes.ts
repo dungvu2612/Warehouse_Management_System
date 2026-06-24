@@ -19,7 +19,7 @@ export interface PickLog {
   note: string
 }
 
-export interface PickLogItem extends PickLog {}
+export type PickLogItem = PickLog
 
 export interface PickLogDisplayItem extends PickLog {
   order_code: string

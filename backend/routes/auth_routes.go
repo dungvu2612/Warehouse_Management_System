@@ -32,6 +32,6 @@ func AuthRoutes(r *echo.Echo) {
 	service := services.NewAuthService(repo)
 	handler := handlers.NewAuthHandler(service)
 
-	r.POST("/auth/login", adapt(handler.Login))
+	r.POST("/auth/login", adapt(handler.Login), middleware.LoginRateLimit())
 	r.GET("/auth/me", adapt(handler.Me), middleware.AuthRequired())
 }

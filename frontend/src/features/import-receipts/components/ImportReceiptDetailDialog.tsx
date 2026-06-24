@@ -25,6 +25,7 @@ import {
 } from '@mui/material'
 import { useState } from 'react'
 import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
+import { formatDateTimeVN } from '../../../shared/lib/datetime'
 import type { ImportReceipt } from '../types/importReceiptTypes'
 
 interface ImportReceiptDetailDialogProps {
@@ -69,7 +70,6 @@ export function ImportReceiptDetailDialog({
   const [staffByItemId, setStaffByItemId] = useState<Record<number, number>>({})
   const productMap = new Map(products.map((product) => [product.id, product]))
   const trayMap = new Map(trays.map((tray) => [tray.id, tray]))
-  const staffMap = new Map(staffOptions.map((staff) => [staff.id, staff]))
   const itemStatusLabel: Record<string, string> = {
     WAITING: 'Chờ nhận',
     IMPORTING: 'Đang nhập',
@@ -78,9 +78,22 @@ export function ImportReceiptDetailDialog({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="xl"
+      slotProps={{
+        paper: {
+          sx: {
+            width: { xs: 'calc(100vw - 16px)', md: 'calc(100vw - 48px)' },
+            maxWidth: 1000,
+          },
+        },
+      }}
+    >
       <DialogTitle sx={{ fontWeight: 900 }}>Chi tiết phiếu nhập</DialogTitle>
-      <DialogContent>
+      <DialogContent sx={{ px: { xs: 1.5, md: 3 } }}>
         {isLoading && <Typography>Đang tải chi tiết phiếu nhập...</Typography>}
 
         {isError && <Alert severity="error">Không tải được chi tiết phiếu nhập.</Alert>}
@@ -97,45 +110,51 @@ export function ImportReceiptDetailDialog({
               <strong>Ghi chú:</strong> {receipt.note || '-'}
             </Typography>
             <Typography variant="body2">
-              <strong>Ngày tạo:</strong> {new Date(receipt.created_at).toLocaleString('vi-VN')}
+              <strong>Ngày tạo:</strong> {formatDateTimeVN(receipt.created_at)}
             </Typography>
             <Typography variant="body2">
               <strong>Trạng thái phiếu:</strong> {receipt.status || 'WAITING'}
             </Typography>
 
-            <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: 2, mt: 1 }}>
-              <Table>
+            <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: 2, mt: 1, maxHeight: '68vh' }}>
+              <Table stickyHeader size="small" sx={{ minWidth: canManageAssignment ? 920 : 760 }}>
                 <TableHead sx={{ bgcolor: 'grey.50' }}>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 800 }}>ID dòng</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Sản phẩm</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: 82 }}>ID dòng</TableCell>
+                    <TableCell sx={{ fontWeight: 800, minWidth: 300 }}>Sản phẩm</TableCell>
                     <TableCell sx={{ fontWeight: 800, textAlign: 'right' }}>Dự kiến</TableCell>
                     <TableCell sx={{ fontWeight: 800, textAlign: 'right' }}>Đã nhập</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Khay thực nhập</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Người phụ trách</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Trạng thái</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Hoàn thành</TableCell>
-                    {canManageAssignment && <TableCell sx={{ fontWeight: 800 }}>Phân công</TableCell>}
+                    <TableCell sx={{ fontWeight: 800, minWidth: 120 }}>Khay thực nhập</TableCell>
+                    <TableCell sx={{ fontWeight: 800, minWidth: 118 }}>Trạng thái</TableCell>
+                    {canManageAssignment && (
+                      <TableCell
+                        sx={{
+                          fontWeight: 800,
+                          minWidth: 230,
+                        }}
+                      >
+                        Phân công
+                      </TableCell>
+                    )}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {receipt.items.map((item) => {
                     const product = productMap.get(item.product_id)
                     const actualTray = item.actual_tray_id ? trayMap.get(item.actual_tray_id) : null
-                    const assignedStaff = item.assigned_to ? staffMap.get(item.assigned_to) : null
                     const selectedStaffId = staffByItemId[item.id] || item.assigned_to || 0
                     const hasImported = (item.actual_quantity || 0) > 0
                     return (
                       <TableRow key={item.id} hover>
                         <TableCell>#{item.id}</TableCell>
-                        <TableCell>
+                        <TableCell sx={{ maxWidth: 360 }}>
                           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                             <ProductImageThumb
                               src={product?.image_url || ''}
                               alt={product?.product_name || `Sản phẩm ${item.product_id}`}
                               size={40}
                             />
-                            <span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {product ? `${product.product_code} - ${product.product_name}` : `#${item.product_id}`}
                             </span>
                           </Stack>
@@ -144,22 +163,12 @@ export function ImportReceiptDetailDialog({
                         <TableCell sx={{ textAlign: 'right', fontWeight: 800 }}>{item.actual_quantity || 0}</TableCell>
                         <TableCell>{actualTray?.tray_code || (item.actual_tray_id ? `#${item.actual_tray_id}` : '-')}</TableCell>
                         <TableCell>
-                          {assignedStaff
-                            ? assignedStaff.full_name || assignedStaff.username
-                            : item.assigned_to
-                              ? `#${item.assigned_to}`
-                              : 'Chưa có người nhận'}
-                        </TableCell>
-                        <TableCell>
                           <Chip
                             size="small"
                             color={item.status === 'DONE' ? 'success' : item.status === 'WAITING' ? 'warning' : 'info'}
                             label={itemStatusLabel[item.status] || item.status || 'Chờ nhận'}
                             sx={{ fontWeight: 800 }}
                           />
-                        </TableCell>
-                        <TableCell>
-                          {item.completed_at ? new Date(item.completed_at).toLocaleString('vi-VN') : '-'}
                         </TableCell>
                         {canManageAssignment && (
                           <TableCell>

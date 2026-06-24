@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Add, Refresh } from '@mui/icons-material'
 import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
-import { useAuth } from '../../../app/providers/AuthProvider'
+import { useAuth } from '../../../app/providers/useAuth'
 import { TrayCreateDialog } from '../components/TrayCreateDialog'
 import { TrayTable } from '../components/TrayTable'
 import {
@@ -54,6 +54,8 @@ export function TraysPage() {
   const createMutation = useCreateTrayMutation({
     onSuccess: () => {
       setBanner({ type: 'success', text: 'Tạo khay thành công.' })
+      setSearch('')
+      setCurrentPage(1)
       setFormOpen(false)
       setForm(defaultTrayForm)
       setFormError('')

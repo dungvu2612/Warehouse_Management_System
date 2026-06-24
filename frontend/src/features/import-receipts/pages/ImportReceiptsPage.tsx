@@ -9,18 +9,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Add, Refresh } from '@mui/icons-material'
 import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
-import { useAuth } from '../../../app/providers/AuthProvider'
+import { useAuth } from '../../../app/providers/useAuth'
 import { ImportReceiptCreateDialog } from '../components/ImportReceiptCreateDialog'
 import { ImportReceiptDetailDialog } from '../components/ImportReceiptDetailDialog'
 import { ImportReceiptTable } from '../components/ImportReceiptTable'
 import {
   useAssignImportReceiptItemMutation,
   useCreateImportReceiptMutation,
+  useDeleteImportReceiptMutation,
   useImportReceiptDetailQuery,
   useImportReceiptLocationsQuery,
   useImportReceiptProductsQuery,
   useImportReceiptTraysQuery,
   useImportReceiptsQuery,
+  useUpdateImportReceiptMutation,
   useUnassignImportReceiptItemMutation,
 } from '../hooks/useImportReceipts'
 import { useUsersQuery } from '../../users/hooks/useUsers'
@@ -49,6 +51,10 @@ export function ImportReceiptsPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState<CreateImportReceiptPayload>(defaultCreateForm)
   const [createError, setCreateError] = useState('')
+  const [editingReceiptId, setEditingReceiptId] = useState<number | null>(null)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editForm, setEditForm] = useState<CreateImportReceiptPayload>(defaultCreateForm)
+  const [editError, setEditError] = useState('')
 
   const [selectedReceiptId, setSelectedReceiptId] = useState<number | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -91,6 +97,22 @@ export function ImportReceiptsPage() {
     onError: (error) => setCreateError(mapImportReceiptApiError(error)),
   })
 
+  const updateMutation = useUpdateImportReceiptMutation({
+    onSuccess: (message) => {
+      setBanner({ type: 'success', text: message || 'Cập nhật phiếu nhập thành công.' })
+      setEditOpen(false)
+      setEditingReceiptId(null)
+      setEditForm(defaultCreateForm)
+      setEditError('')
+    },
+    onError: (error) => setEditError(mapImportReceiptApiError(error)),
+  })
+
+  const deleteMutation = useDeleteImportReceiptMutation({
+    onSuccess: (message) => setBanner({ type: 'success', text: message || 'Xóa phiếu nhập thành công.' }),
+    onError: (error) => setBanner({ type: 'error', text: mapImportReceiptApiError(error) }),
+  })
+
   const assignItemMutation = useAssignImportReceiptItemMutation({
     onSuccess: (message) => setBanner({ type: 'success', text: message || 'Đã gán công việc nhập kho cho nhân viên.' }),
     onError: (error) => setBanner({ type: 'error', text: mapImportReceiptApiError(error) }),
@@ -120,6 +142,51 @@ export function ImportReceiptsPage() {
     }
 
     createMutation.mutate(normalizeImportReceiptPayload(createForm))
+  }
+
+  const handleOpenEdit = (id: number) => {
+    if (!isAdmin) return
+    const receipt = receiptsQuery.data?.find((item) => item.id === id)
+    if (!receipt) {
+      setBanner({ type: 'error', text: 'Không tìm thấy phiếu nhập để sửa.' })
+      return
+    }
+    setEditingReceiptId(id)
+    setEditForm({
+      supplier_name: receipt.supplier_name || '',
+      note: receipt.note || '',
+      items: receipt.items.map((item) => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+      })),
+    })
+    setEditError('')
+    setEditOpen(true)
+  }
+
+  const handleSubmitEdit = () => {
+    if (!isAdmin || !editingReceiptId) return
+    setEditError('')
+
+    const validationError = validateImportReceiptForm(editForm)
+    if (validationError) {
+      setEditError(validationError)
+      return
+    }
+
+    updateMutation.mutate({
+      id: editingReceiptId,
+      payload: normalizeImportReceiptPayload(editForm),
+    })
+  }
+
+  const handleDelete = (id: number) => {
+    if (!isAdmin) return
+    const receipt = receiptsQuery.data?.find((item) => item.id === id)
+    const label = receipt?.receipt_code || `#${id}`
+    const confirmed = window.confirm(`Bạn có chắc muốn xóa phiếu nhập ${label}?`)
+    if (!confirmed) return
+    deleteMutation.mutate(id)
   }
 
   const handleViewDetail = (id: number) => {
@@ -182,7 +249,10 @@ export function ImportReceiptsPage() {
           receipts={paginatedReceipts}
           isLoading={receiptsQuery.isLoading}
           isError={receiptsQuery.isError}
+          canManage={isAdmin}
           onViewDetail={handleViewDetail}
+          onEdit={handleOpenEdit}
+          onDelete={handleDelete}
         />
         <ListPagination
           currentPage={currentPage}
@@ -194,6 +264,7 @@ export function ImportReceiptsPage() {
 
       <ImportReceiptCreateDialog
         open={createOpen}
+        mode="create"
         form={createForm}
         productOptions={productsQuery.data || []}
         trayOptions={traysQuery.data || []}
@@ -203,6 +274,24 @@ export function ImportReceiptsPage() {
         onClose={() => setCreateOpen(false)}
         onSubmit={handleSubmitCreate}
         onChange={setCreateForm}
+      />
+
+      <ImportReceiptCreateDialog
+        open={editOpen}
+        mode="edit"
+        form={editForm}
+        productOptions={productsQuery.data || []}
+        trayOptions={traysQuery.data || []}
+        locationOptions={locationsQuery.data || []}
+        isSubmitting={updateMutation.isPending}
+        errorMessage={editError}
+        onClose={() => {
+          setEditOpen(false)
+          setEditingReceiptId(null)
+          setEditError('')
+        }}
+        onSubmit={handleSubmitEdit}
+        onChange={setEditForm}
       />
 
       <ImportReceiptDetailDialog

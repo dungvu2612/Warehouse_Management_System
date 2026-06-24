@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Add, Refresh } from '@mui/icons-material'
 import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
-import { useAuth } from '../../../app/providers/AuthProvider'
+import { useAuth } from '../../../app/providers/useAuth'
 import { LocationCreateDialog } from '../components/LocationCreateDialog'
 import { LocationTable } from '../components/LocationTable'
 import {
@@ -54,6 +54,8 @@ export function LocationsPage() {
   const createMutation = useCreateLocationMutation({
     onSuccess: () => {
       setBanner({ type: 'success', text: 'Tạo vị trí thành công.' })
+      setSearch('')
+      setCurrentPage(1)
       setFormOpen(false)
       setForm(defaultLocationForm)
       setFormError('')

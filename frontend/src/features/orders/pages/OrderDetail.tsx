@@ -33,7 +33,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom'
 import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
 import { toQrDataUrl } from '../../../shared/lib/qrCode'
-import { useAuth } from '../../../app/providers/AuthProvider'
+import { useAuth } from '../../../app/providers/useAuth'
 import { usePickLogsQuery } from '../../pick-logs/hooks/usePickLogs'
 import { PickLogsTable } from '../../pick-logs/components/PickLogsTable'
 import { pickLogsService } from '../../pick-logs/services/pickLogsService'

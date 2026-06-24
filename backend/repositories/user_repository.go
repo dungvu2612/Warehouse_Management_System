@@ -98,6 +98,9 @@ func (r *userRepository) SetStatus(id uint, isActive bool) (*models.User, error)
 		return nil, err
 	}
 	user.IsActive = isActive
+	if isActive {
+		user.FailedLoginAttempts = 0
+	}
 	return r.Update(*user)
 }
 

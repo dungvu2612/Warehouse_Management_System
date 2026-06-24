@@ -26,6 +26,7 @@ import type { StaffTaskStatus } from '../types/staffTasks.types'
 import { StaffTaskList } from '../components/StaffTaskList'
 import { StaffTaskFilters } from '../components/StaffTaskFilters'
 import { PdaLayout } from '../../pda/layout/PdaLayout'
+import { useAuth } from '../../../app/providers/useAuth'
 
 function getApiErrorData(error: unknown): { error_code?: string; error?: string } {
   if (!error || typeof error !== 'object') return {}
@@ -46,6 +47,7 @@ function mapStaffTaskError(error: unknown) {
 export function StaffTasksPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StaffTaskStatus | 'ALL'>('ALL')
   const [banner, setBanner] = useState<{ severity: 'success' | 'error'; text: string } | null>(null)
@@ -85,8 +87,8 @@ export function StaffTasksPage() {
   }, [filteredTasks])
 
   const myTasks = useMemo(() => {
-    return filteredTasks.filter((item) => item.status === 'PICKING' && item.assigned_to)
-  }, [filteredTasks])
+    return filteredTasks.filter((item) => item.status === 'PICKING' && item.assigned_to === user?.id)
+  }, [filteredTasks, user?.id])
 
   const handleStart = (orderId: number) => {
     navigate(`/staff/picking/${orderId}`)

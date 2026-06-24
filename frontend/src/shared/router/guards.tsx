@@ -8,7 +8,7 @@
 
 import type { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
-import { useAuth } from '../../app/providers/AuthProvider'
+import { useAuth } from '../../app/providers/useAuth'
 import type { UserRole } from '../types/auth'
 
 // Guard cho route cần đăng nhập.

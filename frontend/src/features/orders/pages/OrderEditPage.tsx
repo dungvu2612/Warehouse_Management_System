@@ -29,7 +29,7 @@ import {
 } from '@mui/material'
 import { ArrowBack } from '@mui/icons-material'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useAuth } from '../../../app/providers/AuthProvider'
+import { useAuth } from '../../../app/providers/useAuth'
 import { useOrderByIdQuery, useUpdateOrderMutation } from '../hooks/useOrders'
 import { OrderItemsEditor, type OrderEditorItem } from '../components/OrderItemsEditor'
 import { useProductsQuery } from '../../products/hooks/useProducts'

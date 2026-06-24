@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Add, Refresh } from '@mui/icons-material'
 import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
-import { useAuth } from '../../../app/providers/AuthProvider'
+import { useAuth } from '../../../app/providers/useAuth'
 import { defaultBOMForm } from '../constants/bomForm'
 import {
   useBOMComponentProductsQuery,

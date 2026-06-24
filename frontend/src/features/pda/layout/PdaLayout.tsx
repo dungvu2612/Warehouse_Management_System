@@ -15,7 +15,7 @@ import {
   Stack,
 } from '@mui/material'
 import { useLocation } from 'react-router-dom'
-import { useAuth } from '../../../app/providers/AuthProvider'
+import { useAuth } from '../../../app/providers/useAuth'
 import { PdaHeader } from '../components/PdaHeader'
 import { PdaBottomActionBar } from '../components/PdaBottomActionBar'
 import { AppNavigationDrawer, appDrawerWidth } from '../../../layouts/AppNavigationDrawer'

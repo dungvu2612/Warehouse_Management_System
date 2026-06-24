@@ -44,6 +44,7 @@ interface OrderItemsEditorProps {
   items: OrderEditorItem[]
   onChange: (items: OrderEditorItem[]) => void
   canEditPrice: boolean
+  availableQuantityByProductId?: Map<number, number>
   onInspectProduct?: (productId: number) => void
 }
 
@@ -56,11 +57,16 @@ function productTypeLabel(productType: string): string {
   return productType === 'FINISHED_GOOD' ? 'Thành phẩm' : 'Linh kiện'
 }
 
+function stockChipColor(quantity: number): 'success' | 'warning' {
+  return quantity > 0 ? 'success' : 'warning'
+}
+
 export function OrderItemsEditor({
   products,
   items,
   onChange,
   canEditPrice,
+  availableQuantityByProductId,
   onInspectProduct,
 }: OrderItemsEditorProps) {
   const [productFilter, setProductFilter] = useState<ProductFilterValue>(FILTER_ALL)
@@ -77,6 +83,7 @@ export function OrderItemsEditor({
     () => activeProducts.filter((product) => productFilter === FILTER_ALL || product.product_type === productFilter),
     [activeProducts, productFilter],
   )
+  const getAvailableQuantity = (productId: number) => availableQuantityByProductId?.get(productId) ?? Number.POSITIVE_INFINITY
 
   const totalAmount = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0),
@@ -94,18 +101,22 @@ export function OrderItemsEditor({
     if (!selectedProduct) return
     if (addQuantity <= 0) return
     if (addPrice < 0) return
+    const availableQuantity = getAvailableQuantity(selectedProduct.id)
 
     const existingIndex = items.findIndex((item) => item.product_id === selectedProduct.id)
     if (existingIndex >= 0) {
+      const nextQuantity = items[existingIndex].quantity + addQuantity
+      if (nextQuantity > availableQuantity) return
       const ok = window.confirm('Sản phẩm đã có trong đơn, bạn muốn tăng số lượng không?')
       if (!ok) return
       const nextItems = [...items]
       nextItems[existingIndex] = {
         ...nextItems[existingIndex],
-        quantity: nextItems[existingIndex].quantity + addQuantity,
+        quantity: nextQuantity,
       }
       onChange(nextItems)
     } else {
+      if (addQuantity > availableQuantity) return
       onChange([
         ...items,
         { product_id: selectedProduct.id, quantity: addQuantity, unit_price: addPrice },
@@ -121,7 +132,12 @@ export function OrderItemsEditor({
   // Cách dùng: truyền patch cần đổi (quantity hoặc unit_price), hàm sẽ merge và emit onChange.
   const updateItem = (index: number, patch: Partial<OrderEditorItem>) => {
     const nextItems = [...items]
-    nextItems[index] = { ...nextItems[index], ...patch }
+    const currentItem = nextItems[index]
+    const nextQuantity =
+      patch.quantity === undefined
+        ? currentItem.quantity
+        : Math.min(Math.max(1, patch.quantity), getAvailableQuantity(currentItem.product_id))
+    nextItems[index] = { ...currentItem, ...patch, quantity: nextQuantity }
     onChange(nextItems)
   }
 
@@ -142,7 +158,7 @@ export function OrderItemsEditor({
           label="Lọc loại sản phẩm"
           value={productFilter}
           onChange={(event) => setProductFilter(event.target.value as ProductFilterValue)}
-          sx={{ minWidth: 180 }}
+          sx={{ minWidth: 130 }}
         >
           <MenuItem value={FILTER_ALL}>Tất cả</MenuItem>
           <MenuItem value={FILTER_FINISHED}>Thành phẩm</MenuItem>
@@ -157,12 +173,29 @@ export function OrderItemsEditor({
             setAddPrice(Number(option?.price || 0))
           }}
           getOptionLabel={(option) => `${option.product_code} - ${option.product_name}`}
+          getOptionDisabled={(option) => getAvailableQuantity(option.id) <= 0}
           fullWidth
+          noOptionsText="Không có sản phẩm đã có khay"
+          renderOption={(props, option) => (
+            <li {...props} key={option.id}>
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <span>{option.product_code} - {option.product_name}</span>
+                {availableQuantityByProductId && (
+                  <Chip
+                    size="small"
+                    color={stockChipColor(getAvailableQuantity(option.id))}
+                    label={`Tồn ${getAvailableQuantity(option.id)}`}
+                  />
+                )}
+              </Stack>
+            </li>
+          )}
           renderInput={(params) => (
             <TextField
               {...params}
               label="Chọn sản phẩm"
-              placeholder="Tìm theo mã/tên sản phẩm"
+              placeholder="Tìm the
+              o mã/tên sản phẩm"
             />
           )}
         />
@@ -212,6 +245,7 @@ export function OrderItemsEditor({
             {items.map((item, index) => {
               const product = productById.get(item.product_id)
               const lineTotal = Number(item.quantity || 0) * Number(item.unit_price || 0)
+              const availableQuantity = getAvailableQuantity(item.product_id)
               return (
                 <TableRow key={`${item.product_id}-${index}`}>
                   <TableCell sx={{ fontFamily: 'monospace', fontWeight: 800 }}>{product?.product_code || '-'}</TableCell>
@@ -239,6 +273,11 @@ export function OrderItemsEditor({
                       <IconButton size="small" onClick={() => updateItem(index, { quantity: item.quantity + 1 })}>
                         <Add fontSize="small" />
                       </IconButton>
+                      {availableQuantityByProductId && (
+                        <Typography variant="caption" color="text.secondary">
+                          Tồn {availableQuantity}
+                        </Typography>
+                      )}
                     </Stack>
                   </TableCell>
                   <TableCell>

@@ -21,11 +21,16 @@ import type {
   ProductType,
 } from '../types/productTypes'
 
+function sortProductsNewestFirst(products: Product[]): Product[] {
+  return [...products].sort((a, b) => b.id - a.id)
+}
+
 // Service module products.
 export const productService = {
   // Lay danh sach products active.
   getProducts: async (): Promise<Product[]> => {
-    return productsApi.getProducts()
+    const products = await productsApi.getProducts()
+    return sortProductsNewestFirst(products)
   },
 
   // Tao product moi.
@@ -60,17 +65,22 @@ export const productService = {
     const keyword = keywordRaw.trim().toLowerCase()
 
     // Loc theo type truoc.
-    const typeFiltered = products.filter((product) => product.product_type === type)
+    const typeFiltered = sortProductsNewestFirst(products).filter((product) => product.product_type === type)
 
     // Khong co keyword thi tra luon.
     if (!keyword) return typeFiltered
 
-    // Co keyword thi loc tiep theo ma/ten/don vi.
-    return typeFiltered.filter(
-      (product) =>
-        product.product_code.toLowerCase().includes(keyword) ||
-        product.product_name.toLowerCase().includes(keyword) ||
-        product.unit.toLowerCase().includes(keyword),
-    )
+    // Co keyword thi loc tiep theo ma/ten/don vi, bao gom chuoi hien thi "MA - Ten".
+    return typeFiltered.filter((product) => {
+      const code = product.product_code.toLowerCase()
+      const name = product.product_name.toLowerCase()
+      const displayText = `${code} - ${name}`
+      return (
+        code.includes(keyword) ||
+        name.includes(keyword) ||
+        displayText.includes(keyword) ||
+        product.unit.toLowerCase().includes(keyword)
+      )
+    })
   },
 }

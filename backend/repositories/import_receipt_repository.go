@@ -39,6 +39,13 @@ type ImportReceiptCreateItem struct {
 	Quantity  int
 }
 
+type ImportReceiptUpdateInput struct {
+	ID           uint
+	SupplierName string
+	Note         string
+	Items        []ImportReceiptCreateItem
+}
+
 type ImportReceiptTaskRow struct {
 	ID               uint       `json:"id"`
 	ReceiptID        uint       `json:"receipt_id"`
@@ -83,6 +90,8 @@ type ImportReceiptRepository interface {
 		createdBy uint,
 		items []ImportReceiptCreateItem,
 	) (*models.ImportReceipt, []models.ImportReceiptItem, error)
+	UpdateReceiptWithItems(input ImportReceiptUpdateInput) (*models.ImportReceipt, error)
+	DeleteReceiptByID(id uint) error
 	FindAll() ([]models.ImportReceipt, error)
 	FindByID(id uint) (*models.ImportReceipt, error)
 	FindStaffImportTaskRows(userID uint, role string) ([]ImportReceiptTaskRow, error)
@@ -104,6 +113,7 @@ var (
 	ErrImportTaskNotAssignedToYou = errors.New("import task not assigned to current user")
 	ErrImportTaskAlreadyDone      = errors.New("import task already done")
 	ErrImportTaskHasQuantity      = errors.New("import task has imported quantity")
+	ErrImportReceiptLocked        = errors.New("import receipt already has active work")
 	ErrImportQuantityExceeded     = errors.New("import quantity exceeded expected quantity")
 	ErrInvalidImportQuantity      = errors.New("invalid import quantity")
 )
@@ -184,6 +194,101 @@ func (r *importReceiptRepository) CreateReceiptWithItemsAndInventory(
 	}
 
 	return &createdReceipt, createdItems, nil
+}
+
+func (r *importReceiptRepository) ensureReceiptEditableTx(tx *gorm.DB, receiptID uint) error {
+	var receipt models.ImportReceipt
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&receipt, receiptID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrImportReceiptNotFound
+		}
+		return err
+	}
+
+	var lockedCount int64
+	if err := tx.Model(&models.ImportReceiptItem{}).
+		Where("receipt_id = ?", receiptID).
+		Where("(COALESCE(actual_quantity, 0) > 0 OR assigned_to IS NOT NULL OR COALESCE(status, 'WAITING') <> ?)", "WAITING").
+		Count(&lockedCount).Error; err != nil {
+		return err
+	}
+	if lockedCount > 0 {
+		return ErrImportReceiptLocked
+	}
+
+	return nil
+}
+
+func (r *importReceiptRepository) UpdateReceiptWithItems(input ImportReceiptUpdateInput) (*models.ImportReceipt, error) {
+	var updatedReceipt models.ImportReceipt
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := r.ensureReceiptEditableTx(tx, input.ID); err != nil {
+			return err
+		}
+
+		if err := tx.Model(&models.ImportReceipt{}).Where("id = ?", input.ID).Updates(map[string]interface{}{
+			"supplier_name": input.SupplierName,
+			"note":          input.Note,
+			"status":        "WAITING",
+		}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Where("receipt_id = ?", input.ID).Delete(&models.ImportReceiptItem{}).Error; err != nil {
+			return err
+		}
+
+		newItems := make([]models.ImportReceiptItem, 0, len(input.Items))
+		for _, item := range input.Items {
+			var product models.Product
+			if err := tx.Where("id = ? AND is_active = ?", item.ProductID, true).First(&product).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return ErrProductNotFound
+				}
+				return err
+			}
+
+			newItems = append(newItems, models.ImportReceiptItem{
+				ReceiptID: input.ID,
+				ProductID: item.ProductID,
+				Quantity:  item.Quantity,
+				Status:    "WAITING",
+			})
+		}
+		if err := tx.Create(&newItems).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Preload("Items").First(&updatedReceipt, input.ID).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &updatedReceipt, nil
+}
+
+func (r *importReceiptRepository) DeleteReceiptByID(id uint) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := r.ensureReceiptEditableTx(tx, id); err != nil {
+			return err
+		}
+		if err := tx.Where("receipt_id = ?", id).Delete(&models.ImportReceiptItem{}).Error; err != nil {
+			return err
+		}
+		result := tx.Delete(&models.ImportReceipt{}, id)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrImportReceiptNotFound
+		}
+		return nil
+	})
 }
 
 // FindAll lấy danh sách phiếu nhập theo thứ tự mới nhất.
@@ -312,7 +417,10 @@ func (r *importReceiptRepository) ClaimImportReceiptItem(itemID uint, userID uin
 				return ErrImportTaskAlreadyAssigned
 			}
 		}
-		return tx.First(&item, itemID).Error
+		if err := tx.First(&item, itemID).Error; err != nil {
+			return err
+		}
+		return refreshImportReceiptStatusTx(tx, item.ReceiptID)
 	})
 	if err != nil {
 		return nil, err
@@ -541,10 +649,20 @@ func refreshImportReceiptStatusTx(tx *gorm.DB, receiptID uint) error {
 		return err
 	}
 
-	status := "PROCESSING"
 	if done == total {
-		status = "COMPLETED"
+		return tx.Model(&models.ImportReceipt{}).Where("id = ?", receiptID).Update("status", "COMPLETED").Error
 	}
 
+	var active int64
+	if err := tx.Model(&models.ImportReceiptItem{}).
+		Where("receipt_id = ? AND (assigned_to IS NOT NULL OR status IN ?)", receiptID, []string{"IMPORTING", "PARTIAL", "PROCESSING"}).
+		Count(&active).Error; err != nil {
+		return err
+	}
+
+	status := "WAITING"
+	if active > 0 || done > 0 {
+		status = "PROCESSING"
+	}
 	return tx.Model(&models.ImportReceipt{}).Where("id = ?", receiptID).Update("status", status).Error
 }

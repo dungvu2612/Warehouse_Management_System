@@ -8,9 +8,12 @@ import (
 	"time"
 
 	"quan_ly_kho/config"
-	_ "quan_ly_kho/docs"
+	"quan_ly_kho/docs"
+	"quan_ly_kho/notifications"
 	"quan_ly_kho/realtime"
+	"quan_ly_kho/repositories"
 	"quan_ly_kho/routes"
+	"quan_ly_kho/services"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
@@ -48,6 +51,7 @@ func (b *validatingBinder) Bind(i interface{}, c echo.Context) error {
 // @description Nhập JWT token theo dạng: Bearer <token>
 func main() {
 	_ = godotenv.Load()
+	docs.SwaggerInfo.BasePath = envValue("SWAGGER_BASE_PATH", "/api")
 	config.ConnectDatabase()
 	config.RunDatabaseMigrations()
 	config.SeedDefaultUsers()
@@ -65,6 +69,9 @@ func main() {
 		MaxAge:           int((12 * time.Hour).Seconds()),
 	}))
 	e.Use(realtime.DataChangeMiddleware())
+	notificationRepo := repositories.NewNotificationRepository(config.DB)
+	notificationService := services.NewNotificationService(notificationRepo)
+	e.Use(notifications.DataChangeMiddleware(notificationService))
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, echo.Map{
@@ -81,10 +88,12 @@ func main() {
 	routes.ImportReceiptRoutes(e)
 	routes.InventoryRoutes(e)
 	routes.OrderRoutes(e)
+	routes.StaffReportRoutes(e)
 	routes.StaffRoutes(e)
 	routes.PickLogRoutes(e)
 	routes.StockTransactionRoutes(e)
 	routes.LocationRoutes(e)
+	routes.NotificationRoutes(e)
 	routes.TrayRoutes(e)
 	routes.ProductRoutes(e)
 	routes.UserRoutes(e)
@@ -141,6 +150,7 @@ func firstExistingDir(candidates []string) string {
 func isAPIRoute(path string) bool {
 	apiPrefixes := []string{
 		"/auth",
+		"/admin",
 		"/audit",
 		"/boms",
 		"/dashboard",
@@ -148,6 +158,7 @@ func isAPIRoute(path string) bool {
 		"/import-receipts",
 		"/inventory",
 		"/locations",
+		"/notifications",
 		"/orders",
 		"/pick-logs",
 		"/products",

@@ -14,10 +14,15 @@ import type {
   TrayPayload,
 } from '../types/trayTypes'
 
+function sortTraysNewestFirst<T extends { id: number }>(trays: T[]): T[] {
+  return [...trays].sort((a, b) => b.id - a.id)
+}
+
 export const trayService = {
   // Ghi chú: Lay danh sach trays tu backend.
   getTrays: async (): Promise<Tray[]> => {
-    return traysApi.getTrays()
+    const trays = await traysApi.getTrays()
+    return sortTraysNewestFirst(trays)
   },
 
   // Ghi chú: Tao tray moi.
@@ -57,7 +62,7 @@ export const trayService = {
     const locationMap = new Map<number, LocationOption>(locations.map((location) => [location.id, location]))
     const productMap = new Map<number, ProductOption>(products.map((product) => [product.id, product]))
 
-    return trays.map((tray) => {
+    return sortTraysNewestFirst(trays).map((tray) => {
       const location = locationMap.get(tray.location_id)
       const product = productMap.get(tray.product_id)
       return {
@@ -73,9 +78,10 @@ export const trayService = {
 
   filterTraysByKeyword: (trays: TrayDisplay[], keywordRaw: string): TrayDisplay[] => {
     const keyword = keywordRaw.trim().toLowerCase()
-    if (!keyword) return trays
+    const newestFirst = sortTraysNewestFirst(trays)
+    if (!keyword) return newestFirst
 
-    return trays.filter(
+    return newestFirst.filter(
       (tray) =>
         tray.tray_code.toLowerCase().includes(keyword) ||
         tray.qr_code.toLowerCase().includes(keyword) ||

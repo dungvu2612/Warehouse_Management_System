@@ -48,15 +48,16 @@ func NewProductHandler(service services.ProductService) *ProductHandler {
 
 // Request DTO cho layer HTTP.
 type productRequest struct {
-	ProductCode string  `json:"product_code" binding:"omitempty,max=100"`
-	QRCode      string  `json:"qr_code" binding:"omitempty,max=100"`
-	ProductName string  `json:"product_name" binding:"required,max=255"`
-	ProductType string  `json:"product_type" binding:"omitempty,max=30"`
-	ImageURL    string  `json:"image_url"`
-	Description string  `json:"description"`
-	Unit        string  `json:"unit" binding:"omitempty,max=50"`
-	MinStock    int     `json:"min_stock" binding:"gte=0"`
-	Price       float64 `json:"price" binding:"gte=0"`
+	ProductCode      string   `json:"product_code" binding:"omitempty,max=100"`
+	QRCode           string   `json:"qr_code" binding:"omitempty,max=100"`
+	ProductName      string   `json:"product_name" binding:"required,max=255"`
+	ProductType      string   `json:"product_type" binding:"omitempty,max=30"`
+	ImageURL         string   `json:"image_url"`
+	Description      string   `json:"description"`
+	Unit             string   `json:"unit" binding:"omitempty,max=50"`
+	MinStock         int      `json:"min_stock" binding:"gte=0"`
+	Price            float64  `json:"price" binding:"gte=0"`
+	DifficultyWeight *float64 `json:"difficulty_weight"`
 }
 
 func parseProductID(c echo.Context) (uint, bool) {
@@ -69,7 +70,7 @@ func parseProductID(c echo.Context) (uint, bool) {
 }
 
 func toProductInput(req productRequest) services.ProductInput {
-	return services.ProductInput{
+	input := services.ProductInput{
 		ProductCode: req.ProductCode,
 		QRCode:      req.QRCode,
 		ProductName: req.ProductName,
@@ -80,6 +81,10 @@ func toProductInput(req productRequest) services.ProductInput {
 		MinStock:    req.MinStock,
 		Price:       req.Price,
 	}
+	if req.DifficultyWeight != nil {
+		input.DifficultyWeight = *req.DifficultyWeight
+	}
+	return input
 }
 
 // ScanProductByQRCode tra product + inventory/trays theo qr_code de ho tro workflow scan PDA.
@@ -102,6 +107,8 @@ func mapProductServiceError(c echo.Context, err error) {
 		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 	case errors.Is(err, services.ErrInvalidProductPayload):
 		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "product_name is required and numeric fields must be >= 0"})
+	case errors.Is(err, services.ErrInvalidProductDifficulty):
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 	case errors.Is(err, repositories.ErrProductEntityNotFound):
 		c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 	case errors.Is(err, repositories.ErrProductEntityCodeExists):

@@ -340,6 +340,9 @@ definitions:
       description:
         example: Linh kiện sản xuất
         type: string
+      difficulty_weight:
+        example: 1.5
+        type: number
       id:
         example: 1
         type: integer
@@ -385,6 +388,9 @@ definitions:
       description:
         example: Linh kiện sản xuất
         type: string
+      difficulty_weight:
+        example: 1.5
+        type: number
       image_url:
         example: https://example.com/product.png
         type: string
@@ -394,11 +400,17 @@ definitions:
       price:
         example: 150000
         type: number
+      product_code:
+        example: LK-MOTOR-001
+        type: string
       product_name:
         example: Motor A
         type: string
       product_type:
         example: COMPONENT
+        type: string
+      qr_code:
+        example: QR-LK-MOTOR-001
         type: string
       unit:
         example: pcs

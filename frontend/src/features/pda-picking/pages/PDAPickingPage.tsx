@@ -47,7 +47,7 @@ export function PDAPickingPage() {
   useEffect(() => {
     if (!initialOrderCode) return
     void scanOrderMutation.mutateAsync(initialOrderCode).then(setResult)
-  }, [initialOrderCode])
+  }, [initialOrderCode, scanOrderMutation])
 
   return (
     <PdaLayout

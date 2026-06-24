@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useUserByIdQuery } from '../hooks/useUsers'
 import { UserRoleBadge } from '../components/UserRoleBadge'
 import { UserStatusBadge } from '../components/UserStatusBadge'
+import { formatDateTimeVN } from '../../../shared/lib/datetime'
 
 export function UserDetailPage() {
   const { id } = useParams()
@@ -34,8 +35,8 @@ export function UserDetailPage() {
             <Typography><strong>Tên người dùng:</strong> {userQuery.data.full_name || '-'}</Typography>
             <Typography component="div"><strong>Vai trò:</strong> <UserRoleBadge role={userQuery.data.role} /></Typography>
             <Typography component="div"><strong>Trạng thái:</strong> <UserStatusBadge isActive={userQuery.data.is_active} /></Typography>
-            <Typography><strong>Ngày tạo:</strong> {new Date(userQuery.data.created_at).toLocaleString('vi-VN')}</Typography>
-            <Typography><strong>Cập nhật:</strong> {new Date(userQuery.data.updated_at).toLocaleString('vi-VN')}</Typography>
+            <Typography><strong>Ngày tạo:</strong> {formatDateTimeVN(userQuery.data.created_at)}</Typography>
+            <Typography><strong>Cập nhật:</strong> {formatDateTimeVN(userQuery.data.updated_at)}</Typography>
           </Stack>
         </Paper>
       )}

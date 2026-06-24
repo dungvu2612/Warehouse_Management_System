@@ -21,7 +21,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { useAuth } from '../../../app/providers/AuthProvider'
+import { useAuth } from '../../../app/providers/useAuth'
+import { useSearchParams } from 'react-router-dom'
 import { InventoryAdjustDialog } from '../../inventory/components/InventoryAdjustDialog'
 import { InventoryTable } from '../../inventory/components/InventoryTable'
 import {
@@ -59,6 +60,7 @@ const defaultAdjustForm: InventoryAdjustFormValues = {
 
 export function WarehouseOverviewPage() {
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
   const isAdmin = user?.role === 'ADMIN'
 
   const [activeTab, setActiveTab] = useState(0)
@@ -80,6 +82,19 @@ export function WarehouseOverviewPage() {
   const [adjustError, setAdjustError] = useState('')
 
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  useEffect(() => {
+    const productCode = searchParams.get('product_code') || ''
+    const keyword = searchParams.get('keyword') || productCode
+    if (keyword.trim()) {
+      setActiveTab(0)
+      setInventoryKeyword(keyword.trim())
+    }
+    if (searchParams.get('low_stock') === '1') {
+      setActiveTab(0)
+      setInventoryLowStockOnly(true)
+    }
+  }, [searchParams])
 
   const inventoryQuery = useInventoryQuery()
   const inventoryProductsQuery = useInventoryProductsQuery()

@@ -18,8 +18,9 @@ import {
 import { MenuOutlined } from '@mui/icons-material'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useState } from 'react'
-import { useAuth } from '../app/providers/AuthProvider'
+import { useAuth } from '../app/providers/useAuth'
 import { AppNavigationDrawer, appDrawerCollapsedWidth, appDrawerWidth } from './AppNavigationDrawer'
+import { NotificationBell } from '../features/notifications/components/NotificationBell'
 
 const sidebarCollapsedStorageKey = 'wms_sidebar_collapsed'
 
@@ -27,7 +28,7 @@ export function AppLayout() {
   // Lấy pathname để highlight menu đang active.
   const { pathname } = useLocation()
   // Lấy user + logout từ auth context.
-  const { user, logout } = useAuth()
+  const { user, token, logout } = useAuth()
   const theme = useTheme()
   const isTabletOrBelow = useMediaQuery(theme.breakpoints.down('lg'))
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
@@ -106,8 +107,12 @@ export function AppLayout() {
               </Typography>
             </Box>
             <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1 }}>
+              <NotificationBell token={token} />
               <Chip label={user?.username || 'Unknown'} size="small" color="secondary" />
               <Chip label={user?.role || 'N/A'} size="small" variant="outlined" />
+            </Box>
+            <Box sx={{ display: { xs: 'flex', sm: 'none' }, alignItems: 'center' }}>
+              <NotificationBell token={token} />
             </Box>
           </Toolbar>
         </AppBar>

@@ -30,6 +30,7 @@ import type {
 
 interface ImportReceiptCreateDialogProps {
   open: boolean
+  mode?: 'create' | 'edit'
   form: CreateImportReceiptPayload
   productOptions: ProductOption[]
   trayOptions: unknown[]
@@ -43,6 +44,7 @@ interface ImportReceiptCreateDialogProps {
 
 export function ImportReceiptCreateDialog({
   open,
+  mode = 'create',
   form,
   productOptions,
   isSubmitting,
@@ -51,6 +53,7 @@ export function ImportReceiptCreateDialog({
   onSubmit,
   onChange,
 }: ImportReceiptCreateDialogProps) {
+  const isEdit = mode === 'edit'
   const updateItem = (index: number, patch: Partial<CreateImportReceiptItemPayload>) => {
     // Ghi chú: Dynamic item form block - cap nhat dung index item de tranh mutate state truc tiep.
     const nextItems = form.items.map((item, itemIndex) => {
@@ -83,7 +86,7 @@ export function ImportReceiptCreateDialog({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle sx={{ fontWeight: 900 }}>Tạo phiếu nhập</DialogTitle>
+      <DialogTitle sx={{ fontWeight: 900 }}>{isEdit ? 'Sửa phiếu nhập' : 'Tạo phiếu nhập'}</DialogTitle>
       <DialogContent>
         <Stack spacing={1.75} sx={{ mt: 0.5 }}>
           <TextField
@@ -175,7 +178,7 @@ export function ImportReceiptCreateDialog({
           Hủy
         </Button>
         <Button variant="contained" onClick={onSubmit} disabled={isSubmitting}>
-          {isSubmitting ? 'Đang tạo...' : 'Tạo phiếu nhập'}
+          {isSubmitting ? (isEdit ? 'Đang lưu...' : 'Đang tạo...') : isEdit ? 'Lưu thay đổi' : 'Tạo phiếu nhập'}
         </Button>
       </DialogActions>
     </Dialog>

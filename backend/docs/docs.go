@@ -2897,6 +2897,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Linh kiện sản xuất"
                 },
+                "difficulty_weight": {
+                    "type": "number",
+                    "example": 1.5
+                },
                 "id": {
                     "type": "integer",
                     "example": 1
@@ -2959,6 +2963,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Linh kiện sản xuất"
                 },
+                "difficulty_weight": {
+                    "type": "number",
+                    "example": 1.5
+                },
                 "image_url": {
                     "type": "string",
                     "example": "https://example.com/product.png"
@@ -2971,6 +2979,10 @@ const docTemplate = `{
                     "type": "number",
                     "example": 150000
                 },
+                "product_code": {
+                    "type": "string",
+                    "example": "LK-MOTOR-001"
+                },
                 "product_name": {
                     "type": "string",
                     "example": "Motor A"
@@ -2978,6 +2990,10 @@ const docTemplate = `{
                 "product_type": {
                     "type": "string",
                     "example": "COMPONENT"
+                },
+                "qr_code": {
+                    "type": "string",
+                    "example": "QR-LK-MOTOR-001"
                 },
                 "unit": {
                     "type": "string",
