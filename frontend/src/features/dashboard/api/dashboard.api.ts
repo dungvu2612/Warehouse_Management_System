@@ -4,7 +4,7 @@ Có normalize adapter để tương thích response cũ.
 */
 
 import { http } from '../../../shared/lib/http'
-import type { DashboardStatsResponse } from '../types/dashboard.types'
+import type { DashboardRevenueFilters, DashboardStatsResponse } from '../types/dashboard.types'
 
 type LegacyDashboardStats = {
   orders_pending?: number
@@ -97,8 +97,8 @@ function normalizeDashboardStatsResponse(raw: unknown): DashboardStatsResponse {
 }
 
 export const dashboardApi = {
-  getDashboardStats: async (): Promise<DashboardStatsResponse> => {
-    const { data } = await http.get<unknown>('/dashboard/stats')
+  getDashboardStats: async (filters?: DashboardRevenueFilters): Promise<DashboardStatsResponse> => {
+    const { data } = await http.get<unknown>('/dashboard/stats', { params: filters })
     return normalizeDashboardStatsResponse(data)
   },
 }

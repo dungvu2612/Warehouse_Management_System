@@ -7,11 +7,30 @@
 */
 
 import { Alert, Box, Button, Paper, Skeleton, Stack, Typography } from '@mui/material'
+import { useState } from 'react'
 import { RoleBasedDashboard } from '../components/RoleBasedDashboard'
 import { useDashboardQuery } from '../hooks/useDashboard'
+import type { DashboardRevenueFilters } from '../types/dashboard.types'
+
+function formatDateInput(date: Date) {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function createDefaultRevenueFilters(): DashboardRevenueFilters {
+  const now = new Date()
+  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)
+  return {
+    revenue_from_date: formatDateInput(from),
+    revenue_to_date: formatDateInput(now),
+  }
+}
 
 export function DashboardPage() {
-  const dashboardQuery = useDashboardQuery()
+  const [revenueFilters, setRevenueFilters] = useState<DashboardRevenueFilters>(() => createDefaultRevenueFilters())
+  const dashboardQuery = useDashboardQuery(revenueFilters)
 
   if (dashboardQuery.isLoading) {
     return (
@@ -45,5 +64,12 @@ export function DashboardPage() {
     )
   }
 
-  return <RoleBasedDashboard data={dashboardQuery.data} />
+  return (
+    <RoleBasedDashboard
+      data={dashboardQuery.data}
+      revenueFilters={revenueFilters}
+      isRevenueFetching={dashboardQuery.isFetching}
+      onRevenueFiltersChange={setRevenueFilters}
+    />
+  )
 }

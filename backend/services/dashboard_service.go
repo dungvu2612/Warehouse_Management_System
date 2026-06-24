@@ -9,11 +9,21 @@ import (
 	"errors"
 	"math"
 	"strings"
+	"time"
 
 	"quan_ly_kho/repositories"
 )
 
 var ErrDashboardForbiddenRole = errors.New("role is not allowed for dashboard")
+var ErrDashboardInvalidDateRange = errors.New("invalid dashboard date range")
+
+const dashboardDateLayout = "2006-01-02"
+const maxDashboardRevenueRangeDays = 90
+
+type DashboardStatsQuery struct {
+	RevenueFromDate string
+	RevenueToDate   string
+}
 
 type DashboardRevenueSeriesItem struct {
 	Date    string  `json:"date"`
@@ -57,6 +67,8 @@ type DashboardRecentCompletedOrderItem struct {
 }
 
 type DashboardAdminRevenue struct {
+	RevenueFromDate       string                              `json:"revenue_from_date"`
+	RevenueToDate         string                              `json:"revenue_to_date"`
 	TotalRevenue          float64                             `json:"total_revenue"`
 	RevenueToday          float64                             `json:"revenue_today"`
 	RevenueThisMonth      float64                             `json:"revenue_this_month"`
@@ -77,6 +89,7 @@ type DashboardWarehouseAlert struct {
 	ProductName     string `json:"product_name"`
 	CurrentQuantity int64  `json:"current_quantity"`
 	MinStock        int64  `json:"min_stock"`
+	OutOfStockAt    string `json:"out_of_stock_at"`
 	Message         string `json:"message"`
 }
 
@@ -116,7 +129,7 @@ type DashboardStatsResponse struct {
 }
 
 type DashboardService interface {
-	GetStatsByRole(role string) (*DashboardStatsResponse, error)
+	GetStatsByRole(role string, query DashboardStatsQuery) (*DashboardStatsResponse, error)
 }
 
 type dashboardService struct {
@@ -139,10 +152,15 @@ func normalizeDashboardRole(role string) string {
 	}
 }
 
-func (s *dashboardService) GetStatsByRole(role string) (*DashboardStatsResponse, error) {
+func (s *dashboardService) GetStatsByRole(role string, query DashboardStatsQuery) (*DashboardStatsResponse, error) {
 	normalizedRole := normalizeDashboardRole(role)
 	if normalizedRole != "ADMIN" && normalizedRole != "WAREHOUSE" {
 		return nil, ErrDashboardForbiddenRole
+	}
+
+	revenueFilter, err := buildRevenueFilter(query)
+	if err != nil {
+		return nil, err
 	}
 
 	warehouse, err := s.buildWarehouseOperations()
@@ -157,7 +175,7 @@ func (s *dashboardService) GetStatsByRole(role string) (*DashboardStatsResponse,
 	}
 
 	if normalizedRole == "ADMIN" {
-		adminRevenue, adminErr := s.buildAdminRevenue()
+		adminRevenue, adminErr := s.buildAdminRevenue(revenueFilter)
 		if adminErr != nil {
 			return nil, adminErr
 		}
@@ -167,13 +185,48 @@ func (s *dashboardService) GetStatsByRole(role string) (*DashboardStatsResponse,
 	return response, nil
 }
 
-func (s *dashboardService) buildAdminRevenue() (*DashboardAdminRevenue, error) {
+func buildRevenueFilter(query DashboardStatsQuery) (repositories.DashboardRevenueFilter, error) {
+	now := time.Now()
+	from := time.Date(now.Year(), now.Month(), now.Day()-6, 0, 0, 0, 0, now.Location())
+	to := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	if strings.TrimSpace(query.RevenueFromDate) != "" {
+		parsed, err := time.ParseInLocation(dashboardDateLayout, strings.TrimSpace(query.RevenueFromDate), now.Location())
+		if err != nil {
+			return repositories.DashboardRevenueFilter{}, ErrDashboardInvalidDateRange
+		}
+		from = parsed
+	}
+
+	if strings.TrimSpace(query.RevenueToDate) != "" {
+		parsed, err := time.ParseInLocation(dashboardDateLayout, strings.TrimSpace(query.RevenueToDate), now.Location())
+		if err != nil {
+			return repositories.DashboardRevenueFilter{}, ErrDashboardInvalidDateRange
+		}
+		to = parsed
+	}
+
+	if to.Before(from) {
+		return repositories.DashboardRevenueFilter{}, ErrDashboardInvalidDateRange
+	}
+	if int(to.Sub(from).Hours()/24)+1 > maxDashboardRevenueRangeDays {
+		return repositories.DashboardRevenueFilter{}, ErrDashboardInvalidDateRange
+	}
+
+	return repositories.DashboardRevenueFilter{
+		FromDate:     from,
+		ToDate:       to,
+		EndExclusive: to.AddDate(0, 0, 1),
+	}, nil
+}
+
+func (s *dashboardService) buildAdminRevenue(filter repositories.DashboardRevenueFilter) (*DashboardAdminRevenue, error) {
 	metrics, err := s.repo.GetAdminRevenueMetrics()
 	if err != nil {
 		return nil, err
 	}
 
-	revenueSeriesRows, err := s.repo.GetRevenueSeries()
+	revenueSeriesRows, err := s.repo.GetRevenueSeries(filter)
 	if err != nil {
 		return nil, err
 	}
@@ -226,6 +279,8 @@ func (s *dashboardService) buildAdminRevenue() (*DashboardAdminRevenue, error) {
 	}
 
 	return &DashboardAdminRevenue{
+		RevenueFromDate:   filter.FromDate.Format(dashboardDateLayout),
+		RevenueToDate:     filter.ToDate.Format(dashboardDateLayout),
 		TotalRevenue:      metrics.TotalRevenue,
 		RevenueToday:      metrics.RevenueToday,
 		RevenueThisMonth:  metrics.RevenueThisMonth,
@@ -328,6 +383,7 @@ func (s *dashboardService) buildWarehouseOperations() (*DashboardWarehouseOperat
 			ProductName:     row.ProductName,
 			CurrentQuantity: row.CurrentQty,
 			MinStock:        row.MinStock,
+			OutOfStockAt:    row.OutOfStockAt,
 			Message:         row.Message,
 		})
 	}

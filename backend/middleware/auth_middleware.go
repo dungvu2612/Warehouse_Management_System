@@ -13,6 +13,23 @@ import (
 	"gorm.io/gorm"
 )
 
+func extractAuthorizationToken(header string) (string, bool) {
+	header = strings.TrimSpace(header)
+	if header == "" {
+		return "", false
+	}
+
+	parts := strings.SplitN(header, " ", 2)
+	if len(parts) == 1 {
+		return parts[0], true
+	}
+
+	if !strings.EqualFold(parts[0], "Bearer") || strings.TrimSpace(parts[1]) == "" {
+		return "", false
+	}
+	return strings.TrimSpace(parts[1]), true
+}
+
 func AuthRequired() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -23,14 +40,14 @@ func AuthRequired() echo.MiddlewareFunc {
 				})
 			}
 
-			parts := strings.SplitN(header, " ", 2)
-			if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || strings.TrimSpace(parts[1]) == "" {
+			tokenString, ok := extractAuthorizationToken(header)
+			if !ok {
 				return c.JSON(http.StatusUnauthorized, echo.Map{
 					"error": "invalid authorization header",
 				})
 			}
 
-			claims, err := utils.ParseToken(parts[1])
+			claims, err := utils.ParseToken(tokenString)
 			if err != nil {
 				if err == jwt.ErrTokenExpired || strings.Contains(strings.ToLower(err.Error()), "token is expired") {
 					return c.JSON(http.StatusUnauthorized, echo.Map{

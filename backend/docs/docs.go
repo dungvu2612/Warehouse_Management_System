@@ -3300,7 +3300,7 @@ const docTemplate = `{
     },
     "securityDefinitions": {
         "BearerAuth": {
-            "description": "Nhập JWT token theo dạng: Bearer \u003ctoken\u003e",
+            "description": "Nhập JWT token thô hoặc theo dạng: Bearer \u003ctoken\u003e",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"

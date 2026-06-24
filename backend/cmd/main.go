@@ -40,6 +40,29 @@ func (b *validatingBinder) Bind(i interface{}, c echo.Context) error {
 	return b.validate.Struct(i)
 }
 
+func securityHeadersMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		headers := c.Response().Header()
+		headers.Set(echo.HeaderXContentTypeOptions, "nosniff")
+		headers.Set(echo.HeaderXFrameOptions, "DENY")
+		headers.Set("Referrer-Policy", "no-referrer")
+		headers.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		headers.Set("Content-Security-Policy", strings.Join([]string{
+			"default-src 'self'",
+			"script-src 'self' 'unsafe-inline'",
+			"style-src 'self' 'unsafe-inline'",
+			"connect-src 'self'",
+			"img-src 'self' data:",
+			"font-src 'self' data:",
+			"object-src 'none'",
+			"base-uri 'self'",
+			"form-action 'self'",
+			"frame-ancestors 'none'",
+		}, "; "))
+		return next(c)
+	}
+}
+
 // @title WMS Warehouse Management API
 // @version 1.0
 // @description Tài liệu API cho hệ thống quản lý kho WMS.
@@ -48,7 +71,7 @@ func (b *validatingBinder) Bind(i interface{}, c echo.Context) error {
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
-// @description Nhập JWT token theo dạng: Bearer <token>
+// @description Nhập JWT token thô hoặc theo dạng: Bearer <token>
 func main() {
 	_ = godotenv.Load()
 	docs.SwaggerInfo.BasePath = envValue("SWAGGER_BASE_PATH", "/api")
@@ -60,6 +83,7 @@ func main() {
 	e.Binder = newValidatingBinder()
 	e.Use(echomiddleware.Logger())
 	e.Use(echomiddleware.Recover())
+	e.Use(securityHeadersMiddleware)
 	e.Use(echomiddleware.CORSWithConfig(echomiddleware.CORSConfig{
 		AllowOrigins:     envList("CORS_ALLOWED_ORIGINS", []string{"http://localhost:5173"}),
 		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},

@@ -4,6 +4,11 @@ import type { UserRole } from '../../../shared/types/auth'
 
 export type DashboardRole = UserRole
 
+export interface DashboardRevenueFilters {
+  revenue_from_date: string
+  revenue_to_date: string
+}
+
 export interface DashboardRevenueSeriesItem {
   date: string
   revenue: number
@@ -48,6 +53,8 @@ export interface DashboardRecentCompletedOrderItem {
 }
 
 export interface DashboardAdminRevenue {
+  revenue_from_date?: string
+  revenue_to_date?: string
   total_revenue: number
   revenue_today: number
   revenue_this_month: number
@@ -68,6 +75,7 @@ export interface DashboardWarehouseAlert {
   product_name: string
   current_quantity: number
   min_stock: number
+  out_of_stock_at?: string
   message: string
 }
 

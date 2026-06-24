@@ -39,10 +39,17 @@ func (h *DashboardHandler) GetDashboardStats(c echo.Context) {
 		return
 	}
 
-	stats, err := h.service.GetStatsByRole(role)
+	stats, err := h.service.GetStatsByRole(role, services.DashboardStatsQuery{
+		RevenueFromDate: c.QueryParam("revenue_from_date"),
+		RevenueToDate:   c.QueryParam("revenue_to_date"),
+	})
 	if err != nil {
 		if errors.Is(err, services.ErrDashboardForbiddenRole) {
 			c.JSON(http.StatusForbidden, echo.Map{"error": "forbidden - insufficient role"})
+			return
+		}
+		if errors.Is(err, services.ErrDashboardInvalidDateRange) {
+			c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid revenue date range"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})

@@ -306,9 +306,7 @@ export function StaffPickingDetailPage() {
                 </Typography>
               )}
               <Stack direction="row" spacing={1}>
-                <Button type="button" variant="outlined" onClick={() => scanner.focusScannerInput()} disabled={!canPick}>
-                  Đưa con trỏ quét về máy scan
-                </Button>
+            
                 <Button
                   type="button"
                   variant="outlined"

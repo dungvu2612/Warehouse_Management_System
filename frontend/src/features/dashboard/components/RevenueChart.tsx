@@ -10,8 +10,10 @@
 import * as echarts from 'echarts'
 import type { EChartsOption } from 'echarts'
 import ReactECharts from 'echarts-for-react'
-import { Box, Paper, Typography } from '@mui/material'
-import type { DashboardRevenueSeriesItem } from '../types/dashboard.types'
+import { Box, Button, Paper, Stack, TextField, Typography } from '@mui/material'
+import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
+import type { DashboardRevenueFilters, DashboardRevenueSeriesItem } from '../types/dashboard.types'
 import { formatCurrencyVND } from '../utils/dashboardChartUtils'
 
 type AxisTooltipParam = {
@@ -20,7 +22,45 @@ type AxisTooltipParam = {
   value?: number | string
 }
 
-export function RevenueChart({ series }: { series: DashboardRevenueSeriesItem[] }) {
+type RevenueChartProps = {
+  series: DashboardRevenueSeriesItem[]
+  filters: DashboardRevenueFilters
+  isFetching: boolean
+  onFiltersChange: (filters: DashboardRevenueFilters) => void
+}
+
+const MAX_REVENUE_RANGE_DAYS = 90
+
+function getInclusiveDateRangeDays(fromDate: string, toDate: string): number {
+  const from = new Date(`${fromDate}T00:00:00`)
+  const to = new Date(`${toDate}T00:00:00`)
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return 0
+  return Math.floor((to.getTime() - from.getTime()) / 86400000) + 1
+}
+
+export function RevenueChart({ series, filters, isFetching, onFiltersChange }: RevenueChartProps) {
+  const [draftFilters, setDraftFilters] = useState(filters)
+  const [rangeError, setRangeError] = useState('')
+
+  useEffect(() => {
+    setDraftFilters(filters)
+  }, [filters])
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const rangeDays = getInclusiveDateRangeDays(draftFilters.revenue_from_date, draftFilters.revenue_to_date)
+    if (rangeDays <= 0) {
+      setRangeError('Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.')
+      return
+    }
+    if (rangeDays > MAX_REVENUE_RANGE_DAYS) {
+      setRangeError('Chỉ được lọc tối đa 90 ngày.')
+      return
+    }
+    setRangeError('')
+    onFiltersChange(draftFilters)
+  }
+
   const option: EChartsOption = {
     color: ['#2563eb'],
     tooltip: {
@@ -84,8 +124,42 @@ export function RevenueChart({ series }: { series: DashboardRevenueSeriesItem[] 
 
   return (
     <Paper sx={{ p: 2, flex: 1, minWidth: 0 }} variant="outlined">
-      <Typography sx={{ fontWeight: 800 }}>Doanh thu theo thời gian</Typography>
-      <Typography sx={{ color: 'text.secondary', mb: 1.2 }}>Chỉ tính đơn đã hoàn thành</Typography>
+      <Stack
+        component="form"
+        onSubmit={handleSubmit}
+        spacing={1}
+        sx={{ alignItems: 'stretch', mb: 1.2 }}
+      >
+        <Box>
+          <Typography sx={{ fontWeight: 1000 }}>Doanh thu theo thời gian</Typography>
+        </Box>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { xs: 'stretch', sm: 'center' } }}>
+          <TextField
+            label="Từ ngày"
+            type="date"
+            size="small"
+            value={draftFilters.revenue_from_date}
+            onChange={(event) => setDraftFilters((current) => ({ ...current, revenue_from_date: event.target.value }))}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+          <TextField
+            label="Đến ngày"
+            type="date"
+            size="small"
+            value={draftFilters.revenue_to_date}
+            onChange={(event) => setDraftFilters((current) => ({ ...current, revenue_to_date: event.target.value }))}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+          <Button type="submit" variant="contained" disabled={isFetching}>
+            {isFetching ? 'Đang lọc' : 'Lọc'}
+          </Button>
+        </Stack>
+        {rangeError && (
+          <Typography variant="caption" color="error" sx={{ fontWeight: 700 }}>
+            {rangeError}
+          </Typography>
+        )}
+      </Stack>
       {series.length === 0 ? (
         <Typography color="text.secondary">Không có dữ liệu doanh thu.</Typography>
       ) : (

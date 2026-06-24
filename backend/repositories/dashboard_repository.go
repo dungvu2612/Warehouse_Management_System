@@ -1,5 +1,7 @@
 package repositories
 
+import "time"
+
 /*
 - Mục đích: Lớp truy cập dữ liệu cho Dashboard role-based (admin revenue + warehouse operations).
 - Phụ thuộc: Phu thuoc DBTX/GORM va schema orders/order_items/products/inventory/trays/picking_tasks/stock_transactions.
@@ -10,7 +12,7 @@ package repositories
 
 type DashboardRepository interface {
 	GetAdminRevenueMetrics() (*AdminRevenueMetricsRow, error)
-	GetRevenueSeries() ([]RevenueSeriesRow, error)
+	GetRevenueSeries(filter DashboardRevenueFilter) ([]RevenueSeriesRow, error)
 	GetOrderStatusSummary() ([]OrderStatusSummaryRow, error)
 	GetTopFinishedProducts() ([]TopFinishedProductRow, error)
 	GetRecentCompletedOrders() ([]RecentCompletedOrderRow, error)
@@ -26,6 +28,12 @@ type DashboardRepository interface {
 
 type dashboardRepository struct {
 	db DBTX
+}
+
+type DashboardRevenueFilter struct {
+	FromDate     time.Time
+	ToDate       time.Time
+	EndExclusive time.Time
 }
 
 type AdminRevenueMetricsRow struct {
@@ -79,14 +87,15 @@ type WarehouseSummaryRow struct {
 }
 
 type WarehouseAlertRow struct {
-	AlertType   string `json:"alert_type"`
-	Severity    string `json:"severity"`
-	ProductID   uint   `json:"product_id"`
-	ProductCode string `json:"product_code"`
-	ProductName string `json:"product_name"`
-	CurrentQty  int64  `json:"current_quantity"`
-	MinStock    int64  `json:"min_stock"`
-	Message     string `json:"message"`
+	AlertType    string `json:"alert_type"`
+	Severity     string `json:"severity"`
+	ProductID    uint   `json:"product_id"`
+	ProductCode  string `json:"product_code"`
+	ProductName  string `json:"product_name"`
+	CurrentQty   int64  `json:"current_quantity"`
+	MinStock     int64  `json:"min_stock"`
+	OutOfStockAt string `json:"out_of_stock_at"`
+	Message      string `json:"message"`
 }
 
 type PickingMonitorRow struct {
@@ -175,15 +184,15 @@ func (r *dashboardRepository) GetAdminRevenueMetrics() (*AdminRevenueMetricsRow,
 	return &row, nil
 }
 
-func (r *dashboardRepository) GetRevenueSeries() ([]RevenueSeriesRow, error) {
+func (r *dashboardRepository) GetRevenueSeries(filter DashboardRevenueFilter) ([]RevenueSeriesRow, error) {
 	var rows []RevenueSeriesRow
 	query := `
 		SELECT
 			TO_CHAR(day_series.day::date, 'YYYY-MM-DD') AS date,
 			COALESCE(SUM(o.total_amount), 0) AS revenue
 		FROM generate_series(
-			(CURRENT_DATE - INTERVAL '6 day')::date,
-			CURRENT_DATE::date,
+			CAST(? AS date),
+			CAST(? AS date),
 			INTERVAL '1 day'
 		) AS day_series(day)
 		LEFT JOIN orders o
@@ -192,7 +201,7 @@ func (r *dashboardRepository) GetRevenueSeries() ([]RevenueSeriesRow, error) {
 		GROUP BY day_series.day
 		ORDER BY day_series.day
 	`
-	if err := r.db.Raw(query).Scan(&rows).Error; err != nil {
+	if err := r.db.Raw(query, filter.FromDate, filter.ToDate).Scan(&rows).Error; err != nil {
 		return nil, err
 	}
 	return rows, nil
@@ -300,6 +309,7 @@ func (r *dashboardRepository) GetWarehouseAlerts() ([]WarehouseAlertRow, error) 
 			p.product_name,
 			COALESCE(inv.total_qty, 0)::bigint AS current_quantity,
 			COALESCE(p.min_stock, 0)::bigint AS min_stock,
+			COALESCE(TO_CHAR(last_out.out_of_stock_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS out_of_stock_at,
 			CASE
 				WHEN COALESCE(inv.total_qty, 0) <= 0 THEN 'Het ton kho'
 				ELSE 'Ton kho duoi muc toi thieu'
@@ -310,6 +320,14 @@ func (r *dashboardRepository) GetWarehouseAlerts() ([]WarehouseAlertRow, error) 
 			FROM inventory
 			GROUP BY product_id
 		) inv ON inv.product_id = p.id
+		LEFT JOIN LATERAL (
+			SELECT st.created_at AS out_of_stock_at
+			FROM stock_transactions st
+			WHERE st.product_id = p.id
+			  AND st.after_quantity <= 0
+			ORDER BY st.created_at DESC
+			LIMIT 1
+		) last_out ON TRUE
 		WHERE p.is_active = TRUE
 		  AND COALESCE(inv.total_qty, 0) <= COALESCE(p.min_stock, 0)
 		ORDER BY COALESCE(inv.total_qty, 0) ASC, p.product_code ASC

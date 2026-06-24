@@ -7,6 +7,7 @@
 */
 
 import { Alert, Box, Paper, Stack, Typography } from '@mui/material'
+import { formatDateTimeVN } from '../../../shared/lib/datetime'
 import type { DashboardWarehouseAlert } from '../types/dashboard.types'
 
 function severityToMui(severity: string): 'info' | 'warning' | 'error' | 'success' {
@@ -32,6 +33,11 @@ export function WarehouseAlerts({ alerts }: { alerts: DashboardWarehouseAlert[] 
           {alerts.map((item) => (
             <Alert key={`${item.alert_type}-${item.product_id}`} severity={severityToMui(item.severity)}>
               [{item.alert_type}] {item.product_code} - {item.product_name}: {item.message} (Tồn {item.current_quantity} / Min {item.min_stock})
+              {item.alert_type === 'OUT_OF_STOCK' && (
+                <Typography component="span" sx={{ display: 'block', mt: 0.4, fontSize: 13, fontWeight: 700 }}>
+                  Hết hàng lúc: {item.out_of_stock_at ? formatDateTimeVN(item.out_of_stock_at) : 'Chưa có dữ liệu'}
+                </Typography>
+              )}
             </Alert>
           ))}
         </Stack>

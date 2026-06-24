@@ -2126,7 +2126,7 @@ paths:
       - Users
 securityDefinitions:
   BearerAuth:
-    description: 'Nhập JWT token theo dạng: Bearer <token>'
+    description: 'Nhập JWT token thô hoặc theo dạng: Bearer <token>'
     in: header
     name: Authorization
     type: apiKey
