@@ -220,6 +220,13 @@ func (s *trayService) Delete(id uint) error {
 	if id == 0 {
 		return ErrInvalidTrayID
 	}
+	inUse, err := s.repo.HasActiveUsage(id)
+	if err != nil {
+		return err
+	}
+	if inUse {
+		return repositories.ErrTrayInUse
+	}
 	return s.repo.SoftDeleteByID(id)
 }
 

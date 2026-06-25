@@ -249,6 +249,13 @@ func (s *productService) Delete(id uint) error {
 	if id == 0 {
 		return ErrInvalidProductID
 	}
+	inUse, err := s.repo.HasActiveUsage(id)
+	if err != nil {
+		return err
+	}
+	if inUse {
+		return repositories.ErrProductEntityInUse
+	}
 	return s.repo.SoftDeleteByID(id)
 }
 

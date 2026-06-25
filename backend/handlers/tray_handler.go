@@ -74,6 +74,8 @@ func mapTrayServiceError(c echo.Context, err error) {
 		c.JSON(http.StatusConflict, echo.Map{"error_code": "TRAY_CODE_EXISTS", "error": "Mã khay tự sinh đã tồn tại, vui lòng thử lại."})
 	case errors.Is(err, repositories.ErrTrayPairExists):
 		c.JSON(http.StatusConflict, echo.Map{"error_code": "TRAY_PAIR_EXISTS", "error": "Sản phẩm này đã có khay active tại vị trí đã chọn."})
+	case errors.Is(err, repositories.ErrTrayInUse):
+		c.JSON(http.StatusConflict, echo.Map{"error_code": "TRAY_IN_USE", "error": "Khay đang được dùng trong nghiệp vụ kho, chưa thể xóa."})
 	default:
 		c.JSON(http.StatusInternalServerError, echo.Map{"error_code": "TRAY_INTERNAL_ERROR", "error": err.Error()})
 	}

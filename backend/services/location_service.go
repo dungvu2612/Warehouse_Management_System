@@ -151,6 +151,13 @@ func (s *locationService) Delete(id uint) error {
 	if id == 0 {
 		return ErrInvalidLocationID
 	}
+	inUse, err := s.repo.HasActiveUsage(id)
+	if err != nil {
+		return err
+	}
+	if inUse {
+		return repositories.ErrLocationInUse
+	}
 	return s.repo.SoftDeleteByID(id)
 }
 

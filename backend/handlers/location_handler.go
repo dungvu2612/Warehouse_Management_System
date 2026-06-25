@@ -68,6 +68,8 @@ func mapLocationServiceError(c echo.Context, err error) {
 		c.JSON(http.StatusConflict, echo.Map{"error": err.Error()})
 	case errors.Is(err, repositories.ErrLocationNotFound):
 		c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
+	case errors.Is(err, repositories.ErrLocationInUse):
+		c.JSON(http.StatusConflict, echo.Map{"error": "location is being used in active business process"})
 	default:
 		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}

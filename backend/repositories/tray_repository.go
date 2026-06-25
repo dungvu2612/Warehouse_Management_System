@@ -30,6 +30,7 @@ import (
 	"errors"
 
 	"quan_ly_kho/models"
+	"quan_ly_kho/utils"
 
 	"gorm.io/gorm"
 )
@@ -39,6 +40,7 @@ var (
 	ErrProductNotFound  = errors.New("product not found")
 	ErrLocationNotFound = errors.New("location not found")
 	ErrTrayPairExists   = errors.New("tray for this product and location already exists")
+	ErrTrayInUse        = errors.New("tray is being used in active business process")
 )
 
 type TrayRepository interface {
@@ -48,6 +50,7 @@ type TrayRepository interface {
 	FindActiveByQRCode(qrCode string) (*models.Tray, error)
 	Update(tray *models.Tray) error
 	SoftDeleteByID(id uint) error
+	HasActiveUsage(trayID uint) (bool, error)
 	FindActiveProductByID(id uint) (*models.Product, error)
 	FindActiveLocationByID(id uint) (*models.Location, error)
 	ExistsActiveByProductAndLocation(productID uint, locationID uint, excludeID *uint) (bool, error)
@@ -132,6 +135,35 @@ func (r *trayRepository) SoftDeleteByID(id uint) error {
 		return err
 	}
 	return nil
+}
+
+func (r *trayRepository) HasActiveUsage(trayID uint) (bool, error) {
+	var count int64
+
+	if err := r.db.Model(&models.Inventory{}).
+		Where("tray_id = ? AND quantity > 0", trayID).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	if err := r.db.Model(&models.PickingTask{}).
+		Where("tray_id = ? AND status <> ?", trayID, utils.PickingStatusDone).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	if err := r.db.Model(&models.ImportReceiptItem{}).
+		Where("(tray_id = ? OR actual_tray_id = ?) AND status <> ?", trayID, trayID, "DONE").
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func (r *trayRepository) FindActiveProductByID(id uint) (*models.Product, error) {

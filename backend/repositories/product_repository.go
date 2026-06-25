@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"quan_ly_kho/models"
+	"quan_ly_kho/utils"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
@@ -40,6 +41,7 @@ type ProductRepository interface {
 	FindActiveByID(id uint) (*models.Product, error)
 	FindActiveByQRCode(qrCode string) (*models.Product, error)
 	ExistsByName(productName string, excludeID *uint) (bool, error)
+	HasActiveUsage(productID uint) (bool, error)
 	FindScanRowsByProductID(productID uint) ([]ProductScanRow, error)
 	Update(product *models.Product) error
 	SoftDeleteByID(id uint) error
@@ -107,11 +109,52 @@ func (r *productRepository) FindActiveByQRCode(qrCode string) (*models.Product, 
 func (r *productRepository) ExistsByName(productName string, excludeID *uint) (bool, error) {
 	var count int64
 	query := r.db.Model(&models.Product{}).
+		Where("is_active = ?", true).
 		Where("LOWER(REGEXP_REPLACE(TRIM(product_name), '\\s+', ' ', 'g')) = LOWER(REGEXP_REPLACE(TRIM(?), '\\s+', ' ', 'g'))", productName)
 	if excludeID != nil && *excludeID > 0 {
 		query = query.Where("id <> ?", *excludeID)
 	}
 	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (r *productRepository) HasActiveUsage(productID uint) (bool, error) {
+	var count int64
+
+	if err := r.db.Model(&models.Inventory{}).
+		Where("product_id = ? AND quantity > 0", productID).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	if err := r.db.Table("order_items oi").
+		Joins("JOIN orders o ON o.id = oi.order_id").
+		Where("oi.product_id = ?", productID).
+		Where("o.status NOT IN ?", []string{utils.OrderStatusCompleted, utils.OrderStatusCancelled}).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	if err := r.db.Model(&models.PickingTask{}).
+		Where("product_id = ? AND status <> ?", productID, utils.PickingStatusDone).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	if err := r.db.Model(&models.ImportReceiptItem{}).
+		Where("product_id = ? AND status <> ?", productID, "DONE").
+		Count(&count).Error; err != nil {
 		return false, err
 	}
 	return count > 0, nil
@@ -190,6 +233,7 @@ var (
 	ErrProductEntityNotFound   = errors.New("product not found")
 	ErrProductEntityCodeExists = errors.New("product_code already exists")
 	ErrProductEntityNameExists = errors.New("product_name already exists")
+	ErrProductEntityInUse      = errors.New("product is being used in active business process")
 )
 
 func isUniqueViolation(err error) bool {

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Alert,
   Box,
@@ -31,11 +31,25 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [rateLimitRemaining, setRateLimitRemaining] = useState(0)
+
+  useEffect(() => {
+    if (rateLimitRemaining <= 0) return undefined
+    const timer = window.setInterval(() => {
+      setRateLimitRemaining((current) => Math.max(current - 1, 0))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [rateLimitRemaining])
 
   // Submit form login.
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError('')
+
+    if (rateLimitRemaining > 0) {
+      setError(`IP đang bị khóa đăng nhập. Vui lòng thử lại sau ${formatRemainingTime(rateLimitRemaining)}.`)
+      return
+    }
 
     if (!username.trim() || !password.trim()) {
       setError('Vui lòng nhập username và password')
@@ -58,7 +72,9 @@ export function LoginPage() {
         return
       }
       if (errorInfo.code === 'LOGIN_RATE_LIMITED') {
-        setError('Bạn đã đăng nhập sai quá 15 lần. Vui lòng chờ một lúc rồi thử lại.')
+        const retryAfter = Math.max(errorInfo.retryAfterSeconds || 600, 0)
+        setRateLimitRemaining(retryAfter)
+        setError(`Bạn đã đăng nhập sai quá 15 lần. Vui lòng thử lại sau ${formatRemainingTime(retryAfter)}.`)
         return
       }
       setError(errorInfo.message || 'Đăng nhập thất bại')
@@ -162,8 +178,13 @@ export function LoginPage() {
               />
 
               {error && <Alert severity="error">{error}</Alert>}
+              {rateLimitRemaining > 0 && (
+                <Alert severity="warning">
+                  IP đang bị khóa đăng nhập. Còn {formatRemainingTime(rateLimitRemaining)} để thử lại.
+                </Alert>
+              )}
 
-              <Button type="submit" variant="contained" size="large" disabled={loading} sx={{ py: 1.2 }}>
+              <Button type="submit" variant="contained" size="large" disabled={loading || rateLimitRemaining > 0} sx={{ py: 1.2 }}>
                 {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </Button>
             </Stack>
@@ -172,4 +193,11 @@ export function LoginPage() {
       </Paper>
     </Box>
   )
+}
+
+function formatRemainingTime(totalSeconds: number) {
+  const seconds = Math.max(Math.ceil(totalSeconds), 0)
+  const minutesPart = Math.floor(seconds / 60)
+  const secondsPart = seconds % 60
+  return `${minutesPart}:${secondsPart.toString().padStart(2, '0')}`
 }

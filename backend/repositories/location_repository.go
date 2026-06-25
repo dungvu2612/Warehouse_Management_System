@@ -22,10 +22,13 @@ Luu y khi sua:
 import (
 	"errors"
 	"quan_ly_kho/models"
+	"quan_ly_kho/utils"
 	"strings"
 
 	"gorm.io/gorm"
 )
+
+var ErrLocationInUse = errors.New("location is being used in active business process")
 
 type LocationRepository interface {
 	Create(location *models.Location) error
@@ -35,6 +38,7 @@ type LocationRepository interface {
 	ExistsActiveByCode(locationCode string, excludeID *uint) (bool, error)
 	Update(location *models.Location) error
 	SoftDeleteByID(id uint) error
+	HasActiveUsage(locationID uint) (bool, error)
 }
 
 type LocationTrayRow struct {
@@ -140,4 +144,53 @@ func (r *locationRepository) SoftDeleteByID(id uint) error {
 		return err
 	}
 	return nil
+}
+
+func (r *locationRepository) HasActiveUsage(locationID uint) (bool, error) {
+	var count int64
+
+	if err := r.db.Model(&models.Tray{}).
+		Where("location_id = ? AND is_active = ?", locationID, true).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	if err := r.db.Raw(`
+		SELECT COUNT(*)
+		FROM inventory i
+		JOIN trays t ON t.id = i.tray_id
+		WHERE t.location_id = ? AND i.quantity > 0
+	`, locationID).Scan(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	if err := r.db.Raw(`
+		SELECT COUNT(*)
+		FROM picking_tasks pt
+		JOIN trays t ON t.id = pt.tray_id
+		WHERE t.location_id = ? AND pt.status <> ?
+	`, locationID, utils.PickingStatusDone).Scan(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	if err := r.db.Raw(`
+		SELECT COUNT(*)
+		FROM import_receipt_items iri
+		LEFT JOIN trays planned_tray ON planned_tray.id = iri.tray_id
+		LEFT JOIN trays actual_tray ON actual_tray.id = iri.actual_tray_id
+		WHERE (planned_tray.location_id = ? OR actual_tray.location_id = ?)
+			AND iri.status <> ?
+	`, locationID, locationID, "DONE").Scan(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

@@ -10,13 +10,14 @@ import (
 
 const (
 	loginRateLimitMaxAttempts = 15
-	loginRateLimitWindow      = 15 * time.Minute
+	loginRateLimitLockTime    = 10 * time.Minute
+	loginRateLimitBucketTTL   = 20 * time.Minute
 )
 
 type loginRateLimitBucket struct {
-	count    int
-	resetAt  time.Time
-	lastSeen time.Time
+	count       int
+	lockedUntil time.Time
+	lastSeen    time.Time
 }
 
 type loginRateLimiter struct {
@@ -44,18 +45,23 @@ func (l *loginRateLimiter) middleware(next echo.HandlerFunc) echo.HandlerFunc {
 		l.cleanup(now)
 
 		bucket := l.buckets[ip]
-		if bucket.resetAt.IsZero() || now.After(bucket.resetAt) {
+		if !bucket.lockedUntil.IsZero() && now.After(bucket.lockedUntil) {
 			bucket = newLoginRateLimitBucket(now)
 		}
 
-		if bucket.count >= loginRateLimitMaxAttempts {
-			resetAt := bucket.resetAt
+		if !bucket.lockedUntil.IsZero() && now.Before(bucket.lockedUntil) {
+			retryAfterSeconds := int(time.Until(bucket.lockedUntil).Seconds())
+			if retryAfterSeconds < 0 {
+				retryAfterSeconds = 0
+			}
 			l.buckets[ip] = bucket
 			l.mu.Unlock()
 			return c.JSON(http.StatusTooManyRequests, echo.Map{
-				"error_code":  "LOGIN_RATE_LIMITED",
-				"error":       "too many login attempts",
-				"retry_after": int(time.Until(resetAt).Seconds()),
+				"error_code":          "LOGIN_RATE_LIMITED",
+				"error":               "too many login attempts",
+				"retry_after":         retryAfterSeconds,
+				"retry_after_seconds": retryAfterSeconds,
+				"locked_until":        bucket.lockedUntil.Format(time.RFC3339),
 			})
 		}
 
@@ -72,7 +78,6 @@ func (l *loginRateLimiter) middleware(next echo.HandlerFunc) echo.HandlerFunc {
 func newLoginRateLimitBucket(now time.Time) loginRateLimitBucket {
 	return loginRateLimitBucket{
 		count:    0,
-		resetAt:  now.Add(loginRateLimitWindow),
 		lastSeen: now,
 	}
 }
@@ -93,17 +98,20 @@ func (l *loginRateLimiter) recordResult(ip string, status int) {
 	}
 
 	bucket := l.buckets[ip]
-	if bucket.resetAt.IsZero() || now.After(bucket.resetAt) {
+	if !bucket.lockedUntil.IsZero() && now.After(bucket.lockedUntil) {
 		bucket = newLoginRateLimitBucket(now)
 	}
 	bucket.count++
+	if bucket.count >= loginRateLimitMaxAttempts {
+		bucket.lockedUntil = now.Add(loginRateLimitLockTime)
+	}
 	bucket.lastSeen = now
 	l.buckets[ip] = bucket
 }
 
 func (l *loginRateLimiter) cleanup(now time.Time) {
 	for ip, bucket := range l.buckets {
-		if now.Sub(bucket.lastSeen) > loginRateLimitWindow*2 {
+		if now.Sub(bucket.lastSeen) > loginRateLimitBucketTTL {
 			delete(l.buckets, ip)
 		}
 	}

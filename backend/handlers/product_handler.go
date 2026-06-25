@@ -115,6 +115,8 @@ func mapProductServiceError(c echo.Context, err error) {
 		c.JSON(http.StatusConflict, echo.Map{"error": err.Error()})
 	case errors.Is(err, repositories.ErrProductEntityNameExists):
 		c.JSON(http.StatusConflict, echo.Map{"error": "product_name already exists"})
+	case errors.Is(err, repositories.ErrProductEntityInUse):
+		c.JSON(http.StatusConflict, echo.Map{"error": "product is being used in active business process"})
 	default:
 		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}

@@ -117,6 +117,7 @@ func main() {
 	routes.PickLogRoutes(e)
 	routes.StockTransactionRoutes(e)
 	routes.LocationRoutes(e)
+	routes.MaintenanceRoutes(e)
 	routes.NotificationRoutes(e)
 	routes.TrayRoutes(e)
 	routes.ProductRoutes(e)
