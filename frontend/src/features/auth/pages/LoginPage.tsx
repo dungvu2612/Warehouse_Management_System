@@ -74,7 +74,7 @@ export function LoginPage() {
       if (errorInfo.code === 'LOGIN_RATE_LIMITED') {
         const retryAfter = Math.max(errorInfo.retryAfterSeconds || 600, 0)
         setRateLimitRemaining(retryAfter)
-        setError(`Bạn đã đăng nhập sai quá 15 lần. Vui lòng thử lại sau ${formatRemainingTime(retryAfter)}.`)
+        setError(`Bạn đã đăng nhập sai quá 15 lần. Vui lòng thử lại sau.`)
         return
       }
       setError(errorInfo.message || 'Đăng nhập thất bại')

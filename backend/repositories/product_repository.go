@@ -42,6 +42,7 @@ type ProductRepository interface {
 	FindActiveByQRCode(qrCode string) (*models.Product, error)
 	ExistsByName(productName string, excludeID *uint) (bool, error)
 	HasActiveUsage(productID uint) (bool, error)
+	IsUsedInActiveBOM(productID uint) (bool, error)
 	FindScanRowsByProductID(productID uint) ([]ProductScanRow, error)
 	Update(product *models.Product) error
 	SoftDeleteByID(id uint) error
@@ -160,6 +161,31 @@ func (r *productRepository) HasActiveUsage(productID uint) (bool, error) {
 	return count > 0, nil
 }
 
+func (r *productRepository) IsUsedInActiveBOM(productID uint) (bool, error) {
+	var count int64
+
+	// Kiểm tra xem product có là COMPONENT (linh kiện) trong BOM nào không
+	// Tìm trong BOMItem - component_product_id là product
+	if err := r.db.Table("bom_items bi").
+		Joins("JOIN boms b ON b.id = bi.bom_id").
+		Where("bi.component_product_id = ?", productID).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+
+	// Kiểm tra xem product có là PARENT PRODUCT (thành phẩm) trong BOM nào không
+	// Tìm trong BOM table - product_id là parent product
+	if err := r.db.Model(&models.BOM{}).
+		Where("product_id = ?", productID).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func (r *productRepository) Update(product *models.Product) error {
 	if err := r.db.Save(product).Error; err != nil {
 		if isUniqueViolation(err) {
@@ -234,6 +260,7 @@ var (
 	ErrProductEntityCodeExists = errors.New("product_code already exists")
 	ErrProductEntityNameExists = errors.New("product_name already exists")
 	ErrProductEntityInUse      = errors.New("product is being used in active business process")
+	ErrProductUsedInActiveBOM  = errors.New("product is used in active BOM - please remove from BOM or deactivate BOM first")
 )
 
 func isUniqueViolation(err error) bool {

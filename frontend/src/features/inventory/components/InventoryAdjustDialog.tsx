@@ -17,7 +17,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import type { InventoryAdjustFormValues, InventoryDisplayItem } from '../types/inventoryTypes'
+import type { InventoryAdjustFormValues, InventoryDisplayItem, TrayOption } from '../types/inventoryTypes'
 
 interface InventoryAdjustDialogProps {
   open: boolean
@@ -25,6 +25,7 @@ interface InventoryAdjustDialogProps {
   form: InventoryAdjustFormValues
   isSubmitting: boolean
   errorMessage: string
+  trayOptions?: TrayOption[]
   onClose: () => void
   onSubmit: () => void
   onChange: (next: InventoryAdjustFormValues) => void
@@ -36,13 +37,19 @@ export function InventoryAdjustDialog({
   form,
   isSubmitting,
   errorMessage,
+  trayOptions = [],
   onClose,
   onSubmit,
   onChange,
 }: InventoryAdjustDialogProps) {
+  const isCreateMode = Boolean(selectedItem?.is_virtual_row)
+  const availableTrays = selectedItem
+    ? trayOptions.filter((tray) => tray.product_id === selectedItem.product_id)
+    : []
+
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle sx={{ fontWeight: 900 }}>Điều chỉnh tồn kho</DialogTitle>
+      <DialogTitle sx={{ fontWeight: 900 }}>{isCreateMode ? 'Thêm tồn kho' : 'Điều chỉnh tồn kho'}</DialogTitle>
       <DialogContent>
         <Stack spacing={1.5} sx={{ mt: 0.5 }}>
           <Typography variant="body2" color="text.secondary">
@@ -50,6 +57,23 @@ export function InventoryAdjustDialog({
               ? `${selectedItem.product_code} - ${selectedItem.product_name} | ${selectedItem.tray_code} | Tồn hiện tại: ${selectedItem.quantity}`
               : '-'}
           </Typography>
+
+          {isCreateMode && (
+            <TextField
+              select
+              label="Khay nhập hàng"
+              value={form.tray_id}
+              onChange={(e) => onChange({ ...form, tray_id: Number(e.target.value) })}
+              helperText={availableTrays.length ? 'Chỉ hiện khay đang dùng của sản phẩm này.' : 'Sản phẩm này chưa có khay đang dùng để nhập tồn.'}
+              fullWidth
+            >
+              {availableTrays.map((tray) => (
+                <MenuItem key={tray.id} value={tray.id}>
+                  {tray.tray_code}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
 
           <TextField
             select
@@ -60,9 +84,10 @@ export function InventoryAdjustDialog({
               onChange({ ...form, operation: e.target.value as InventoryAdjustFormValues['operation'] })
             }
             fullWidth
+            disabled={isCreateMode}
           >
             <MenuItem value="IMPORT">Nhập kho</MenuItem>
-            <MenuItem value="EXPORT">Xuất kho</MenuItem>
+            {!isCreateMode && <MenuItem value="EXPORT">Xuất kho</MenuItem>}
           </TextField>
 
           <TextField
@@ -90,7 +115,7 @@ export function InventoryAdjustDialog({
           Hủy
         </Button>
         <Button variant="contained" onClick={onSubmit} disabled={isSubmitting}>
-          {isSubmitting ? 'Đang điều chỉnh...' : 'Điều chỉnh tồn'}
+          {isSubmitting ? 'Đang xử lý...' : isCreateMode ? 'Thêm tồn' : 'Điều chỉnh tồn'}
         </Button>
       </DialogActions>
     </Dialog>

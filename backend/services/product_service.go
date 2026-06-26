@@ -249,6 +249,16 @@ func (s *productService) Delete(id uint) error {
 	if id == 0 {
 		return ErrInvalidProductID
 	}
+
+	// Kiểm tra xem product có đang sử dụng trong BOM active không
+	usedInBOM, err := s.repo.IsUsedInActiveBOM(id)
+	if err != nil {
+		return err
+	}
+	if usedInBOM {
+		return repositories.ErrProductUsedInActiveBOM
+	}
+
 	inUse, err := s.repo.HasActiveUsage(id)
 	if err != nil {
 		return err

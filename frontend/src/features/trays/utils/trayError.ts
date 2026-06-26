@@ -9,11 +9,11 @@ export function mapTrayApiError(error: unknown): string {
 
   if (code === 'INVALID_TRAY_ID') return message || 'Mã khay không hợp lệ.'
   if (code === 'INVALID_TRAY_PAYLOAD') return message || 'Vui lòng chọn sản phẩm và vị trí hợp lệ.'
-  if (code === 'TRAY_NOT_FOUND') return message || 'Không tìm thấy khay hoặc khay đã bị khóa.'
-  if (code === 'TRAY_PRODUCT_NOT_FOUND') return message || 'Không tìm thấy sản phẩm hoặc sản phẩm đã bị khóa.'
-  if (code === 'TRAY_LOCATION_NOT_FOUND') return message || 'Không tìm thấy vị trí hoặc vị trí đã bị khóa.'
+  if (code === 'TRAY_NOT_FOUND') return message || 'Không tìm thấy khay hoặc khay đã ngưng sử dụng.'
+  if (code === 'TRAY_PRODUCT_NOT_FOUND') return message || 'Không tìm thấy sản phẩm hoặc sản phẩm đã ngưng sử dụng.'
+  if (code === 'TRAY_LOCATION_NOT_FOUND') return message || 'Không tìm thấy vị trí hoặc vị trí đã ngưng sử dụng.'
   if (code === 'TRAY_CODE_EXISTS') return message || 'Mã khay tự sinh đã tồn tại, vui lòng thử lại.'
-  if (code === 'TRAY_PAIR_EXISTS') return message || 'Sản phẩm này đã có khay active tại vị trí đã chọn.'
+  if (code === 'TRAY_PAIR_EXISTS') return message || 'Sản phẩm này đã có khay đang dùng tại vị trí đã chọn.'
   if (code === 'TRAY_INTERNAL_ERROR') return message || 'Có lỗi hệ thống khi xử lý khay.'
 
   if (status === 422) return message || 'Dữ liệu khay không hợp lệ (422).'

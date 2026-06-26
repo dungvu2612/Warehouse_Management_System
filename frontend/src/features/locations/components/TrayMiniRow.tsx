@@ -35,7 +35,7 @@ export function TrayMiniRow({ tray }: { tray: LocationTray }) {
           )}
         </Box>
         <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', rowGap: 0.75 }}>
-          <Chip size="small" color={tray.is_active ? 'success' : 'default'} label={tray.is_active ? 'Active' : 'Inactive'} />
+          <Chip size="small" color={tray.is_active ? 'success' : 'default'} label={tray.is_active ? 'Đang dùng' : 'Ngưng dùng'} />
           <Chip size="small" variant="outlined" label={hasStock ? `${tray.products_count} sản phẩm` : 'Chưa có hàng'} />
           <Chip size="small" color="info" variant="outlined" label={`Tổng tồn ${Number(tray.total_quantity || 0).toLocaleString('vi-VN')}`} />
         </Stack>

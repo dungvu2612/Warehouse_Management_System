@@ -86,7 +86,7 @@ export function ProductsPage() {
   })
 
   const deleteMutation = useDeleteProductMutation({
-    onSuccess: () => setBanner({ type: 'success', text: 'Đã xóa mềm sản phẩm (is_active=false).' }),
+    onSuccess: () => setBanner({ type: 'success', text: 'Đã xóa sản phẩm khỏi danh sách sử dụng.' }),
     onError: (error) => setBanner({ type: 'error', text: mapProductApiError(error) }),
   })
 
@@ -194,7 +194,7 @@ export function ProductsPage() {
   }
 
   const handleDelete = (product: Product) => {
-    if (!window.confirm(`Xóa mềm sản phẩm ${product.product_code}?`)) return
+    if (!window.confirm(`Xóa sản phẩm ${product.product_code} khỏi danh sách sử dụng?`)) return
     deleteMutation.mutate(product.id)
   }
 

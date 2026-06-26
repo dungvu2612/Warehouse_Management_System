@@ -79,7 +79,7 @@ export function LocationsPage() {
   })
   const deleteMutation = useDeleteLocationMutation({
     onSuccess: () => {
-      setBanner({ type: 'success', text: 'Đã xóa mềm vị trí (is_active=false).' })
+      setBanner({ type: 'success', text: 'Đã xóa vị trí khỏi danh sách sử dụng.' })
     },
     onError: (error) => {
       setBanner({ type: 'error', text: mapLocationApiError(error) })
@@ -177,7 +177,7 @@ export function LocationsPage() {
   const handleDeleteLocation = (location: Location) => {
     // Ghi chú: Permission block - chỉ ADMIN được quyền xóa mềm.
     if (!isAdmin) return
-    if (!window.confirm(`Xóa mềm vị trí ${location.location_code}?`)) return
+    if (!window.confirm(`Xóa vị trí ${location.location_code} khỏi danh sách sử dụng?`)) return
     deleteMutation.mutate(location.id)
   }
 

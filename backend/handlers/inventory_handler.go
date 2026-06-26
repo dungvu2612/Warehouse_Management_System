@@ -40,9 +40,10 @@ func NewInventoryHandler(service services.InventoryService) *InventoryHandler {
 }
 
 type createInventoryRequest struct {
-	ProductID uint `json:"product_id" binding:"required,gt=0"`
-	TrayID    uint `json:"tray_id" binding:"required,gt=0"`
-	Quantity  int  `json:"quantity" binding:"gte=0"`
+	ProductID uint   `json:"product_id" binding:"required,gt=0"`
+	TrayID    uint   `json:"tray_id" binding:"required,gt=0"`
+	Quantity  int    `json:"quantity" binding:"gte=0"`
+	Note      string `json:"note"`
 }
 
 type adjustInventoryRequest struct {
@@ -95,10 +96,15 @@ func (h *InventoryHandler) CreateInventory(c echo.Context) {
 		return
 	}
 
+	userIDValue := c.Get("user_id")
+	createdBy, _ := userIDValue.(uint)
+
 	inventory, err := h.service.Create(services.CreateInventoryInput{
 		ProductID: req.ProductID,
 		TrayID:    req.TrayID,
 		Quantity:  req.Quantity,
+		Note:      req.Note,
+		CreatedBy: createdBy,
 	})
 	if err != nil {
 		switch {

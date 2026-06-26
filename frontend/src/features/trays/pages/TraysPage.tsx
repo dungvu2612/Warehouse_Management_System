@@ -79,7 +79,7 @@ export function TraysPage() {
   })
   const deleteMutation = useDeleteTrayMutation({
     onSuccess: () => {
-      setBanner({ type: 'success', text: 'Đã xóa mềm khay (is_active=false).' })
+      setBanner({ type: 'success', text: 'Đã xóa khay khỏi danh sách sử dụng.' })
     },
     onError: (error) => {
       setBanner({ type: 'error', text: mapTrayApiError(error) })
@@ -156,7 +156,7 @@ export function TraysPage() {
   const handleDeleteTray = (tray: TrayDisplay) => {
     // Ghi chú: Permission block - chi ADMIN duoc xoa mem tray.
     if (!isAdmin) return
-    if (!window.confirm(`Xóa mềm khay ${tray.tray_code}?`)) return
+    if (!window.confirm(`Xóa khay ${tray.tray_code} khỏi danh sách sử dụng?`)) return
     deleteMutation.mutate(tray.id)
   }
 

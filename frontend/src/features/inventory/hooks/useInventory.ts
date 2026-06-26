@@ -7,7 +7,7 @@ Thông tin ghi chú:
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { inventoryService } from '../services/inventoryService'
-import type { InventoryAdjustPayload } from '../types/inventoryTypes'
+import type { InventoryAdjustPayload, InventoryCreatePayload } from '../types/inventoryTypes'
 
 const INVENTORY_QUERY_KEY = ['inventory'] as const
 const INVENTORY_PRODUCTS_QUERY_KEY = ['inventory-products'] as const
@@ -62,6 +62,23 @@ export function useAdjustInventoryMutation(options?: {
     // Ghi chú: Block adjust ton kho (PATCH /inventory/:id/adjust).
     mutationFn: ({ id, payload }: { id: number; payload: InventoryAdjustPayload }) =>
       inventoryService.adjustInventory(id, payload),
+    onSuccess: async () => {
+      await invalidateInventoryQueries(queryClient)
+      options?.onSuccess?.()
+    },
+    onError: (error) => options?.onError?.(error),
+  })
+}
+
+export function useCreateInventoryMutation(options?: {
+  onSuccess?: () => void
+  onError?: (error: unknown) => void
+}) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    // Ghi chú: Block tao ton ban dau (POST /inventory) cho product chua co inventory row.
+    mutationFn: (payload: InventoryCreatePayload) => inventoryService.createInventory(payload),
     onSuccess: async () => {
       await invalidateInventoryQueries(queryClient)
       options?.onSuccess?.()

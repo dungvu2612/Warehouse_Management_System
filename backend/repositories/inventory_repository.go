@@ -50,7 +50,7 @@ type InventoryRepository interface {
 	FindAll(filters InventoryFilters) ([]models.Inventory, error)
 	FindActiveProductByID(id uint) (*models.Product, error)
 	FindActiveTrayByID(id uint) (*models.Tray, error)
-	Create(inventory *models.Inventory) error
+	Create(inventory *models.Inventory, note string, createdBy uint) error
 	AdjustWithTransaction(inventoryID uint, delta int, note string, createdBy uint) (*models.Inventory, error)
 	AdjustByTrayQRCode(trayQRCode string, delta int, note string, createdBy uint, referenceCode string) (*models.Inventory, error)
 	PutawayByScan(productQRCode string, trayQRCode string, quantity int, note string, createdBy uint, referenceCode string) (*models.Inventory, error)
@@ -109,14 +109,37 @@ func (r *inventoryRepository) FindActiveTrayByID(id uint) (*models.Tray, error) 
 	return &tray, nil
 }
 
-func (r *inventoryRepository) Create(inventory *models.Inventory) error {
-	if err := r.db.Create(inventory).Error; err != nil {
-		if isUniqueConstraintError(err) {
-			return ErrInventoryAlreadyExists
+func (r *inventoryRepository) Create(inventory *models.Inventory, note string, createdBy uint) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(inventory).Error; err != nil {
+			if isUniqueConstraintError(err) {
+				return ErrInventoryAlreadyExists
+			}
+			return err
 		}
-		return err
-	}
-	return nil
+
+		if inventory.Quantity <= 0 {
+			return nil
+		}
+
+		trayID := inventory.TrayID
+		stockTx := models.StockTransaction{
+			TransactionType: utils.StockTxTypeImport,
+			ProductID:       inventory.ProductID,
+			TrayID:          &trayID,
+			Quantity:        inventory.Quantity,
+			BeforeQuantity:  0,
+			AfterQuantity:   inventory.Quantity,
+			Note:            note,
+		}
+		if createdBy > 0 {
+			stockTx.CreatedBy = &createdBy
+		}
+		if err := tx.Create(&stockTx).Error; err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func (r *inventoryRepository) AdjustWithTransaction(inventoryID uint, delta int, note string, createdBy uint) (*models.Inventory, error) {

@@ -115,8 +115,13 @@ func mapProductServiceError(c echo.Context, err error) {
 		c.JSON(http.StatusConflict, echo.Map{"error": err.Error()})
 	case errors.Is(err, repositories.ErrProductEntityNameExists):
 		c.JSON(http.StatusConflict, echo.Map{"error": "product_name already exists"})
+	case errors.Is(err, repositories.ErrProductUsedInActiveBOM):
+		c.JSON(http.StatusConflict, echo.Map{
+			"error_code": "PRODUCT_USED_IN_ACTIVE_BOM",
+			"error":      "Sản phẩm này đang được sử dụng trong BOM active. Hãy vào BOM để: xóa linh kiện này khỏi BOM, thay bằng linh kiện khác, hoặc ngừng sử dụng BOM.",
+		})
 	case errors.Is(err, repositories.ErrProductEntityInUse):
-		c.JSON(http.StatusConflict, echo.Map{"error": "product is being used in active business process"})
+		c.JSON(http.StatusConflict, echo.Map{"error": "Sản phẩm đang được sử dụng trong nghiệp vụ kho, chưa thể xóa."})
 	default:
 		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
@@ -215,5 +220,5 @@ func (h *ProductHandler) DeleteProduct(c echo.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, echo.Map{"message": "product deactivated successfully"})
+	c.JSON(http.StatusOK, echo.Map{"message": "Xóa sản phẩm thành công."})
 }

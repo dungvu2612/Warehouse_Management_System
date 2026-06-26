@@ -36,11 +36,13 @@ import (
 )
 
 var (
-	ErrTrayNotFound     = errors.New("tray not found")
-	ErrProductNotFound  = errors.New("product not found")
-	ErrLocationNotFound = errors.New("location not found")
-	ErrTrayPairExists   = errors.New("tray for this product and location already exists")
-	ErrTrayInUse        = errors.New("tray is being used in active business process")
+	ErrTrayNotFound                   = errors.New("tray not found")
+	ErrProductNotFound                = errors.New("product not found")
+	ErrLocationNotFound               = errors.New("location not found")
+	ErrTrayPairExists                 = errors.New("tray for this product and location already exists")
+	ErrTrayInUse                      = errors.New("tray is being used in active business process")
+	ErrTrayHasActivePickingTask       = errors.New("product is in active picking task")
+	ErrTrayHasActiveImportReceiptItem = errors.New("product is in active import receipt")
 )
 
 type TrayRepository interface {
@@ -50,7 +52,7 @@ type TrayRepository interface {
 	FindActiveByQRCode(qrCode string) (*models.Tray, error)
 	Update(tray *models.Tray) error
 	SoftDeleteByID(id uint) error
-	HasActiveUsage(trayID uint) (bool, error)
+	HasActiveUsage(trayID uint) error
 	FindActiveProductByID(id uint) (*models.Product, error)
 	FindActiveLocationByID(id uint) (*models.Location, error)
 	ExistsActiveByProductAndLocation(productID uint, locationID uint, excludeID *uint) (bool, error)
@@ -137,33 +139,36 @@ func (r *trayRepository) SoftDeleteByID(id uint) error {
 	return nil
 }
 
-func (r *trayRepository) HasActiveUsage(trayID uint) (bool, error) {
+func (r *trayRepository) HasActiveUsage(trayID uint) error {
 	var count int64
 
 	if err := r.db.Model(&models.Inventory{}).
 		Where("tray_id = ? AND quantity > 0", trayID).
 		Count(&count).Error; err != nil {
-		return false, err
+		return err
 	}
 	if count > 0 {
-		return true, nil
+		return ErrTrayInUse
 	}
 
 	if err := r.db.Model(&models.PickingTask{}).
 		Where("tray_id = ? AND status <> ?", trayID, utils.PickingStatusDone).
 		Count(&count).Error; err != nil {
-		return false, err
+		return err
 	}
 	if count > 0 {
-		return true, nil
+		return ErrTrayHasActivePickingTask
 	}
 
 	if err := r.db.Model(&models.ImportReceiptItem{}).
 		Where("(tray_id = ? OR actual_tray_id = ?) AND status <> ?", trayID, trayID, "DONE").
 		Count(&count).Error; err != nil {
-		return false, err
+		return err
 	}
-	return count > 0, nil
+	if count > 0 {
+		return ErrTrayHasActiveImportReceiptItem
+	}
+	return nil
 }
 
 func (r *trayRepository) FindActiveProductByID(id uint) (*models.Product, error) {

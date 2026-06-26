@@ -69,7 +69,7 @@ func mapLocationServiceError(c echo.Context, err error) {
 	case errors.Is(err, repositories.ErrLocationNotFound):
 		c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
 	case errors.Is(err, repositories.ErrLocationInUse):
-		c.JSON(http.StatusConflict, echo.Map{"error": "location is being used in active business process"})
+		c.JSON(http.StatusConflict, echo.Map{"error": "Vị trí đang được sử dụng trong nghiệp vụ kho, chưa thể xóa."})
 	default:
 		c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
@@ -152,5 +152,5 @@ func (h *LocationHandler) DeleteLocation(c echo.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, echo.Map{"message": "location deactivated successfully"})
+	c.JSON(http.StatusOK, echo.Map{"message": "Xóa vị trí thành công."})
 }

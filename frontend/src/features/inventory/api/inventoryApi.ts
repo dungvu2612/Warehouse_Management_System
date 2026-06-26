@@ -9,6 +9,7 @@ import { http } from '../../../shared/lib/http'
 import type {
   InventoryAdjustPayload,
   InventoryAdjustResponse,
+  InventoryCreatePayload,
   InventoryItem,
   InventoryPutawayPayload,
   InventoryStocktakingPayload,
@@ -31,6 +32,11 @@ export const inventoryApi = {
     payload: InventoryAdjustPayload,
   ): Promise<InventoryAdjustResponse> => {
     const { data } = await http.patch<InventoryAdjustResponse>(`/inventory/${id}/adjust`, payload)
+    return data
+  },
+
+  createInventory: async (payload: InventoryCreatePayload): Promise<InventoryItem> => {
+    const { data } = await http.post<InventoryItem>('/inventory', payload)
     return data
   },
 

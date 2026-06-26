@@ -140,14 +140,14 @@ export function StaffPerformancePage() {
             <TableHead>
               <TableRow>
                 <TableCell>Nhân viên</TableCell>
-                <TableCell align="right">Task nhặt hàng</TableCell>
-                <TableCell align="right">Số lượng đã nhặt</TableCell>
-                <TableCell align="right">Task nhập kho</TableCell>
-                <TableCell align="right">Số lượng đã nhập</TableCell>
-                <TableCell align="right">Tổng task</TableCell>
-                <TableCell align="right">Tổng số lượng</TableCell>
-                <TableCell align="right">Khối lượng quy đổi</TableCell>
-                <TableCell align="right">Điểm hiệu suất</TableCell>
+                <TableCell align="left">Task nhặt hàng</TableCell>
+                <TableCell align="left">Số lượng đã nhặt</TableCell>
+                <TableCell align="left">Task nhập kho</TableCell>
+                <TableCell align="left">Số lượng đã nhập</TableCell>
+                <TableCell align="left">Tổng task</TableCell>
+                <TableCell align="left">Tổng số lượng</TableCell>
+                <TableCell align="left">Khối lượng quy đổi</TableCell>
+                <TableCell align="left">Điểm hiệu suất</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -170,14 +170,14 @@ export function StaffPerformancePage() {
               {!reportQuery.isLoading && !reportQuery.isError && items.map((item) => (
                 <TableRow key={item.staff_id} hover>
                   <TableCell sx={{ fontWeight: 800 }}>{item.staff_name}</TableCell>
-                  <TableCell align="right">{formatNumber(item.picking_task_count)}</TableCell>
-                  <TableCell align="right">{formatNumber(item.picked_quantity)}</TableCell>
-                  <TableCell align="right">{formatNumber(item.import_task_count)}</TableCell>
-                  <TableCell align="right">{formatNumber(item.imported_quantity)}</TableCell>
-                  <TableCell align="right">{formatNumber(item.total_task_count)}</TableCell>
-                  <TableCell align="right">{formatNumber(item.total_quantity)}</TableCell>
-                  <TableCell align="right">{formatDecimal(item.weighted_total_quantity)}</TableCell>
-                  <TableCell align="right">
+                  <TableCell align="left">{formatNumber(item.picking_task_count)}</TableCell>
+                  <TableCell align="left">{formatNumber(item.picked_quantity)}</TableCell>
+                  <TableCell align="left">{formatNumber(item.import_task_count)}</TableCell>
+                  <TableCell align="left">{formatNumber(item.imported_quantity)}</TableCell>
+                  <TableCell align="left">{formatNumber(item.total_task_count)}</TableCell>
+                  <TableCell align="left">{formatNumber(item.total_quantity)}</TableCell>
+                  <TableCell align="left">{formatDecimal(item.weighted_total_quantity)}</TableCell>
+                  <TableCell align="left">
                     <Chip color="secondary" label={formatNumber(item.performance_score)} sx={{ fontWeight: 900 }} />
                   </TableCell>
                 </TableRow>

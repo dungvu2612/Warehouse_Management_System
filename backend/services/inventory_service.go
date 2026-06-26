@@ -47,6 +47,8 @@ type CreateInventoryInput struct {
 	ProductID uint
 	TrayID    uint
 	Quantity  int
+	Note      string
+	CreatedBy uint
 }
 
 type AdjustInventoryInput struct {
@@ -156,7 +158,7 @@ func (s *inventoryService) Create(input CreateInventoryInput) (*models.Inventory
 		Quantity:  input.Quantity,
 	}
 
-	if err := s.repo.Create(inventory); err != nil {
+	if err := s.repo.Create(inventory, strings.TrimSpace(input.Note), input.CreatedBy); err != nil {
 		return nil, err
 	}
 	return inventory, nil

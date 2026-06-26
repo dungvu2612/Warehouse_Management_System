@@ -19,6 +19,12 @@ export interface InventoryAdjustPayload {
   note: string
 }
 
+export interface InventoryCreatePayload {
+  product_id: number
+  tray_id: number
+  quantity: number
+  note: string
+}
 
 export interface InventoryPutawayPayload {
   product_qr_code: string
@@ -48,6 +54,7 @@ export interface InventoryAdjustFormValues {
   operation: InventoryAdjustOperation
   quantity: number
   note: string
+  tray_id: number | ''
 }
 
 export interface InventoryAdjustResponse {

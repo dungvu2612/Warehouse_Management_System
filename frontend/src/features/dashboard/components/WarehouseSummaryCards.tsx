@@ -14,9 +14,9 @@ export function WarehouseSummaryCards({ data }: { data: DashboardWarehouseOperat
     { label: 'Đơn chờ xử lý', value: data.pending_orders },
     { label: 'Đơn đang picking', value: data.picking_orders },
     { label: 'Hoàn tất hôm nay', value: data.completed_today },
-    { label: 'Sản phẩm low stock', value: data.low_stock_products },
+    { label: 'Sản phẩm tồn thấp', value: data.low_stock_products },
     { label: 'Tổng tồn kho', value: data.total_inventory_quantity },
-    { label: 'Khay active', value: data.active_trays },
+    { label: 'Khay đang dùng', value: data.active_trays },
   ]
 
   return (

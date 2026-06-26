@@ -17,25 +17,25 @@ func NewMaintenanceHandler(service services.MaintenanceService) *MaintenanceHand
 	return &MaintenanceHandler{service: service}
 }
 
-type archiveInactiveRequest struct {
+type purgeInactiveRequest struct {
 	RetentionDays int  `json:"retention_days"`
 	DryRun        bool `json:"dry_run"`
 }
 
-func (h *MaintenanceHandler) ArchiveInactiveMasterData(c echo.Context) {
-	var req archiveInactiveRequest
+func (h *MaintenanceHandler) PurgeInactiveMasterData(c echo.Context) {
+	var req purgeInactiveRequest
 	if err := c.Bind(&req); err != nil {
 		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		return
 	}
 
-	result, err := h.service.ArchiveInactiveMasterData(services.ArchiveInactiveInput{
+	result, err := h.service.PurgeInactiveMasterData(services.PurgeInactiveInput{
 		RetentionDays: req.RetentionDays,
 		DryRun:        req.DryRun,
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, services.ErrInvalidArchiveRetention):
+		case errors.Is(err, services.ErrInvalidPurgeRetention):
 			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})

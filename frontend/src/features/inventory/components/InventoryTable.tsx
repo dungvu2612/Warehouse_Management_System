@@ -79,10 +79,10 @@ export function InventoryTable({
                 <Button
                   size="small"
                   variant="contained"
-                  disabled={!isAdmin || item.is_virtual_row}
+                  disabled={!isAdmin}
                   onClick={() => onOpenAdjust(item)}
                 >
-                  Điều chỉnh
+                  {item.is_virtual_row ? 'Thêm tồn' : 'Điều chỉnh'}
                 </Button>
               )}
             </Stack>
@@ -170,10 +170,10 @@ export function InventoryTable({
                   <Button
                     size="small"
                     variant="contained"
-                    disabled={!isAdmin || item.is_virtual_row}
+                    disabled={!isAdmin}
                     onClick={() => onOpenAdjust(item)}
                   >
-                    Điều chỉnh
+                    {item.is_virtual_row ? 'Thêm tồn' : 'Điều chỉnh'}
                   </Button>
                 </TableCell>
               )}

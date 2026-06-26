@@ -74,9 +74,9 @@ func mapBOMServiceError(c echo.Context, err error) {
 	case errors.Is(err, repositories.ErrBOMDuplicateComponent):
 		c.JSON(http.StatusBadRequest, echo.Map{"error_code": "BOM_DUPLICATE_COMPONENT", "error": "Không được chọn trùng linh kiện trong cùng BOM."})
 	case errors.Is(err, repositories.ErrBOMParentProductNotFound):
-		c.JSON(http.StatusNotFound, echo.Map{"error_code": "BOM_PARENT_PRODUCT_NOT_FOUND", "error": "Không tìm thấy thành phẩm cha hoặc thành phẩm đã bị khóa."})
+		c.JSON(http.StatusNotFound, echo.Map{"error_code": "BOM_PARENT_PRODUCT_NOT_FOUND", "error": "Không tìm thấy thành phẩm cha hoặc thành phẩm đã ngưng sử dụng."})
 	case errors.Is(err, repositories.ErrBOMComponentProductsNotFound):
-		c.JSON(http.StatusNotFound, echo.Map{"error_code": "BOM_COMPONENT_PRODUCTS_NOT_FOUND", "error": "Một hoặc nhiều linh kiện không tồn tại hoặc đã bị khóa."})
+		c.JSON(http.StatusNotFound, echo.Map{"error_code": "BOM_COMPONENT_PRODUCTS_NOT_FOUND", "error": "Một hoặc nhiều linh kiện không tồn tại hoặc đã ngưng sử dụng."})
 	case errors.Is(err, repositories.ErrBOMParentMustBeFinishedGood):
 		c.JSON(http.StatusBadRequest, echo.Map{"error_code": "BOM_PARENT_MUST_BE_FINISHED_GOOD", "error": "Sản phẩm cha của BOM phải là thành phẩm FINISHED_GOOD."})
 	case errors.Is(err, repositories.ErrBOMComponentsMustBeComponents):

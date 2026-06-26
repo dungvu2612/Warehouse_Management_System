@@ -27,6 +27,7 @@ import { InventoryAdjustDialog } from '../../inventory/components/InventoryAdjus
 import { InventoryTable } from '../../inventory/components/InventoryTable'
 import {
   useAdjustInventoryMutation,
+  useCreateInventoryMutation,
   useInventoryLocationsQuery,
   useInventoryProductsQuery,
   useInventoryQuery,
@@ -56,6 +57,7 @@ const defaultAdjustForm: InventoryAdjustFormValues = {
   operation: 'IMPORT',
   quantity: 0,
   note: '',
+  tray_id: '',
 }
 
 export function WarehouseOverviewPage() {
@@ -195,6 +197,17 @@ export function WarehouseOverviewPage() {
     onError: (error) => setAdjustError(mapInventoryApiError(error)),
   })
 
+  const createInventoryMutation = useCreateInventoryMutation({
+    onSuccess: () => {
+      setBanner({ type: 'success', text: 'Thêm tồn kho ban đầu thành công.' })
+      setAdjustOpen(false)
+      setSelectedItem(null)
+      setAdjustForm(defaultAdjustForm)
+      setAdjustError('')
+    },
+    onError: (error) => setAdjustError(mapInventoryApiError(error)),
+  })
+
   const handleOpenAdjust = (item: InventoryDisplayItem) => {
     if (!isAdmin) return
     setSelectedItem(item)
@@ -215,6 +228,20 @@ export function WarehouseOverviewPage() {
 
     if (adjustForm.operation === 'EXPORT' && adjustForm.quantity > selectedItem.quantity) {
       setAdjustError('Số lượng xuất kho vượt quá tồn hiện tại.')
+      return
+    }
+
+    if (selectedItem.is_virtual_row) {
+      if (!adjustForm.tray_id) {
+        setAdjustError('Vui lòng chọn khay để thêm tồn kho.')
+        return
+      }
+      createInventoryMutation.mutate({
+        product_id: selectedItem.product_id,
+        tray_id: Number(adjustForm.tray_id),
+        quantity: adjustForm.quantity,
+        note: adjustForm.note.trim(),
+      })
       return
     }
 
@@ -422,8 +449,9 @@ export function WarehouseOverviewPage() {
         open={adjustOpen}
         selectedItem={selectedItem}
         form={adjustForm}
-        isSubmitting={adjustMutation.isPending}
+        isSubmitting={adjustMutation.isPending || createInventoryMutation.isPending}
         errorMessage={adjustError}
+        trayOptions={inventoryTraysQuery.data || []}
         onClose={() => setAdjustOpen(false)}
         onSubmit={handleSubmitAdjust}
         onChange={setAdjustForm}

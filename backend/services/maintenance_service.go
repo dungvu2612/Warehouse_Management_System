@@ -21,10 +21,10 @@ type PurgeInactiveInput struct {
 }
 
 type PurgeInactiveResult struct {
-	RetentionDays int                               `json:"retention_days"`
-	CutoffAt      time.Time                         `json:"cutoff_at"`
-	DryRun        bool                              `json:"dry_run"`
-	Deleted       repositories.PurgeInactiveResult  `json:"deleted"`
+	RetentionDays int                              `json:"retention_days"`
+	CutoffAt      time.Time                        `json:"cutoff_at"`
+	DryRun        bool                             `json:"dry_run"`
+	Deleted       repositories.PurgeInactiveResult `json:"deleted"`
 }
 
 type MaintenanceService interface {

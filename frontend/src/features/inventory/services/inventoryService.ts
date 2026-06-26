@@ -9,6 +9,7 @@ import { inventoryApi } from '../api/inventoryApi'
 import type {
   InventoryAdjustPayload,
   InventoryAdjustResponse,
+  InventoryCreatePayload,
   InventoryDisplayItem,
   InventoryItem,
   LocationOption,
@@ -28,6 +29,10 @@ export const inventoryService = {
     payload: InventoryAdjustPayload,
   ): Promise<InventoryAdjustResponse> => {
     return inventoryApi.adjustInventory(id, payload)
+  },
+
+  createInventory: async (payload: InventoryCreatePayload): Promise<InventoryItem> => {
+    return inventoryApi.createInventory(payload)
   },
 
   getProductOptions: async (): Promise<ProductOption[]> => {

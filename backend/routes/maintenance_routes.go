@@ -18,6 +18,6 @@ func MaintenanceRoutes(r *echo.Echo) {
 	maintenance := r.Group("/maintenance")
 	maintenance.Use(middleware.AuthRequired())
 	{
-		maintenance.POST("/archive-inactive", adapt(handler.ArchiveInactiveMasterData), middleware.RequireRoles("ADMIN"))
+		maintenance.POST("/purge-inactive", adapt(handler.PurgeInactiveMasterData), middleware.RequireRoles("ADMIN"))
 	}
 }

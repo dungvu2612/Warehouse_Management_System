@@ -161,7 +161,7 @@ func swaggerCreateProduct() {}
 func swaggerUpdateProduct() {}
 
 // @Summary Ngừng kích hoạt sản phẩm
-// @Description ADMIN deactivate sản phẩm, không xóa vật lý.
+// @Description ADMIN xóa sản phẩm khỏi danh sách sử dụng.
 // @Tags Products
 // @Security BearerAuth
 // @Produce json
