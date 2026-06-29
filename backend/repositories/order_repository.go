@@ -80,6 +80,16 @@ type OrderShortageItem struct {
 	MissingQty    int
 }
 
+// OrderShortagePreviewItem bieu dien linh kien thieu truoc khi tao don.
+type OrderShortagePreviewItem struct {
+	ProductID    uint
+	ProductCode  string
+	ProductName  string
+	RequiredQty  int
+	AvailableQty int
+	MissingQty   int
+}
+
 // StaffTaskRow la read-model danh sach cong viec staff can xu ly.
 type StaffTaskRow struct {
 	ID               uint
@@ -134,6 +144,7 @@ type OrderRepository interface {
 	UpdateOrderCustomer(orderID uint, customerName string, customerPhone string, customerAddress string) (*models.Order, error)
 	UpdateOrderWithItems(orderID uint, customerName string, customerPhone string, customerAddress string, items []OrderItemUpsertInput) (*models.Order, error)
 	DeleteOrder(orderID uint) error
+	PreviewOrderShortage(items []OrderItemUpsertInput) ([]OrderShortagePreviewItem, error)
 }
 
 // Nhóm lỗi domain module order ở tầng repository.
@@ -321,6 +332,102 @@ func (r *orderRepository) CreateOrderWithItems(customerName string, customerPhon
 		return nil, err
 	}
 	return &created, nil
+}
+
+func (r *orderRepository) PreviewOrderShortage(items []OrderItemUpsertInput) ([]OrderShortagePreviewItem, error) {
+	type requiredProductSummary struct {
+		RequiredQty int
+	}
+
+	returnItems := make([]OrderShortagePreviewItem, 0)
+	requiredByProduct := make(map[uint]*requiredProductSummary)
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range items {
+			var product models.Product
+			if err := tx.Where("id = ? AND is_active = ?", item.ProductID, true).First(&product).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return ErrOrderEntityNotFound
+				}
+				return err
+			}
+
+			if strings.EqualFold(product.ProductType, "FINISHED_GOOD") {
+				var bom models.BOM
+				if err := tx.Where("product_id = ?", product.ID).First(&bom).Error; err != nil {
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						return ErrOrderBOMNotFound
+					}
+					return err
+				}
+
+				var bomItems []models.BOMItem
+				if err := tx.Where("bom_id = ?", bom.ID).Find(&bomItems).Error; err != nil {
+					return err
+				}
+				if len(bomItems) == 0 {
+					return ErrOrderBOMHasNoItems
+				}
+
+				for _, bomItem := range bomItems {
+					requiredQty := bomItem.Quantity * item.Quantity
+					if requiredQty <= 0 {
+						continue
+					}
+					if _, exists := requiredByProduct[bomItem.ComponentProductID]; !exists {
+						requiredByProduct[bomItem.ComponentProductID] = &requiredProductSummary{}
+					}
+					requiredByProduct[bomItem.ComponentProductID].RequiredQty += requiredQty
+				}
+				continue
+			}
+
+			if _, exists := requiredByProduct[item.ProductID]; !exists {
+				requiredByProduct[item.ProductID] = &requiredProductSummary{}
+			}
+			requiredByProduct[item.ProductID].RequiredQty += item.Quantity
+		}
+
+		for productID, summary := range requiredByProduct {
+			var product models.Product
+			if err := tx.Where("id = ? AND is_active = ?", productID, true).First(&product).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return ErrOrderEntityNotFound
+				}
+				return err
+			}
+
+			var inventoryTotal struct {
+				TotalQty int
+			}
+			if err := tx.Table("inventory").
+				Select("COALESCE(SUM(quantity), 0) AS total_qty").
+				Where("product_id = ?", productID).
+				Scan(&inventoryTotal).Error; err != nil {
+				return err
+			}
+
+			if inventoryTotal.TotalQty >= summary.RequiredQty {
+				continue
+			}
+
+			returnItems = append(returnItems, OrderShortagePreviewItem{
+				ProductID:    productID,
+				ProductCode:  product.ProductCode,
+				ProductName:  product.ProductName,
+				RequiredQty:  summary.RequiredQty,
+				AvailableQty: inventoryTotal.TotalQty,
+				MissingQty:   summary.RequiredQty - inventoryTotal.TotalQty,
+			})
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return returnItems, nil
 }
 
 func (r *orderRepository) generateOrderCode(tx *gorm.DB, now time.Time) (string, error) {
@@ -763,7 +870,7 @@ func (r *orderRepository) FindByIDWithItems(orderID uint) (*models.Order, error)
 	return &order, nil
 }
 
-// FindOrderDetailRows lay order va task rows da join product/tray/location/inventory.
+// FindOrderDetailRows lay order va task rows da join product/tray/location/ton kho theo san pham.
 func (r *orderRepository) FindOrderDetailRows(orderID uint) (*models.Order, []OrderDetailTaskRow, error) {
 	var order models.Order
 	if err := r.db.Preload("Items").First(&order, orderID).Error; err != nil {
@@ -776,30 +883,36 @@ func (r *orderRepository) FindOrderDetailRows(orderID uint) (*models.Order, []Or
 	var rows []OrderDetailTaskRow
 	err := r.db.Table("picking_tasks AS pt").
 		Select(`
-			pt.id AS picking_task_id,
-			pt.order_id AS order_id,
-			pt.product_id AS product_id,
+				pt.id AS picking_task_id,
+				pt.order_id AS order_id,
+				pt.product_id AS product_id,
 			COALESCE(p.product_code, '') AS product_code,
 			COALESCE(p.product_name, '') AS product_name,
-			pt.tray_id AS tray_id,
-			COALESCE(t.tray_code, '') AS tray_code,
-			COALESCE(l.location_code, '') AS location_code,
-			pt.required_quantity AS required_quantity,
-			pt.picked_quantity AS picked_quantity,
-			COALESCE(i.quantity, 0) AS inventory_qty,
-			pt.status AS status,
-			pt.verified AS verified,
-			pt.assigned_to AS assigned_to,
-			pt.assigned_at AS assigned_at,
-			pt.started_at AS started_at,
+				pt.tray_id AS tray_id,
+				COALESCE(t.tray_code, '') AS tray_code,
+				COALESCE(l.location_code, '') AS location_code,
+				pt.required_quantity AS required_quantity,
+				pt.picked_quantity AS picked_quantity,
+				COALESCE(i.total_quantity, 0) AS inventory_qty,
+				pt.status AS status,
+				pt.verified AS verified,
+				pt.assigned_to AS assigned_to,
+				pt.assigned_at AS assigned_at,
+				pt.started_at AS started_at,
 			pt.completed_at AS completed_at,
 			COALESCE(u.full_name, '') AS assignee_name,
 			COALESCE(u.username, '') AS assignee_username
-		`).
+			`).
 		Joins("LEFT JOIN products AS p ON p.id = pt.product_id").
 		Joins("LEFT JOIN trays AS t ON t.id = pt.tray_id").
 		Joins("LEFT JOIN locations AS l ON l.id = t.location_id").
-		Joins("LEFT JOIN inventory AS i ON i.product_id = pt.product_id AND i.tray_id = pt.tray_id").
+		Joins(`
+				LEFT JOIN (
+					SELECT product_id, SUM(quantity) AS total_quantity
+					FROM inventory
+					GROUP BY product_id
+				) AS i ON i.product_id = pt.product_id
+			`).
 		Joins("LEFT JOIN users AS u ON u.id = pt.assigned_to").
 		Where("pt.order_id = ?", order.ID).
 		Order("pt.id ASC").

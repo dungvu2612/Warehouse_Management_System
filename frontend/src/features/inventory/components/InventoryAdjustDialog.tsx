@@ -17,6 +17,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import { useEffect, useState } from 'react'
 import type { InventoryAdjustFormValues, InventoryDisplayItem, TrayOption } from '../types/inventoryTypes'
 
 interface InventoryAdjustDialogProps {
@@ -46,6 +47,34 @@ export function InventoryAdjustDialog({
   const availableTrays = selectedItem
     ? trayOptions.filter((tray) => tray.product_id === selectedItem.product_id)
     : []
+  const [quantityInput, setQuantityInput] = useState(String(form.quantity ?? 0))
+
+  useEffect(() => {
+    setQuantityInput(String(form.quantity ?? 0))
+  }, [form.quantity, open])
+
+  const handleQuantityChange = (rawValue: string) => {
+    const value = rawValue.trim()
+    if (!/^\d*$/.test(value)) return
+    setQuantityInput(rawValue)
+    if (value === '') return
+    onChange({ ...form, quantity: Number(value) })
+  }
+
+  const handleQuantityBlur = () => {
+    const normalized = quantityInput.trim()
+    if (normalized === '') {
+      setQuantityInput(String(form.quantity ?? 0))
+      return
+    }
+    const parsed = Number(normalized)
+    if (Number.isNaN(parsed)) {
+      setQuantityInput(String(form.quantity ?? 0))
+      return
+    }
+    onChange({ ...form, quantity: parsed })
+    setQuantityInput(String(parsed))
+  }
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -92,9 +121,11 @@ export function InventoryAdjustDialog({
 
           <TextField
             label="Số lượng điều chỉnh"
-            type="number"
-            value={form.quantity}
-            onChange={(e) => onChange({ ...form, quantity: Number(e.target.value) })}
+            type="text"
+            value={quantityInput}
+            onChange={(e) => handleQuantityChange(e.target.value)}
+            onBlur={handleQuantityBlur}
+            slotProps={{ htmlInput: { inputMode: 'numeric', placeholder: 'Ví dụ: 10' } }}
             fullWidth
           />
 

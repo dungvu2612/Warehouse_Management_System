@@ -34,7 +34,6 @@ import {
   QrCode2Outlined,
 } from '@mui/icons-material'
 import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
-import { productDifficultyLabel } from '../constants/productDifficulty'
 import type { Product } from '../types/productTypes'
 import { useEffect, useState } from 'react'
 import { toQrDataUrl } from '../../../shared/lib/qrCode'
@@ -65,6 +64,8 @@ export function ProductTable({
 }: ProductTableProps) {
   const [selectedQR, setSelectedQR] = useState<Product | null>(null)
   const [selectedQRImage, setSelectedQRImage] = useState('')
+
+  const formatDifficulty = (value: number) => Number(value || 1).toLocaleString('vi-VN', { maximumFractionDigits: 2 })
 
   const copyQR = async (value: string) => {
     await navigator.clipboard.writeText(value)
@@ -177,9 +178,7 @@ export function ProductTable({
                 <TableCell sx={{ textAlign: 'left', fontWeight: 700 }}>
                   {Number(product.price).toLocaleString('vi-VN')} đ
                 </TableCell>
-                <TableCell>
-                  <Chip size="small" variant="outlined" label={productDifficultyLabel(product.difficulty_weight)} />
-                </TableCell>
+                <TableCell>{formatDifficulty(product.difficulty_weight)}</TableCell>
                 <TableCell>{product.description || '-'}</TableCell>
                 <TableCell sx={{ textAlign: 'center', minWidth: 96 }}>
                   <Box
@@ -268,4 +267,3 @@ export function ProductTable({
     </>
   )
 }
-

@@ -88,6 +88,11 @@ type assignPickingOrderRequest struct {
 	StaffID uint `json:"staff_id" binding:"required,gt=0"`
 }
 
+type previewShortageResponse struct {
+	HasShortage bool                                      `json:"has_shortage"`
+	Items       []services.OrderShortagePreviewItemResult `json:"items"`
+}
+
 func currentUser(c echo.Context) (uint, string) {
 	userIDValue := c.Get("user_id")
 	userID, _ := userIDValue.(uint)
@@ -199,6 +204,41 @@ func (h *OrderHandler) CreateOrder(c echo.Context) {
 	}
 
 	c.JSON(http.StatusCreated, order)
+}
+
+func (h *OrderHandler) PreviewOrderShortage(c echo.Context) {
+	var req createOrderRequest
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
+		return
+	}
+
+	result, err := h.service.PreviewShortage(services.OrderCreateInput{
+		CustomerName:    req.CustomerName,
+		CustomerPhone:   req.CustomerPhone,
+		CustomerAddress: req.CustomerAddress,
+		Items:           mapOrderItems(req.Items),
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrOrderInvalidPayload):
+			c.JSON(http.StatusUnprocessableEntity, echo.Map{"error_code": "INVALID_ORDER_PAYLOAD", "error": err.Error()})
+		case errors.Is(err, repositories.ErrOrderBOMNotFound):
+			c.JSON(http.StatusNotFound, echo.Map{"error_code": "ORDER_BOM_NOT_FOUND", "error": "Sản phẩm thành phẩm chưa có BOM để tạo tác vụ nhặt hàng."})
+		case errors.Is(err, repositories.ErrOrderBOMHasNoItems):
+			c.JSON(http.StatusBadRequest, echo.Map{"error_code": "ORDER_BOM_HAS_NO_ITEMS", "error": "BOM của sản phẩm chưa có linh kiện."})
+		case errors.Is(err, repositories.ErrOrderEntityNotFound):
+			c.JSON(http.StatusNotFound, echo.Map{"error_code": "ORDER_PICKING_SOURCE_NOT_FOUND", "error": "Không tìm thấy sản phẩm hoặc khay đang hoạt động để tạo tác vụ nhặt hàng."})
+		default:
+			c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, previewShortageResponse{
+		HasShortage: result.HasShortage,
+		Items:       result.Items,
+	})
 }
 
 func (h *OrderHandler) UpdateOrder(c echo.Context) {

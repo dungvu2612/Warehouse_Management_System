@@ -8,14 +8,14 @@ import {
   DialogTitle,
   FormHelperText,
   InputLabel,
+  MenuItem,
   Stack,
   TextField,
-  MenuItem,
   Typography,
 } from '@mui/material'
+import { useEffect, useState } from 'react'
 import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
 import { PRODUCT_IMAGE_SIZE } from '../../../shared/constants/productImage'
-import { PRODUCT_DIFFICULTY_OPTIONS } from '../constants/productDifficulty'
 import type { ProductPayload } from '../types/productTypes'
 
 interface ProductFormDialogProps {
@@ -46,6 +46,119 @@ export function ProductFormDialog({
   onProductCodeManualChange,
   onImportImage,
 }: ProductFormDialogProps) {
+  const [difficultyInput, setDifficultyInput] = useState(String(form.difficulty_weight || 1.0))
+  const [minStockInput, setMinStockInput] = useState(String(form.min_stock ?? 0))
+  const [priceInput, setPriceInput] = useState(String(form.price ?? 0))
+
+  useEffect(() => {
+    setDifficultyInput(String(form.difficulty_weight || 1.0))
+    setMinStockInput(String(form.min_stock ?? 0))
+    setPriceInput(String(form.price ?? 0))
+  }, [form.difficulty_weight, form.min_stock, form.price, open])
+
+  const handleIntegerInputChange = (
+    rawValue: string,
+    onInputChange: (value: string) => void,
+    onValueChange: (value: number) => void,
+  ) => {
+    const value = rawValue.trim()
+    if (!/^\d*$/.test(value)) return
+    onInputChange(rawValue)
+    if (value === '') return
+    onValueChange(Number(value))
+  }
+
+  const handleIntegerInputBlur = (
+    currentInput: string,
+    fallbackValue: number,
+    onInputChange: (value: string) => void,
+    onValueChange: (value: number) => void,
+  ) => {
+    const normalized = currentInput.trim()
+    if (normalized === '') {
+      onInputChange(String(fallbackValue))
+      return
+    }
+    const parsed = Number(normalized)
+    if (Number.isNaN(parsed)) {
+      onInputChange(String(fallbackValue))
+      return
+    }
+    onValueChange(parsed)
+    onInputChange(String(parsed))
+  }
+
+  const handleDecimalInputChange = (
+    rawValue: string,
+    onInputChange: (value: string) => void,
+    onValueChange: (value: number) => void,
+  ) => {
+    const value = rawValue.trim()
+    if (!/^(\d+([.,]\d*)?|[.,]\d*)?$/.test(value)) return
+    onInputChange(rawValue)
+    const normalized = value.replace(',', '.')
+    if (normalized === '' || normalized === '.' || normalized === ',' || normalized.endsWith('.')) {
+      return
+    }
+    const parsed = Number(normalized)
+    if (Number.isNaN(parsed)) return
+    onValueChange(parsed)
+  }
+
+  const handleDecimalInputBlur = (
+    currentInput: string,
+    fallbackValue: number,
+    onInputChange: (value: string) => void,
+    onValueChange: (value: number) => void,
+  ) => {
+    const normalized = currentInput.trim().replace(',', '.')
+    if (normalized === '' || normalized === '.' || normalized === ',') {
+      onInputChange(String(fallbackValue))
+      return
+    }
+    const parsed = Number(normalized.endsWith('.') ? normalized.slice(0, -1) : normalized)
+    if (Number.isNaN(parsed)) {
+      onInputChange(String(fallbackValue))
+      return
+    }
+    onValueChange(parsed)
+    onInputChange(String(parsed))
+  }
+
+  const handleDifficultyWeightChange = (rawValue: string) => {
+    const value = rawValue.trim()
+    if (!/^(\d+([.,]\d*)?|[.,]\d*)?$/.test(value)) return
+
+    setDifficultyInput(rawValue)
+
+    const normalized = value.replace(',', '.')
+    if (normalized === '' || normalized === '.' || normalized === ',' || normalized.endsWith('.')) {
+      return
+    }
+
+    const parsed = Number(normalized)
+    if (Number.isNaN(parsed)) return
+
+    onChange({ ...form, difficulty_weight: parsed })
+  }
+
+  const handleDifficultyWeightBlur = () => {
+    const normalized = difficultyInput.trim().replace(',', '.')
+    if (normalized === '' || normalized === '.' || normalized === ',') {
+      setDifficultyInput(String(form.difficulty_weight || 1.0))
+      return
+    }
+
+    const parsed = Number(normalized.endsWith('.') ? normalized.slice(0, -1) : normalized)
+    if (Number.isNaN(parsed)) {
+      setDifficultyInput(String(form.difficulty_weight || 1.0))
+      return
+    }
+
+    onChange({ ...form, difficulty_weight: parsed })
+    setDifficultyInput(String(parsed))
+  }
+
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>{title}</DialogTitle>
@@ -129,32 +242,59 @@ export function ProductFormDialog({
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
             <TextField
               label="Min stock"
-              type="number"
-              value={form.min_stock}
-              onChange={(e) => onChange({ ...form, min_stock: Number(e.target.value) })}
+              type="text"
+              value={minStockInput}
+              onChange={(e) =>
+                handleIntegerInputChange(
+                  e.target.value,
+                  setMinStockInput,
+                  (value) => onChange({ ...form, min_stock: value }),
+                )
+              }
+              onBlur={() =>
+                handleIntegerInputBlur(
+                  minStockInput,
+                  form.min_stock ?? 0,
+                  setMinStockInput,
+                  (value) => onChange({ ...form, min_stock: value }),
+                )
+              }
+              slotProps={{ htmlInput: { inputMode: 'numeric', placeholder: 'Ví dụ: 10' } }}
               fullWidth
             />
             <TextField
               label="Giá"
-              type="number"
-              value={form.price}
-              onChange={(e) => onChange({ ...form, price: Number(e.target.value) })}
+              type="text"
+              value={priceInput}
+              onChange={(e) =>
+                handleDecimalInputChange(
+                  e.target.value,
+                  setPriceInput,
+                  (value) => onChange({ ...form, price: value }),
+                )
+              }
+              onBlur={() =>
+                handleDecimalInputBlur(
+                  priceInput,
+                  form.price ?? 0,
+                  setPriceInput,
+                  (value) => onChange({ ...form, price: value }),
+                )
+              }
+              slotProps={{ htmlInput: { inputMode: 'decimal', placeholder: 'Ví dụ: 100000 hoặc 100000.5' } }}
               fullWidth
             />
           </Stack>
           <TextField
-            select
-            label="Độ khó xử lý"
-            value={form.difficulty_weight || 1.0}
-            onChange={(e) => onChange({ ...form, difficulty_weight: Number(e.target.value) })}
+            label="Hệ số độ khó"
+            type="text"
+            value={difficultyInput}
+            onChange={(e) => handleDifficultyWeightChange(e.target.value)}
+            onBlur={handleDifficultyWeightBlur}
+            helperText="Admin tự nhập hệ số độ khó xử lý cho sản phẩm."
             fullWidth
-          >
-            {PRODUCT_DIFFICULTY_OPTIONS.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </TextField>
+            slotProps={{ htmlInput: { inputMode: 'decimal', placeholder: 'Ví dụ: 1.5, 1,5 hoặc 100' } }}
+          />
           <TextField
             label="Mô tả"
             value={form.description}

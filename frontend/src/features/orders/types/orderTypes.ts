@@ -102,6 +102,20 @@ export interface OrderDetailResponse {
   }
 }
 
+export interface OrderShortagePreviewItem {
+  product_id: number
+  product_code: string
+  product_name: string
+  required_qty: number
+  available_qty: number
+  missing_qty: number
+}
+
+export interface OrderShortagePreviewResponse {
+  has_shortage: boolean
+  items: OrderShortagePreviewItem[]
+}
+
 export interface ScanOrderResponse {
   message: string
   order: Order

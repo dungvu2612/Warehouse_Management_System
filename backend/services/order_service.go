@@ -198,6 +198,20 @@ type OrderShortageItemResult struct {
 	MissingQty    int
 }
 
+type OrderShortagePreviewItemResult struct {
+	ProductID    uint   `json:"product_id"`
+	ProductCode  string `json:"product_code"`
+	ProductName  string `json:"product_name"`
+	RequiredQty  int    `json:"required_qty"`
+	AvailableQty int    `json:"available_qty"`
+	MissingQty   int    `json:"missing_qty"`
+}
+
+type OrderShortagePreviewResult struct {
+	HasShortage bool                             `json:"has_shortage"`
+	Items       []OrderShortagePreviewItemResult `json:"items"`
+}
+
 // OrderService định nghĩa use-cases cho module order/picking.
 type OrderService interface {
 	Create(input OrderCreateInput) (*models.Order, error)
@@ -216,6 +230,7 @@ type OrderService interface {
 	Finish(orderID uint) (*models.Order, []OrderShortageItemResult, error)
 	GetPickingTasks(orderID uint) (*models.Order, []models.PickingTask, error)
 	GetProgress(orderID uint) (*OrderProgressResult, error)
+	PreviewShortage(input OrderCreateInput) (*OrderShortagePreviewResult, error)
 }
 
 // Nhóm lỗi service để handler map HTTP status chuẩn.
@@ -298,6 +313,48 @@ func (s *orderService) Update(input OrderUpdateInput) (*models.Order, error) {
 		seen[item.ProductID] = struct{}{}
 	}
 	return s.repo.UpdateOrderWithItems(input.OrderID, name, phone, address, mapOrderItemInputs(input.Items))
+}
+
+func (s *orderService) PreviewShortage(input OrderCreateInput) (*OrderShortagePreviewResult, error) {
+	if len(input.Items) == 0 {
+		return nil, ErrOrderInvalidPayload
+	}
+
+	for _, item := range input.Items {
+		if item.ProductID == 0 || item.Quantity <= 0 || item.UnitPrice < 0 {
+			return nil, ErrOrderInvalidPayload
+		}
+	}
+
+	seen := make(map[uint]struct{}, len(input.Items))
+	for _, item := range input.Items {
+		if _, exists := seen[item.ProductID]; exists {
+			return nil, ErrOrderInvalidPayload
+		}
+		seen[item.ProductID] = struct{}{}
+	}
+
+	shortageItems, err := s.repo.PreviewOrderShortage(mapOrderItemInputs(input.Items))
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]OrderShortagePreviewItemResult, 0, len(shortageItems))
+	for _, item := range shortageItems {
+		result = append(result, OrderShortagePreviewItemResult{
+			ProductID:    item.ProductID,
+			ProductCode:  item.ProductCode,
+			ProductName:  item.ProductName,
+			RequiredQty:  item.RequiredQty,
+			AvailableQty: item.AvailableQty,
+			MissingQty:   item.MissingQty,
+		})
+	}
+
+	return &OrderShortagePreviewResult{
+		HasShortage: len(result) > 0,
+		Items:       result,
+	}, nil
 }
 
 func mapOrderItemInputs(items []OrderItemInput) []repositories.OrderItemUpsertInput {

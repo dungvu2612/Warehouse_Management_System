@@ -21,6 +21,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import { useEffect, useState } from 'react'
 import { ProductImageThumb } from '../../../shared/components/ProductImageThumb'
 import type {
   CreateImportReceiptItemPayload,
@@ -54,6 +55,12 @@ export function ImportReceiptCreateDialog({
   onChange,
 }: ImportReceiptCreateDialogProps) {
   const isEdit = mode === 'edit'
+  const [quantityInputs, setQuantityInputs] = useState<string[]>(form.items.map((item) => String(item.quantity ?? 1)))
+
+  useEffect(() => {
+    setQuantityInputs(form.items.map((item) => String(item.quantity ?? 1)))
+  }, [form.items, open])
+
   const updateItem = (index: number, patch: Partial<CreateImportReceiptItemPayload>) => {
     // Ghi chú: Dynamic item form block - cap nhat dung index item de tranh mutate state truc tiep.
     const nextItems = form.items.map((item, itemIndex) => {
@@ -73,6 +80,7 @@ export function ImportReceiptCreateDialog({
       ...form,
       items: [...form.items, { product_id: 0, quantity: 1 }],
     })
+    setQuantityInputs((prev) => [...prev, '1'])
   }
 
   const removeItem = (index: number) => {
@@ -82,6 +90,31 @@ export function ImportReceiptCreateDialog({
       ...form,
       items: form.items.filter((_, itemIndex) => itemIndex !== index),
     })
+    setQuantityInputs((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
+  }
+
+  const handleQuantityChange = (index: number, rawValue: string) => {
+    const value = rawValue.trim()
+    if (!/^\d*$/.test(value)) return
+    setQuantityInputs((prev) => prev.map((item, itemIndex) => (itemIndex === index ? rawValue : item)))
+    if (value === '') return
+    updateItem(index, { quantity: Number(value) })
+  }
+
+  const handleQuantityBlur = (index: number) => {
+    const normalized = (quantityInputs[index] || '').trim()
+    const fallback = form.items[index]?.quantity ?? 1
+    if (normalized === '') {
+      setQuantityInputs((prev) => prev.map((item, itemIndex) => (itemIndex === index ? String(fallback) : item)))
+      return
+    }
+    const parsed = Number(normalized)
+    if (Number.isNaN(parsed)) {
+      setQuantityInputs((prev) => prev.map((item, itemIndex) => (itemIndex === index ? String(fallback) : item)))
+      return
+    }
+    updateItem(index, { quantity: parsed })
+    setQuantityInputs((prev) => prev.map((item, itemIndex) => (itemIndex === index ? String(parsed) : item)))
   }
 
   return (
@@ -159,9 +192,11 @@ export function ImportReceiptCreateDialog({
 
                     <TextField
                       label="Số lượng dự kiến"
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })}
+                      type="text"
+                      value={quantityInputs[index] || ''}
+                      onChange={(e) => handleQuantityChange(index, e.target.value)}
+                      onBlur={() => handleQuantityBlur(index)}
+                      slotProps={{ htmlInput: { inputMode: 'numeric', placeholder: 'Ví dụ: 10' } }}
                       fullWidth
                     />
                   </Stack>
