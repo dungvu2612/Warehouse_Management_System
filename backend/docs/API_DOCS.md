@@ -2,6 +2,14 @@
 
 Tài liệu Swagger/OpenAPI cho backend WMS dùng Go Echo.
 
+Route backend hiện được expose trực tiếp ở root path, ví dụ:
+
+- `/auth/login`
+- `/products`
+- `/orders`
+
+Không dùng prefix `/api` trong cấu hình hiện tại.
+
 ## Cài Swagger CLI
 
 ```bash

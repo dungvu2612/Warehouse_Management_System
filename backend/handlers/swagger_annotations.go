@@ -21,6 +21,64 @@ func swaggerHealth() {}
 // @Router /auth/login [post]
 func swaggerAuthLogin() {}
 
+// @Summary Thông tin người dùng hiện tại
+// @Description Lấy user hiện tại từ JWT đang đăng nhập.
+// @Tags Auth
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} DocAuthUser
+// @Failure 401 {object} DocErrorResponse
+// @Router /auth/me [get]
+func swaggerAuthMe() {}
+
+// @Summary Danh sách BOM
+// @Tags BOMs
+// @Security BearerAuth
+// @Produce json
+// @Param product_id query int false "Lọc theo ID thành phẩm"
+// @Success 200 {array} DocBOM
+// @Router /boms [get]
+func swaggerGetBOMs() {}
+
+// @Summary Chi tiết item của BOM
+// @Tags BOMs
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "ID BOM"
+// @Success 200 {object} DocSuccessResponse
+// @Router /boms/{id}/items [get]
+func swaggerGetBOMItems() {}
+
+// @Summary Tạo BOM
+// @Tags BOMs
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param payload body DocBOMRequest true "Thông tin BOM"
+// @Success 201 {object} DocBOM
+// @Router /boms [post]
+func swaggerCreateBOM() {}
+
+// @Summary Cập nhật BOM
+// @Tags BOMs
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path int true "ID BOM"
+// @Param payload body DocBOMRequest true "Thông tin BOM"
+// @Success 200 {object} DocBOM
+// @Router /boms/{id} [put]
+func swaggerUpdateBOM() {}
+
+// @Summary Xóa BOM
+// @Tags BOMs
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "ID BOM"
+// @Success 200 {object} DocSuccessResponse
+// @Router /boms/{id} [delete]
+func swaggerDeleteBOM() {}
+
 // @Summary Danh sách người dùng
 // @Description ADMIN xem danh sách tài khoản, có thể lọc theo search, role, is_active.
 // @Tags Users
@@ -385,6 +443,26 @@ func swaggerGetImportReceiptByID() {}
 // @Router /import-receipts [post]
 func swaggerCreateImportReceipt() {}
 
+// @Summary Cập nhật phiếu nhập
+// @Tags Import Receipts
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path int true "ID phiếu nhập"
+// @Param payload body DocCreateImportReceiptRequest true "Thông tin phiếu nhập"
+// @Success 200 {object} DocImportReceipt
+// @Router /import-receipts/{id} [put]
+func swaggerUpdateImportReceipt() {}
+
+// @Summary Xóa phiếu nhập
+// @Tags Import Receipts
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "ID phiếu nhập"
+// @Success 200 {object} DocSuccessResponse
+// @Router /import-receipts/{id} [delete]
+func swaggerDeleteImportReceipt() {}
+
 // @Summary Danh sách task nhập kho
 // @Description STAFF xem các dòng phiếu nhập chờ nhận hoặc đang được phân công.
 // @Tags Import Receipts
@@ -471,6 +549,17 @@ func swaggerGetOrderByID() {}
 // @Success 201 {object} DocOrder
 // @Router /orders [post]
 func swaggerCreateOrder() {}
+
+// @Summary Xem trước thiếu linh kiện khi tạo đơn
+// @Description Kiểm tra mềm các linh kiện còn thiếu dựa trên sản phẩm trong đơn trước khi submit tạo đơn.
+// @Tags Orders
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param payload body DocOrderRequest true "Thông tin đơn hàng"
+// @Success 200 {object} DocPreviewShortageResponse
+// @Router /orders/preview-shortage [post]
+func swaggerPreviewOrderShortage() {}
 
 // @Summary Cập nhật đơn hàng
 // @Tags Orders
@@ -645,6 +734,17 @@ func swaggerGetStockTransactions() {}
 // @Router /dashboard/stats [get]
 func swaggerDashboardStats() {}
 
+// @Summary Báo cáo hiệu suất nhân viên
+// @Tags Reports
+// @Security BearerAuth
+// @Produce json
+// @Param from_date query string false "Ngày bắt đầu"
+// @Param to_date query string false "Ngày kết thúc"
+// @Param work_type query string false "all, picking, import"
+// @Success 200 {object} DocStaffPerformanceReport
+// @Router /admin/reports/staff-performance [get]
+func swaggerStaffPerformanceReport() {}
+
 // @Summary Kiểm tra nhất quán đơn hàng
 // @Description Kiểm tra sai lệch order/picking/stock cho một đơn hàng.
 // @Tags Audit
@@ -654,3 +754,55 @@ func swaggerDashboardStats() {}
 // @Success 200 {object} DocAuditConsistency
 // @Router /audit/consistency/{order_id} [get]
 func swaggerAuditConsistency() {}
+
+// @Summary Tóm tắt thông báo
+// @Tags Notifications
+// @Security BearerAuth
+// @Produce json
+// @Param limit query int false "Số lượng thông báo"
+// @Success 200 {object} DocNotificationSummary
+// @Router /notifications/summary [get]
+func swaggerNotificationSummary() {}
+
+// @Summary Danh sách thông báo
+// @Tags Notifications
+// @Security BearerAuth
+// @Produce json
+// @Param limit query int false "Số lượng thông báo"
+// @Success 200 {object} DocNotificationSummary
+// @Router /notifications [get]
+func swaggerGetNotifications() {}
+
+// @Summary Đánh dấu đã xem tất cả thông báo
+// @Tags Notifications
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} DocSuccessResponse
+// @Router /notifications/read-all [post]
+func swaggerMarkAllNotificationsRead() {}
+
+// @Summary WebSocket thông báo
+// @Description Kênh websocket đẩy thông báo realtime.
+// @Tags Notifications
+// @Produce json
+// @Success 101 {string} string "Switching Protocols"
+// @Router /notifications/ws [get]
+func swaggerNotificationsWebSocket() {}
+
+// @Summary WebSocket đồng bộ thay đổi dữ liệu
+// @Description Kênh websocket báo sự kiện DATA_CHANGED cho frontend.
+// @Tags Realtime
+// @Produce json
+// @Success 101 {string} string "Switching Protocols"
+// @Router /ws [get]
+func swaggerRealtimeWebSocket() {}
+
+// @Summary Dọn dữ liệu master đã ngưng hoạt động
+// @Tags Maintenance
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param payload body DocMaintenancePurgeRequest true "Thông tin dọn dữ liệu"
+// @Success 200 {object} DocMaintenancePurgeResponse
+// @Router /maintenance/purge-inactive [post]
+func swaggerPurgeInactiveMasterData() {}
