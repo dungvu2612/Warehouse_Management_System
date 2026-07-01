@@ -1,4 +1,4 @@
-basePath: /api
+basePath: /
 definitions:
   handlers.DocAdjustByTrayRequest:
     properties:
@@ -66,6 +66,46 @@ definitions:
       username:
         example: admin
         type: string
+    type: object
+  handlers.DocBOM:
+    properties:
+      bom_name:
+        example: BOM may khau gia dinh
+        type: string
+      description:
+        example: BOM lap rap chuan
+        type: string
+      id:
+        example: 1
+        type: integer
+      product_id:
+        example: 1
+        type: integer
+    type: object
+  handlers.DocBOMItemRequest:
+    properties:
+      component_product_id:
+        example: 2
+        type: integer
+      quantity:
+        example: 4
+        type: integer
+    type: object
+  handlers.DocBOMRequest:
+    properties:
+      bom_name:
+        example: BOM may khau gia dinh
+        type: string
+      description:
+        example: BOM lap rap chuan
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/handlers.DocBOMItemRequest'
+        type: array
+      product_id:
+        example: 1
+        type: integer
     type: object
   handlers.DocConfirmImportReceiptItemRequest:
     properties:
@@ -262,6 +302,55 @@ definitions:
       user:
         $ref: '#/definitions/handlers.DocAuthUser'
     type: object
+  handlers.DocMaintenancePurgeRequest:
+    properties:
+      dry_run:
+        example: true
+        type: boolean
+      retention_days:
+        example: 30
+        type: integer
+    type: object
+  handlers.DocMaintenancePurgeResponse:
+    properties:
+      message:
+        example: Đã xử lý dọn dữ liệu.
+        type: string
+    type: object
+  handlers.DocNotificationItem:
+    properties:
+      created_at:
+        example: "2026-06-30T10:00:00Z"
+        type: string
+      id:
+        example: import-receipt-1
+        type: string
+      level:
+        example: INFO
+        type: string
+      link:
+        example: /import-receipts/1
+        type: string
+      message:
+        example: Phiếu nhập IMP-123 đã hoàn tất.
+        type: string
+      title:
+        example: Phiếu nhập đã hoàn thành
+        type: string
+    type: object
+  handlers.DocNotificationSummary:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handlers.DocNotificationItem'
+        type: array
+      total_count:
+        example: 10
+        type: integer
+      unread_count:
+        example: 3
+        type: integer
+    type: object
   handlers.DocOrder:
     properties:
       customer_address:
@@ -334,6 +423,37 @@ definitions:
       tray_id:
         example: 1
         type: integer
+    type: object
+  handlers.DocPreviewShortageItem:
+    properties:
+      available_quantity:
+        example: 6
+        type: integer
+      missing_quantity:
+        example: 4
+        type: integer
+      product_code:
+        example: LK-001
+        type: string
+      product_id:
+        example: 2
+        type: integer
+      product_name:
+        example: Motor A
+        type: string
+      required_quantity:
+        example: 10
+        type: integer
+    type: object
+  handlers.DocPreviewShortageResponse:
+    properties:
+      has_shortage:
+        example: true
+        type: boolean
+      items:
+        items:
+          $ref: '#/definitions/handlers.DocPreviewShortageItem'
+        type: array
     type: object
   handlers.DocProduct:
     properties:
@@ -456,6 +576,18 @@ definitions:
         type: string
       tray_qr_code:
         example: TRAY-A0102
+        type: string
+    type: object
+  handlers.DocStaffPerformanceReport:
+    properties:
+      from_date:
+        example: "2026-06-01"
+        type: string
+      to_date:
+        example: "2026-06-30"
+        type: string
+      work_type:
+        example: all
         type: string
     type: object
   handlers.DocStaffTask:
@@ -732,6 +864,33 @@ paths:
       summary: ADMIN gỡ phân công đơn picking
       tags:
       - Admin Picking
+  /admin/reports/staff-performance:
+    get:
+      parameters:
+      - description: Ngày bắt đầu
+        in: query
+        name: from_date
+        type: string
+      - description: Ngày kết thúc
+        in: query
+        name: to_date
+        type: string
+      - description: all, picking, import
+        in: query
+        name: work_type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocStaffPerformanceReport'
+      security:
+      - BearerAuth: []
+      summary: Báo cáo hiệu suất nhân viên
+      tags:
+      - Reports
   /audit/consistency/{order_id}:
     get:
       description: Kiểm tra sai lệch order/picking/stock cho một đơn hàng.
@@ -783,6 +942,135 @@ paths:
       summary: Đăng nhập
       tags:
       - Auth
+  /auth/me:
+    get:
+      description: Lấy user hiện tại từ JWT đang đăng nhập.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocAuthUser'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.DocErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Thông tin người dùng hiện tại
+      tags:
+      - Auth
+  /boms:
+    get:
+      parameters:
+      - description: Lọc theo ID thành phẩm
+        in: query
+        name: product_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.DocBOM'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Danh sách BOM
+      tags:
+      - BOMs
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Thông tin BOM
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocBOMRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.DocBOM'
+      security:
+      - BearerAuth: []
+      summary: Tạo BOM
+      tags:
+      - BOMs
+  /boms/{id}:
+    delete:
+      parameters:
+      - description: ID BOM
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Xóa BOM
+      tags:
+      - BOMs
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID BOM
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Thông tin BOM
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocBOMRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocBOM'
+      security:
+      - BearerAuth: []
+      summary: Cập nhật BOM
+      tags:
+      - BOMs
+  /boms/{id}/items:
+    get:
+      parameters:
+      - description: ID BOM
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Chi tiết item của BOM
+      tags:
+      - BOMs
   /dashboard/stats:
     get:
       description: Thống kê dashboard theo role hiện tại.
@@ -852,6 +1140,25 @@ paths:
       tags:
       - Import Receipts
   /import-receipts/{id}:
+    delete:
+      parameters:
+      - description: ID phiếu nhập
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Xóa phiếu nhập
+      tags:
+      - Import Receipts
     get:
       parameters:
       - description: ID phiếu nhập
@@ -869,6 +1176,33 @@ paths:
       security:
       - BearerAuth: []
       summary: Chi tiết phiếu nhập
+      tags:
+      - Import Receipts
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID phiếu nhập
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Thông tin phiếu nhập
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocCreateImportReceiptRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocImportReceipt'
+      security:
+      - BearerAuth: []
+      summary: Cập nhật phiếu nhập
       tags:
       - Import Receipts
   /inventory:
@@ -1190,6 +1524,94 @@ paths:
       summary: Danh sách khay trong vị trí
       tags:
       - Locations
+  /maintenance/purge-inactive:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Thông tin dọn dữ liệu
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocMaintenancePurgeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocMaintenancePurgeResponse'
+      security:
+      - BearerAuth: []
+      summary: Dọn dữ liệu master đã ngưng hoạt động
+      tags:
+      - Maintenance
+  /notifications:
+    get:
+      parameters:
+      - description: Số lượng thông báo
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocNotificationSummary'
+      security:
+      - BearerAuth: []
+      summary: Danh sách thông báo
+      tags:
+      - Notifications
+  /notifications/read-all:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Đánh dấu đã xem tất cả thông báo
+      tags:
+      - Notifications
+  /notifications/summary:
+    get:
+      parameters:
+      - description: Số lượng thông báo
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocNotificationSummary'
+      security:
+      - BearerAuth: []
+      summary: Tóm tắt thông báo
+      tags:
+      - Notifications
+  /notifications/ws:
+    get:
+      description: Kênh websocket đẩy thông báo realtime.
+      produces:
+      - application/json
+      responses:
+        "101":
+          description: Switching Protocols
+          schema:
+            type: string
+      summary: WebSocket thông báo
+      tags:
+      - Notifications
   /orders:
     get:
       parameters:
@@ -1419,6 +1841,31 @@ paths:
       summary: Xác nhận QR khay cho picking task
       tags:
       - Picking
+  /orders/preview-shortage:
+    post:
+      consumes:
+      - application/json
+      description: Kiểm tra mềm các linh kiện còn thiếu dựa trên sản phẩm trong đơn
+        trước khi submit tạo đơn.
+      parameters:
+      - description: Thông tin đơn hàng
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DocOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.DocPreviewShortageResponse'
+      security:
+      - BearerAuth: []
+      summary: Xem trước thiếu linh kiện khi tạo đơn
+      tags:
+      - Orders
   /orders/scan:
     post:
       consumes:
@@ -1545,7 +1992,7 @@ paths:
       - Products
   /products/{id}:
     delete:
-      description: ADMIN deactivate sản phẩm, không xóa vật lý.
+      description: ADMIN xóa sản phẩm khỏi danh sách sử dụng.
       parameters:
       - description: ID sản phẩm
         in: path
@@ -2124,6 +2571,19 @@ paths:
       summary: Khóa hoặc mở tài khoản
       tags:
       - Users
+  /ws:
+    get:
+      description: Kênh websocket báo sự kiện DATA_CHANGED cho frontend.
+      produces:
+      - application/json
+      responses:
+        "101":
+          description: Switching Protocols
+          schema:
+            type: string
+      summary: WebSocket đồng bộ thay đổi dữ liệu
+      tags:
+      - Realtime
 securityDefinitions:
   BearerAuth:
     description: 'Nhập JWT token thô hoặc theo dạng: Bearer <token>'

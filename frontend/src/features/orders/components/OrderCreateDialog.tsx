@@ -7,14 +7,15 @@
 - Ghi chú bảo trì: Validate items o FE de feedback nhanh, backend van la nguon su that cuoi.
 */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField } from '@mui/material'
 import { http } from '../../../shared/lib/http'
-import type { Order } from '../types/orderTypes'
+import type { Order, OrderShortagePreviewResponse } from '../types/orderTypes'
 import { OrderItemsEditor, type OrderEditorItem } from './OrderItemsEditor'
 import { useProductsQuery } from '../../products/hooks/useProducts'
 import { useInventoryQuery, useInventoryTraysQuery } from '../../inventory/hooks/useInventory'
 import { mapOrderApiError } from '../utils/orderError'
+import { useBOMsQuery } from '../../boms/hooks/useBOMs'
 
 export interface OrderCreateDialogProps {
   open: boolean
@@ -32,12 +33,15 @@ export function OrderCreateDialog({
   const productsQuery = useProductsQuery()
   const inventoryQuery = useInventoryQuery()
   const traysQuery = useInventoryTraysQuery()
+  const bomsQuery = useBOMsQuery()
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerAddress, setCustomerAddress] = useState('')
   const [items, setItems] = useState<OrderEditorItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [shortagePreview, setShortagePreview] = useState<OrderShortagePreviewResponse | null>(null)
+  const [shortagePreviewError, setShortagePreviewError] = useState('')
 
   const hasDuplicateProduct = useMemo(() => {
     const set = new Set<number>()
@@ -59,9 +63,22 @@ export function OrderCreateDialog({
     return result
   }, [inventoryQuery.data, traysQuery.data])
 
+  const finishedGoodProductIdsWithBom = useMemo(() => {
+    const result = new Set<number>()
+    for (const bom of bomsQuery.data || []) {
+      if (bom.product_id) result.add(bom.product_id)
+    }
+    return result
+  }, [bomsQuery.data])
+
   const productsWithTray = useMemo(() => {
-    return (productsQuery.data || []).filter((product) => stockQuantityByProductId.has(product.id))
-  }, [productsQuery.data, stockQuantityByProductId])
+    return (productsQuery.data || []).filter((product) => {
+      if (product.product_type === 'FINISHED_GOOD') {
+        return finishedGoodProductIdsWithBom.has(product.id)
+      }
+      return stockQuantityByProductId.has(product.id)
+    })
+  }, [productsQuery.data, stockQuantityByProductId, finishedGoodProductIdsWithBom])
 
   const handleClose = () => {
     setCustomerName('')
@@ -69,8 +86,60 @@ export function OrderCreateDialog({
     setCustomerAddress('')
     setItems([])
     setError('')
+    setShortagePreview(null)
+    setShortagePreviewError('')
     onClose()
   }
+
+  useEffect(() => {
+    if (!open) return
+    if (productsQuery.isLoading || inventoryQuery.isLoading || traysQuery.isLoading || bomsQuery.isLoading) return
+    if (!customerName.trim() || items.length === 0 || hasDuplicateProduct) {
+      setShortagePreview(null)
+      setShortagePreviewError('')
+      return
+    }
+    if (items.some((item) => !item.product_id || item.quantity <= 0 || item.unit_price < 0)) {
+      setShortagePreview(null)
+      setShortagePreviewError('')
+      return
+    }
+
+    let cancelled = false
+
+    void (async () => {
+      try {
+        const { data } = await http.post<OrderShortagePreviewResponse>('/orders/preview-shortage', {
+          customer_name: customerName.trim(),
+          customer_phone: customerPhone.trim(),
+          customer_address: customerAddress.trim(),
+          items,
+        })
+        if (cancelled) return
+        setShortagePreview(data)
+        setShortagePreviewError('')
+      } catch (err) {
+        if (cancelled) return
+        setShortagePreview(null)
+        setShortagePreviewError('Chưa thể kiểm tra thiếu linh kiện lúc này. Vui lòng kiểm tra lại thông tin đơn hàng.')
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    open,
+    items,
+    hasDuplicateProduct,
+    customerName,
+    customerPhone,
+    customerAddress,
+    productsQuery.isLoading,
+    inventoryQuery.isLoading,
+    traysQuery.isLoading,
+    bomsQuery.isLoading,
+  ])
 
   const handleSubmit = async () => {
     const name = customerName.trim()
@@ -84,6 +153,17 @@ export function OrderCreateDialog({
       if (!item.product_id || item.quantity <= 0 || item.unit_price < 0) {
         return setError('Dữ liệu sản phẩm không hợp lệ')
       }
+      const product = (productsQuery.data || []).find((candidate) => candidate.id === item.product_id)
+      if (!product) {
+        return setError('Sản phẩm đã chọn không còn hợp lệ.')
+      }
+      if (product.product_type === 'FINISHED_GOOD') {
+        if (!finishedGoodProductIdsWithBom.has(product.id)) {
+          return setError('Thành phẩm đã chọn chưa có BOM để tạo đơn.')
+        }
+        continue
+      }
+
       const availableQuantity = stockQuantityByProductId.get(item.product_id) || 0
       if (availableQuantity <= 0) {
         return setError('Sản phẩm đã chọn chưa có khay hoặc chưa có tồn kho.')
@@ -130,22 +210,30 @@ export function OrderCreateDialog({
             availableQuantityByProductId={stockQuantityByProductId}
           />
 
-          {!productsQuery.isLoading && !inventoryQuery.isLoading && !traysQuery.isLoading && productsWithTray.length === 0 && (
+          {!productsQuery.isLoading && !inventoryQuery.isLoading && !traysQuery.isLoading && !bomsQuery.isLoading && productsWithTray.length === 0 && (
             <Alert severity="warning">
-              Chưa có sản phẩm nào có khay để tạo đơn.
+              Chưa có sản phẩm nào đủ điều kiện tạo đơn.
             </Alert>
           )}
+
+          {shortagePreview?.has_shortage && (
+            <Alert severity="warning">
+              Thiếu linh kiện: {shortagePreview.items.map((item) => `${item.product_code || item.product_id} thiếu ${item.missing_qty} (cần ${item.required_qty}, có ${item.available_qty})`).join(', ')}
+            </Alert>
+          )}
+
+          {shortagePreviewError && <Alert severity="info">{shortagePreviewError}</Alert>}
 
           {error && <Alert severity="error">{error}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} disabled={loading}>Hủy</Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          disabled={loading || productsQuery.isLoading || inventoryQuery.isLoading || traysQuery.isLoading}
-        >
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            disabled={loading || productsQuery.isLoading || inventoryQuery.isLoading || traysQuery.isLoading || bomsQuery.isLoading}
+          >
           {loading ? 'Đang tạo...' : 'Tạo đơn'}
         </Button>
       </DialogActions>

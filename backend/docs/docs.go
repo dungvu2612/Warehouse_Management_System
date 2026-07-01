@@ -172,6 +172,50 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/reports/staff-performance": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Báo cáo hiệu suất nhân viên",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ngày bắt đầu",
+                        "name": "from_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ngày kết thúc",
+                        "name": "to_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "all, picking, import",
+                        "name": "work_type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocStaffPerformanceReport"
+                        }
+                    }
+                }
+            }
+        },
         "/audit/consistency/{order_id}": {
             "get": {
                 "security": [
@@ -247,6 +291,217 @@ const docTemplate = `{
                         "description": "Unprocessable Entity",
                         "schema": {
                             "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lấy user hiện tại từ JWT đang đăng nhập.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Thông tin người dùng hiện tại",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocAuthUser"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/boms": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BOMs"
+                ],
+                "summary": "Danh sách BOM",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Lọc theo ID thành phẩm",
+                        "name": "product_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.DocBOM"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BOMs"
+                ],
+                "summary": "Tạo BOM",
+                "parameters": [
+                    {
+                        "description": "Thông tin BOM",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocBOMRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocBOM"
+                        }
+                    }
+                }
+            }
+        },
+        "/boms/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BOMs"
+                ],
+                "summary": "Cập nhật BOM",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID BOM",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Thông tin BOM",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocBOMRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocBOM"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BOMs"
+                ],
+                "summary": "Xóa BOM",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID BOM",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/boms/{id}/items": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BOMs"
+                ],
+                "summary": "Chi tiết item của BOM",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID BOM",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
                         }
                     }
                 }
@@ -389,6 +644,80 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.DocImportReceipt"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Import Receipts"
+                ],
+                "summary": "Cập nhật phiếu nhập",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID phiếu nhập",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Thông tin phiếu nhập",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocCreateImportReceiptRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocImportReceipt"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Import Receipts"
+                ],
+                "summary": "Xóa phiếu nhập",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID phiếu nhập",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
                         }
                     }
                 }
@@ -913,6 +1242,152 @@ const docTemplate = `{
                 }
             }
         },
+        "/maintenance/purge-inactive": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Maintenance"
+                ],
+                "summary": "Dọn dữ liệu master đã ngưng hoạt động",
+                "parameters": [
+                    {
+                        "description": "Thông tin dọn dữ liệu",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocMaintenancePurgeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocMaintenancePurgeResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Danh sách thông báo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Số lượng thông báo",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocNotificationSummary"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/read-all": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Đánh dấu đã xem tất cả thông báo",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Tóm tắt thông báo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Số lượng thông báo",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocNotificationSummary"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/ws": {
+            "get": {
+                "description": "Kênh websocket đẩy thông báo realtime.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "WebSocket thông báo",
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/orders": {
             "get": {
                 "security": [
@@ -1071,6 +1546,45 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.DocSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/preview-shortage": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Kiểm tra mềm các linh kiện còn thiếu dựa trên sản phẩm trong đơn trước khi submit tạo đơn.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Xem trước thiếu linh kiện khi tạo đơn",
+                "parameters": [
+                    {
+                        "description": "Thông tin đơn hàng",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.DocPreviewShortageResponse"
                         }
                     }
                 }
@@ -1649,7 +2163,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "ADMIN deactivate sản phẩm, không xóa vật lý.",
+                "description": "ADMIN xóa sản phẩm khỏi danh sách sử dụng.",
                 "produces": [
                     "application/json"
                 ],
@@ -2414,6 +2928,26 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/ws": {
+            "get": {
+                "description": "Kênh websocket báo sự kiện DATA_CHANGED cho frontend.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Realtime"
+                ],
+                "summary": "WebSocket đồng bộ thay đổi dữ liệu",
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -2510,6 +3044,63 @@ const docTemplate = `{
                 "username": {
                     "type": "string",
                     "example": "admin"
+                }
+            }
+        },
+        "handlers.DocBOM": {
+            "type": "object",
+            "properties": {
+                "bom_name": {
+                    "type": "string",
+                    "example": "BOM may khau gia dinh"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "BOM lap rap chuan"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "product_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "handlers.DocBOMItemRequest": {
+            "type": "object",
+            "properties": {
+                "component_product_id": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 4
+                }
+            }
+        },
+        "handlers.DocBOMRequest": {
+            "type": "object",
+            "properties": {
+                "bom_name": {
+                    "type": "string",
+                    "example": "BOM may khau gia dinh"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "BOM lap rap chuan"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.DocBOMItemRequest"
+                    }
+                },
+                "product_id": {
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },
@@ -2788,6 +3379,76 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.DocMaintenancePurgeRequest": {
+            "type": "object",
+            "properties": {
+                "dry_run": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "retention_days": {
+                    "type": "integer",
+                    "example": 30
+                }
+            }
+        },
+        "handlers.DocMaintenancePurgeResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Đã xử lý dọn dữ liệu."
+                }
+            }
+        },
+        "handlers.DocNotificationItem": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-06-30T10:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "import-receipt-1"
+                },
+                "level": {
+                    "type": "string",
+                    "example": "INFO"
+                },
+                "link": {
+                    "type": "string",
+                    "example": "/import-receipts/1"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Phiếu nhập IMP-123 đã hoàn tất."
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Phiếu nhập đã hoàn thành"
+                }
+            }
+        },
+        "handlers.DocNotificationSummary": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.DocNotificationItem"
+                    }
+                },
+                "total_count": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "unread_count": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
         "handlers.DocOrder": {
             "type": "object",
             "properties": {
@@ -2887,6 +3548,50 @@ const docTemplate = `{
                 "tray_id": {
                     "type": "integer",
                     "example": 1
+                }
+            }
+        },
+        "handlers.DocPreviewShortageItem": {
+            "type": "object",
+            "properties": {
+                "available_quantity": {
+                    "type": "integer",
+                    "example": 6
+                },
+                "missing_quantity": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "product_code": {
+                    "type": "string",
+                    "example": "LK-001"
+                },
+                "product_id": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "product_name": {
+                    "type": "string",
+                    "example": "Motor A"
+                },
+                "required_quantity": {
+                    "type": "integer",
+                    "example": 10
+                }
+            }
+        },
+        "handlers.DocPreviewShortageResponse": {
+            "type": "object",
+            "properties": {
+                "has_shortage": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.DocPreviewShortageItem"
+                    }
                 }
             }
         },
@@ -3058,6 +3763,23 @@ const docTemplate = `{
                 "tray_qr_code": {
                     "type": "string",
                     "example": "TRAY-A0102"
+                }
+            }
+        },
+        "handlers.DocStaffPerformanceReport": {
+            "type": "object",
+            "properties": {
+                "from_date": {
+                    "type": "string",
+                    "example": "2026-06-01"
+                },
+                "to_date": {
+                    "type": "string",
+                    "example": "2026-06-30"
+                },
+                "work_type": {
+                    "type": "string",
+                    "example": "all"
                 }
             }
         },
@@ -3312,7 +4034,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "",
-	BasePath:         "/api",
+	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "WMS Warehouse Management API",
 	Description:      "Tài liệu API cho hệ thống quản lý kho WMS.\nHệ thống hỗ trợ quản lý sản phẩm, tồn kho, đơn hàng, nhập kho, picking, khay/kệ, người dùng và lịch sử kho.",

@@ -621,7 +621,7 @@ export function OrderDetail() {
                       <TableCell sx={{ fontWeight: 900 }}>Khay</TableCell>
                       <TableCell sx={{ fontWeight: 900, textAlign: 'right' }}>SL yêu cầu</TableCell>
                       <TableCell sx={{ fontWeight: 900, textAlign: 'right' }}>SL đã nhặt</TableCell>
-                      <TableCell sx={{ fontWeight: 900, textAlign: 'right' }}>Tồn hiện tại</TableCell>
+                      <TableCell sx={{ fontWeight: 900, textAlign: 'right' }}>Tồn khả dụng</TableCell>
                       <TableCell sx={{ fontWeight: 900, textAlign: 'right' }}>Số lần xuất</TableCell>
                       <TableCell sx={{ fontWeight: 900, textAlign: 'right' }}>Tổng SL xuất</TableCell>
                       <TableCell sx={{ fontWeight: 900 }}>Xuất gần nhất</TableCell>

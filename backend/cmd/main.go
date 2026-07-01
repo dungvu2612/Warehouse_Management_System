@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,12 +22,15 @@ import (
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"
+	"github.com/swaggo/swag"
 )
 
 type validatingBinder struct {
 	binder   echo.DefaultBinder
 	validate *validator.Validate
 }
+
+const swaggerDescriptionBase = "Tài liệu API cho hệ thống quản lý kho WMS.\nHệ thống hỗ trợ quản lý sản phẩm, tồn kho, đơn hàng, nhập kho, picking, khay/kệ, người dùng và lịch sử kho."
 
 func newValidatingBinder() *validatingBinder {
 	validate := validator.New()
@@ -67,14 +72,15 @@ func securityHeadersMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 // @version 1.0
 // @description Tài liệu API cho hệ thống quản lý kho WMS.
 // @description Hệ thống hỗ trợ quản lý sản phẩm, tồn kho, đơn hàng, nhập kho, picking, khay/kệ, người dùng và lịch sử kho.
-// @BasePath /api
+// @BasePath /
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
 // @description Nhập JWT token thô hoặc theo dạng: Bearer <token>
 func main() {
 	_ = godotenv.Load()
-	docs.SwaggerInfo.BasePath = envValue("SWAGGER_BASE_PATH", "/api")
+	docs.SwaggerInfo.BasePath = envValue("SWAGGER_BASE_PATH", "")
+	docs.SwaggerInfo.Description = buildSwaggerDescription(docs.SwaggerInfo)
 	config.ConnectDatabase()
 	config.RunDatabaseMigrations()
 	config.SeedDefaultUsers()
@@ -102,7 +108,9 @@ func main() {
 			"message": "Server running",
 		})
 	})
-	e.GET("/docs/*", echoSwagger.WrapHandler)
+	if strings.EqualFold(envValue("ENABLE_SWAGGER", "false"), "true") {
+		e.GET("/docs/*", echoSwagger.WrapHandler)
+	}
 	e.GET("/ws", realtime.HandleWebSocket)
 
 	routes.AuthRoutes(e)
@@ -227,4 +235,39 @@ func envList(key string, fallback []string) []string {
 		return fallback
 	}
 	return result
+}
+
+func buildSwaggerDescription(spec *swag.Spec) string {
+	pathCount, operationCount := countSwaggerOperations(spec)
+	if pathCount == 0 && operationCount == 0 {
+		return swaggerDescriptionBase
+	}
+
+	return fmt.Sprintf("%s\n\nTong so path: %d\nTong so API: %d", swaggerDescriptionBase, pathCount, operationCount)
+}
+
+func countSwaggerOperations(spec *swag.Spec) (int, int) {
+	if spec == nil {
+		return 0, 0
+	}
+
+	var doc struct {
+		Paths map[string]map[string]json.RawMessage `json:"paths"`
+	}
+	if err := json.Unmarshal([]byte(spec.ReadDoc()), &doc); err != nil {
+		return 0, 0
+	}
+
+	pathCount := len(doc.Paths)
+	operationCount := 0
+	for _, operations := range doc.Paths {
+		for method := range operations {
+			switch strings.ToLower(method) {
+			case "get", "post", "put", "patch", "delete", "options", "head":
+				operationCount++
+			}
+		}
+	}
+
+	return pathCount, operationCount
 }

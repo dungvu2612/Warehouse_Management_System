@@ -311,7 +311,7 @@ func normalizeAndValidateInput(input ProductInput) (ProductInput, error) {
 	if input.DifficultyWeight == 0 {
 		input.DifficultyWeight = 1.0
 	}
-	if input.DifficultyWeight < 0.5 || input.DifficultyWeight > 5.0 {
+	if input.DifficultyWeight < 0.5 || input.DifficultyWeight > 100 {
 		return ProductInput{}, ErrInvalidProductDifficulty
 	}
 
@@ -326,7 +326,7 @@ var (
 	ErrInvalidProductID         = errors.New("invalid product id")
 	ErrInvalidProductType       = errors.New("product_type must be COMPONENT or FINISHED_GOOD")
 	ErrInvalidProductPayload    = errors.New("invalid product payload")
-	ErrInvalidProductDifficulty = errors.New("difficulty_weight must be between 0.5 and 5.0")
+	ErrInvalidProductDifficulty = errors.New("difficulty_weight must be between 0.5 and 100")
 )
 
 // GenerateFinalCode sinh product_code theo format: PREFIX-ABBREVIATION-SEQ.

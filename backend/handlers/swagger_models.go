@@ -28,6 +28,39 @@ type DocLoginResponse struct {
 	User        DocAuthUser `json:"user"`
 }
 
+type DocBOMItemRequest struct {
+	ComponentProductID uint `json:"component_product_id" example:"2"`
+	Quantity           int  `json:"quantity" example:"4"`
+}
+
+type DocBOMRequest struct {
+	ProductID   uint                `json:"product_id" example:"1"`
+	BOMName     string              `json:"bom_name" example:"BOM may khau gia dinh"`
+	Description string              `json:"description" example:"BOM lap rap chuan"`
+	Items       []DocBOMItemRequest `json:"items"`
+}
+
+type DocBOM struct {
+	ID          uint   `json:"id" example:"1"`
+	ProductID   uint   `json:"product_id" example:"1"`
+	BOMName     string `json:"bom_name" example:"BOM may khau gia dinh"`
+	Description string `json:"description" example:"BOM lap rap chuan"`
+}
+
+type DocPreviewShortageItem struct {
+	ProductID         uint   `json:"product_id" example:"2"`
+	ProductCode       string `json:"product_code" example:"LK-001"`
+	ProductName       string `json:"product_name" example:"Motor A"`
+	RequiredQuantity  int    `json:"required_quantity" example:"10"`
+	AvailableQuantity int    `json:"available_quantity" example:"6"`
+	MissingQuantity   int    `json:"missing_quantity" example:"4"`
+}
+
+type DocPreviewShortageResponse struct {
+	HasShortage bool                     `json:"has_shortage" example:"true"`
+	Items       []DocPreviewShortageItem `json:"items"`
+}
+
 type DocUser struct {
 	ID       uint   `json:"id" example:"1"`
 	Username string `json:"username" example:"staff"`
@@ -189,6 +222,36 @@ type DocImportReceipt struct {
 	SupplierName string `json:"supplier_name" example:"Nhà cung cấp A"`
 	Status       string `json:"status" example:"PENDING"`
 	Note         string `json:"note" example:"Nhập lô tháng 6"`
+}
+
+type DocNotificationItem struct {
+	ID        string `json:"id" example:"import-receipt-1"`
+	Title     string `json:"title" example:"Phiếu nhập đã hoàn thành"`
+	Message   string `json:"message" example:"Phiếu nhập IMP-123 đã hoàn tất."`
+	Level     string `json:"level" example:"INFO"`
+	Link      string `json:"link" example:"/import-receipts/1"`
+	CreatedAt string `json:"created_at" example:"2026-06-30T10:00:00Z"`
+}
+
+type DocNotificationSummary struct {
+	Items       []DocNotificationItem `json:"items"`
+	UnreadCount int                   `json:"unread_count" example:"3"`
+	TotalCount  int                   `json:"total_count" example:"10"`
+}
+
+type DocMaintenancePurgeRequest struct {
+	RetentionDays int  `json:"retention_days" example:"30"`
+	DryRun        bool `json:"dry_run" example:"true"`
+}
+
+type DocMaintenancePurgeResponse struct {
+	Message string `json:"message" example:"Đã xử lý dọn dữ liệu."`
+}
+
+type DocStaffPerformanceReport struct {
+	FromDate string `json:"from_date" example:"2026-06-01"`
+	ToDate   string `json:"to_date" example:"2026-06-30"`
+	WorkType string `json:"work_type" example:"all"`
 }
 
 type DocImportTask struct {

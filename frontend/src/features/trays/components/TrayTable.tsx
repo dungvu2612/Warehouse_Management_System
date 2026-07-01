@@ -1,4 +1,4 @@
-/*
+  /*
 Thông tin ghi chú:
 - File nay la bang hien thi danh sach trays, thuoc presentation layer.
 - Phu thuoc vao type `TrayDisplay`; trang truyen san loading/error/empty states va actions de render.

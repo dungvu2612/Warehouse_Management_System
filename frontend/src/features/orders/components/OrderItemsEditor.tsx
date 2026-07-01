@@ -84,6 +84,7 @@ export function OrderItemsEditor({
     [activeProducts, productFilter],
   )
   const getAvailableQuantity = (productId: number) => availableQuantityByProductId?.get(productId) ?? Number.POSITIVE_INFINITY
+  const isStockTrackedProduct = (productId: number) => productById.get(productId)?.product_type !== 'FINISHED_GOOD'
 
   const totalAmount = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0),
@@ -102,11 +103,12 @@ export function OrderItemsEditor({
     if (addQuantity <= 0) return
     if (addPrice < 0) return
     const availableQuantity = getAvailableQuantity(selectedProduct.id)
+    const shouldCheckStock = isStockTrackedProduct(selectedProduct.id)
 
     const existingIndex = items.findIndex((item) => item.product_id === selectedProduct.id)
     if (existingIndex >= 0) {
       const nextQuantity = items[existingIndex].quantity + addQuantity
-      if (nextQuantity > availableQuantity) return
+      if (shouldCheckStock && nextQuantity > availableQuantity) return
       const ok = window.confirm('Sản phẩm đã có trong đơn, bạn muốn tăng số lượng không?')
       if (!ok) return
       const nextItems = [...items]
@@ -116,7 +118,7 @@ export function OrderItemsEditor({
       }
       onChange(nextItems)
     } else {
-      if (addQuantity > availableQuantity) return
+      if (shouldCheckStock && addQuantity > availableQuantity) return
       onChange([
         ...items,
         { product_id: selectedProduct.id, quantity: addQuantity, unit_price: addPrice },
@@ -133,10 +135,13 @@ export function OrderItemsEditor({
   const updateItem = (index: number, patch: Partial<OrderEditorItem>) => {
     const nextItems = [...items]
     const currentItem = nextItems[index]
+    const shouldCheckStock = isStockTrackedProduct(currentItem.product_id)
     const nextQuantity =
       patch.quantity === undefined
         ? currentItem.quantity
-        : Math.min(Math.max(1, patch.quantity), getAvailableQuantity(currentItem.product_id))
+        : shouldCheckStock
+          ? Math.min(Math.max(1, patch.quantity), getAvailableQuantity(currentItem.product_id))
+          : Math.max(1, patch.quantity)
     nextItems[index] = { ...currentItem, ...patch, quantity: nextQuantity }
     onChange(nextItems)
   }
@@ -173,14 +178,14 @@ export function OrderItemsEditor({
             setAddPrice(Number(option?.price || 0))
           }}
           getOptionLabel={(option) => `${option.product_code} - ${option.product_name}`}
-          getOptionDisabled={(option) => getAvailableQuantity(option.id) <= 0}
+          getOptionDisabled={(option) => isStockTrackedProduct(option.id) && getAvailableQuantity(option.id) <= 0}
           fullWidth
-          noOptionsText="Không có sản phẩm đã có khay"
+          noOptionsText="Không có sản phẩm đủ điều kiện tạo đơn"
           renderOption={(props, option) => (
             <li {...props} key={option.id}>
               <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                 <span>{option.product_code} - {option.product_name}</span>
-                {availableQuantityByProductId && (
+                {isStockTrackedProduct(option.id) && availableQuantityByProductId?.has(option.id) && (
                   <Chip
                     size="small"
                     color={stockChipColor(getAvailableQuantity(option.id))}
@@ -273,7 +278,7 @@ export function OrderItemsEditor({
                       <IconButton size="small" onClick={() => updateItem(index, { quantity: item.quantity + 1 })}>
                         <Add fontSize="small" />
                       </IconButton>
-                      {availableQuantityByProductId && (
+                      {isStockTrackedProduct(item.product_id) && availableQuantityByProductId?.has(item.product_id) && (
                         <Typography variant="caption" color="text.secondary">
                           Tồn {availableQuantity}
                         </Typography>

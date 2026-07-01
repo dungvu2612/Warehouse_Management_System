@@ -25,6 +25,7 @@ func OrderRoutes(r *echo.Echo) {
 	{
 		// Tạo order từ BOM: chỉ ADMIN.
 		orders.POST("", adapt(handler.CreateOrder), middleware.RequireRoles("ADMIN"))
+		orders.POST("/preview-shortage", adapt(handler.PreviewOrderShortage), middleware.RequireRoles("ADMIN"))
 		orders.PUT("/:id", adapt(handler.UpdateOrder), middleware.RequireRoles("ADMIN"))
 		orders.DELETE("/:id", adapt(handler.DeleteOrder), middleware.RequireRoles("ADMIN"))
 		// Staff/Admin quét order để vào luồng picking.
